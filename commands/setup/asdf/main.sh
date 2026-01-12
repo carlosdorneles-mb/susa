@@ -1,33 +1,35 @@
 #!/bin/bash
 
 # ============================================================
-# Instalação do ASDF Version Manager
+# ASDF Version Manager Installation
 # ============================================================
 
+setup_command_env
+
 show_help() {
-    echo "Instalação do ASDF Version Manager"
+    show_description
     echo ""
-    echo -e "${LIGHT_GREEN}Usage:${NC} susa setup asdf [options]"
+    show_usage
     echo ""
-    echo -e "${LIGHT_GREEN}Description:${NC}"
+    echo -e "${LIGHT_GREEN}O que é:${NC}"
     echo "  ASDF é um gerenciador de versões universal que suporta múltiplas"
     echo "  linguagens de programação através de plugins (Node.js, Python, Ruby,"
     echo "  Elixir, Java, e muitos outros)."
     echo ""
-    echo -e "${LIGHT_GREEN}Options:${NC}"
+    echo -e "${LIGHT_GREEN}Opções:${NC}"
     echo "  -h, --help        Mostra esta mensagem de ajuda"
     echo "  -u, --uninstall   Desinstala o ASDF do sistema"
     echo ""
-    echo -e "${LIGHT_GREEN}Examples:${NC}"
+    echo -e "${LIGHT_GREEN}Exemplos:${NC}"
     echo "  susa setup asdf              # Instala o ASDF"
     echo "  susa setup asdf --uninstall  # Desinstala o ASDF"
     echo ""
-    echo -e "${LIGHT_GREEN}Post-installation:${NC}"
+    echo -e "${LIGHT_GREEN}Pós-instalação:${NC}"
     echo "  Após a instalação, reinicie o terminal ou execute:"
     echo "    source ~/.bashrc   (para Bash)"
     echo "    source ~/.zshrc    (para Zsh)"
     echo ""
-    echo -e "${LIGHT_GREEN}Next steps:${NC}"
+    echo -e "${LIGHT_GREEN}Próximos passos:${NC}"
     echo "  asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git"
     echo "  asdf install nodejs latest"
     echo "  asdf global nodejs latest"

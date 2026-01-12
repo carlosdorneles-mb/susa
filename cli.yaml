@@ -2,7 +2,7 @@
 
 command: "susa"
 name: "Susa CLI"
-description: "CLI para gerenciar instalações e atualizações de software."
+description: "Gerenciador de Shell Scripts para automação de tarefas diárias e instalação de software"
 version: "1.0.0"
 
 # Diretórios de comandos

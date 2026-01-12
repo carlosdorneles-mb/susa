@@ -2,7 +2,7 @@
 
 # --- Shell Helper Functions ---
 
-# Detecta o tipo de shell do usuário
+# Detect user shell type
 detect_shell_type() {
     local user_shell=$(basename "${SHELL:-}")
     
@@ -17,7 +17,7 @@ detect_shell_type() {
             echo "fish"
             ;;
         *)
-            # Fallback: tenta detectar pelo ambiente de execução
+            # Fallback: tries to detect by the execution environment
             if [ -n "${ZSH_VERSION:-}" ]; then
                 echo "zsh"
             elif [ -n "${BASH_VERSION:-}" ]; then
@@ -30,10 +30,10 @@ detect_shell_type() {
 }
 
 
-# Detecta o arquivo de configuração do shell
+# Detect shell configuration file
 detect_shell_config() {
-    # Detecta qual arquivo de configuração do shell usar
-    # Verifica o shell do usuário via $SHELL
+    # Detect which shell configuration file to use
+    # Checks the user's shell via $SHELL
     local user_shell=$(basename "$SHELL")
     
     if [[ "$user_shell" == "zsh" ]] && [ -f "$HOME/.zshrc" ]; then

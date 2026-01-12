@@ -456,6 +456,38 @@ Funções para detectar e configurar o shell do usuário.
 
 ### Funções
 
+#### `detect_shell_type()`
+Detecta o tipo de shell do usuário.
+
+**Retorno:**
+- `zsh` - Se o shell atual é zsh
+- `bash` - Se o shell atual é bash
+- `fish` - Se o shell atual é fish
+- `unknown` - Shell não reconhecido
+
+**Lógica de detecção:**
+1. Verifica variável `$SHELL`
+2. Fallback para variáveis de ambiente específicas (`$ZSH_VERSION`, `$BASH_VERSION`)
+
+**Uso:**
+```bash
+shell=$(detect_shell_type)
+
+case "$shell" in
+    zsh)
+        echo "Usando Zsh"
+        ;;
+    bash)
+        echo "Usando Bash"
+        ;;
+    *)
+        echo "Shell desconhecido"
+        ;;
+esac
+```
+
+---
+
 #### `detect_shell_config()`
 Detecta qual arquivo de configuração do shell usar (.zshrc, .bashrc, etc.).
 
@@ -989,13 +1021,13 @@ Parser YAML usando yq para configurações centralizadas e descentralizadas.
 
 Antes de usar, configure:
 ```bash
-YAML_CONFIG="/path/to/cli.yaml"  # Config global
+GLOBAL_CONFIG_FILE="/path/to/cli.yaml"  # Config global
 CLI_DIR="/path/to/cli"           # Diretório raiz do CLI
 ```
 
 ### Funções - Config Global
 
-#### `get_yaml_global_field()`
+#### `get_yaml_field()`
 Obtém campos do arquivo cli.yaml.
 
 **Parâmetros:**
@@ -1006,8 +1038,8 @@ Obtém campos do arquivo cli.yaml.
 
 **Uso:**
 ```bash
-name=$(get_yaml_global_field "$YAML_CONFIG" "name")
-version=$(get_yaml_global_field "$YAML_CONFIG" "version")
+name=$(get_yaml_field "$GLOBAL_CONFIG_FILE" "name")
+version=$(get_yaml_field "$GLOBAL_CONFIG_FILE" "version")
 ```
 
 ---
@@ -1022,7 +1054,7 @@ Lê categorias do YAML (se houver).
 
 **Uso:**
 ```bash
-categories=$(parse_yaml_categories "$YAML_CONFIG")
+categories=$(parse_yaml_categories "$GLOBAL_CONFIG_FILE")
 ```
 
 ---
@@ -1052,7 +1084,7 @@ Obtém todas as categorias (YAML + descobertas via filesystem).
 
 **Uso:**
 ```bash
-all_categories=$(get_all_categories "$YAML_CONFIG")
+all_categories=$(get_all_categories "$GLOBAL_CONFIG_FILE")
 ```
 
 ---
@@ -1069,7 +1101,7 @@ Obtém informações de uma categoria do config.yaml dela.
 
 **Uso:**
 ```bash
-desc=$(get_category_info "$YAML_CONFIG" "install" "description")
+desc=$(get_category_info "$GLOBAL_CONFIG_FILE" "install" "description")
 echo "Categoria install: $desc"
 ```
 
@@ -1202,8 +1234,8 @@ Obtém informação de um comando específico.
 
 **Uso:**
 ```bash
-script=$(get_command_info "$YAML_CONFIG" "install" "docker" "script")
-needs_sudo=$(get_command_info "$YAML_CONFIG" "install" "docker" "sudo")
+script=$(get_command_info "$GLOBAL_CONFIG_FILE" "install" "docker" "script")
+needs_sudo=$(get_command_info "$GLOBAL_CONFIG_FILE" "install" "docker" "sudo")
 ```
 
 ---
@@ -1225,7 +1257,7 @@ Verifica se comando é compatível com o SO atual.
 ```bash
 current_os=$(get_simple_os)
 
-if is_command_compatible "$YAML_CONFIG" "install" "docker" "$current_os"; then
+if is_command_compatible "$GLOBAL_CONFIG_FILE" "install" "docker" "$current_os"; then
     echo "Comando compatível"
 fi
 ```
@@ -1246,7 +1278,7 @@ Verifica se comando requer sudo.
 
 **Uso:**
 ```bash
-if requires_sudo "$YAML_CONFIG" "install" "docker"; then
+if requires_sudo "$GLOBAL_CONFIG_FILE" "install" "docker"; then
     log_warning "Este comando requer sudo"
 fi
 ```
@@ -1265,7 +1297,7 @@ Obtém o grupo de um comando (para agrupamento visual).
 
 **Uso:**
 ```bash
-group=$(get_command_group "$YAML_CONFIG" "install" "docker")
+group=$(get_command_group "$GLOBAL_CONFIG_FILE" "install" "docker")
 echo "Grupo: $group"
 ```
 
@@ -1284,7 +1316,7 @@ Obtém lista única de grupos em uma categoria.
 **Uso:**
 ```bash
 current_os=$(get_simple_os)
-groups=$(get_category_groups "$YAML_CONFIG" "install" "$current_os")
+groups=$(get_category_groups "$GLOBAL_CONFIG_FILE" "install" "$current_os")
 
 for group in $groups; do
     echo "Grupo: $group"
@@ -1298,21 +1330,21 @@ source "$(dirname "$0")/../../lib/yaml.sh"
 source "$(dirname "$0")/../../lib/os.sh"
 
 # Configuração
-YAML_CONFIG="/opt/cli/cli.yaml"
+GLOBAL_CONFIG_FILE="/opt/cli/cli.yaml"
 CLI_DIR="/opt/cli"
 
 # Obtém info global
-cli_name=$(get_yaml_global_field "$YAML_CONFIG" "name")
-cli_version=$(get_yaml_global_field "$YAML_CONFIG" "version")
+cli_name=$(get_yaml_field "$GLOBAL_CONFIG_FILE" "name")
+cli_version=$(get_yaml_field "$GLOBAL_CONFIG_FILE" "version")
 
 echo "$cli_name v$cli_version"
 echo ""
 
 # Lista todas as categorias
-categories=$(get_all_categories "$YAML_CONFIG")
+categories=$(get_all_categories "$GLOBAL_CONFIG_FILE")
 
 for category in $categories; do
-    cat_desc=$(get_category_info "$YAML_CONFIG" "$category" "description")
+    cat_desc=$(get_category_info "$GLOBAL_CONFIG_FILE" "$category" "description")
     echo "=== $category ==="
     echo "    $cat_desc"
     echo ""
@@ -1323,16 +1355,16 @@ for category in $categories; do
     
     for cmd in $commands; do
         # Verifica compatibilidade
-        if ! is_command_compatible "$YAML_CONFIG" "$category" "$cmd" "$current_os"; then
+        if ! is_command_compatible "$GLOBAL_CONFIG_FILE" "$category" "$cmd" "$current_os"; then
             continue
         fi
         
-        cmd_name=$(get_command_info "$YAML_CONFIG" "$category" "$cmd" "name")
-        cmd_desc=$(get_command_info "$YAML_CONFIG" "$category" "$cmd" "description")
+        cmd_name=$(get_command_info "$GLOBAL_CONFIG_FILE" "$category" "$cmd" "name")
+        cmd_desc=$(get_command_info "$GLOBAL_CONFIG_FILE" "$category" "$cmd" "description")
         
         echo "  - $cmd_name: $cmd_desc"
         
-        if requires_sudo "$YAML_CONFIG" "$category" "$cmd"; then
+        if requires_sudo "$GLOBAL_CONFIG_FILE" "$category" "$cmd"; then
             echo "    (requer sudo)"
         fi
     done
@@ -1356,32 +1388,97 @@ Funções auxiliares específicas do CLI.
 
 ### Funções
 
-#### `show_version()`
-Mostra nome e versão do CLI (lê de cli.yaml).
+#### `setup_command_env()`
+Configura o ambiente do comando determinando SCRIPT_DIR e CONFIG_FILE.
+
+**Comportamento:**
+- Define `SCRIPT_DIR` como o diretório do script que chamou a função
+- Define `CONFIG_FILE` como `$SCRIPT_DIR/config.yaml`
+- Exporta ambas as variáveis para uso em subprocessos
 
 **Uso:**
 ```bash
-source "$(dirname "$0")/../../lib/cli.sh"
+#!/bin/bash
 
-show_version
-# Output: MyCLI (version 2.0.0)
+setup_command_env
+
+# Agora você tem acesso a:
+echo "Script dir: $SCRIPT_DIR"
+echo "Config file: $CONFIG_FILE"
+```
+
+---
+
+#### `build_command_path()`
+Constrói o caminho do comando baseado no SCRIPT_DIR.
+
+**Parâmetros:**
+- `$1` - Diretório do script (opcional, usa SCRIPT_DIR se não fornecido)
+
+**Retorno:** Caminho do comando sem barras (separado por espaços)
+
+**Exemplo:**
+```bash
+# Se SCRIPT_DIR = /opt/cli/commands/self/plugin/install
+path=$(build_command_path)
+echo "$path"  # self plugin install
 ```
 
 ---
 
 #### `show_usage()`
-Mostra mensagem de uso do CLI.
+Mostra mensagem de uso do comando com argumentos customizáveis.
 
 **Parâmetros:**
-- `$@` - Argumentos opcionais para adicionar à mensagem
+- `$@` - Argumentos opcionais (padrão: "[opções]")
 
 **Uso:**
 ```bash
 show_usage
-# Output: Usage: cli <command> [options]
+# Output: Uso: susa <comando> [opções]
 
-show_usage setup docker
-# Output: Usage: susa setup docker <command> [options]
+show_usage "<arquivo> <destino>"
+# Output: Uso: susa setup docker <arquivo> <destino>
+```
+
+---
+
+#### `show_description()`
+Exibe a descrição do comando do arquivo config.yaml.
+
+**Requisitos:**
+- Variável `CONFIG_FILE` deve estar definida (use `setup_command_env`)
+- O arquivo config.yaml deve ter um campo "description"
+
+**Uso:**
+```bash
+setup_command_env
+show_description
+# Output: Instala Docker no sistema
+```
+
+---
+
+#### `show_version()`
+Mostra nome e versão do CLI formatados.
+
+**Uso:**
+```bash
+show_version
+# Output: Susa (versão 2.0.0)
+```
+
+---
+
+#### `show_number_version()`
+Mostra apenas o número da versão do CLI.
+
+**Retorno:** String com o número da versão
+
+**Uso:**
+```bash
+version=$(show_number_version)
+echo "$version"  # 2.0.0
 ```
 
 ### Exemplo Completo
@@ -1389,10 +1486,19 @@ show_usage setup docker
 #!/bin/bash
 source "$(dirname "$0")/../../lib/cli.sh"
 
+# Setup do ambiente
+setup_command_env
+
 if [ $# -eq 0 ]; then
-    show_version
+    show_description
     echo ""
     show_usage
+    exit 0
+fi
+
+# Mostra versão se solicitado
+if [ "$1" = "--version" ]; then
+    show_version
     exit 0
 fi
 ```
@@ -1484,10 +1590,10 @@ source "$CLI_DIR/lib/yaml.sh"
 source "$CLI_DIR/lib/os.sh"
 
 # Configuração
-YAML_CONFIG="$CLI_DIR/cli.yaml"
+GLOBAL_CONFIG_FILE="$CLI_DIR/cli.yaml"
 
 # Obtém categorias
-categories=$(get_all_categories "$YAML_CONFIG")
+categories=$(get_all_categories "$GLOBAL_CONFIG_FILE")
 current_os=$(get_simple_os)
 
 for category in $categories; do
@@ -1495,9 +1601,9 @@ for category in $categories; do
     commands=$(get_category_commands "$category")
     
     for cmd in $commands; do
-        if is_command_compatible "$YAML_CONFIG" "$category" "$cmd" "$current_os"; then
+        if is_command_compatible "$GLOBAL_CONFIG_FILE" "$category" "$cmd" "$current_os"; then
             # Processa comando
-            name=$(get_command_info "$YAML_CONFIG" "$category" "$cmd" "name")
+            name=$(get_command_info "$GLOBAL_CONFIG_FILE" "$category" "$cmd" "name")
             echo "Comando disponível: $name"
         fi
     done

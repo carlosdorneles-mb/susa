@@ -6,17 +6,12 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SUSA_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-
-source "$SUSA_DIR/lib/logger.sh"
-source "$SUSA_DIR/lib/color.sh"
-source "$SUSA_DIR/lib/shell.sh"
+setup_command_env
 
 show_help() {
-    echo "Configuração de Autocompletar do Susa CLI"
+    show_description
     echo ""
-    echo -e "${LIGHT_GREEN}Usage:${NC} susa self completion [shell] [options]"
+    show_usage "[shell] [options]"
     echo ""
     echo -e "${LIGHT_GREEN}Description:${NC}"
     echo "  Gera e instala scripts de autocompletar (tab completion) para seu shell."
@@ -46,7 +41,7 @@ show_help() {
 
 # Descobre categorias disponíveis dinamicamente
 get_categories() {
-    local commands_dir="$SUSA_DIR/commands"
+    local commands_dir="$CLI_DIR/commands"
     local categories=""
     
     if [ -d "$commands_dir" ]; then
@@ -64,7 +59,7 @@ get_categories() {
 # Descobre comandos de uma categoria
 get_category_commands() {
     local category="$1"
-    local category_dir="$SUSA_DIR/commands/$category"
+    local category_dir="$CLI_DIR/commands/$category"
     local commands=""
     
     if [ -d "$category_dir" ]; then
@@ -397,8 +392,8 @@ main() {
     while [ $# -gt 0 ]; do
         case "$1" in
             -h|--help)
-                show_help
-                return 0
+                action="help"
+                shift
                 ;;
             -i|--install)
                 action="install"
@@ -483,5 +478,7 @@ main() {
     esac
 }
 
-# Executa
-main "$@"
+# Executa (não executa se já foi chamado via source para show_help)
+if [ "${SUSA_SHOW_HELP_CALLED:-false}" != "true" ]; then
+    main "$@"
+fi

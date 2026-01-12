@@ -1,27 +1,24 @@
 #!/bin/bash
 
 # ============================================================
-# YAML Parser para Shell Script usando yq
+# YAML Parser for Shell Script using yq
 # ============================================================
-# Parser para ler configurações YAML (centralizadas e descentralizadas)
-
-# Obtém o diretório da lib
-LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Parser to read YAML configurations (centralized and decentralized)
 
 # Source registry lib
 source "$LIB_DIR/registry.sh"
 source "$LIB_DIR/dependencies.sh"
 
-# Garante que yq está instalado
+# Make sure yq is installed
 ensure_yq_installed || {
-    echo "Erro: yq é necessário para o Susa CLI funcionar" >&2
+    echo "Error: yq is required for Susa CLI to work" >&2
     exit 1
 }
 
-# --- Funções para Config Global (cli.yaml) ---
+# --- Functions for Global Config (cli.yaml) ---
 
-# Função para obter campos globais do YAML (name, description, version)
-get_yaml_global_field() {
+# Function to get global YAML fields (name, description, version)
+get_yaml_field() {
     local yaml_file="$1"
     local field="$2"  # name, description, version, commands_dir, plugins_dir
     
@@ -32,7 +29,7 @@ get_yaml_global_field() {
     yq eval ".$field" "$yaml_file" 2>/dev/null
 }
 
-# Função para ler categorias do YAML
+# Function to read YAML categories
 parse_yaml_categories() {
     local yaml_file="$1"
     
@@ -40,20 +37,20 @@ parse_yaml_categories() {
         return 1
     fi
     
-    # Extrai nomes das categorias usando yq
+    # Extract category names using yq
     yq eval '.categories | keys | .[]' "$yaml_file" 2>/dev/null
 }
 
-# Descobre categorias/subcategorias automaticamente da estrutura de diretórios
-# Retorna apenas categorias de nível 1 (diretórios diretos em commands/ e plugins/)
+# Discover categories/subcategories automatically from directory structure
+# Returns only level 1 categories (directories in commands/ and plugins/)
 discover_categories() {
-    local cli_dir="${CLI_DIR:-$(dirname "$YAML_CONFIG")}"
+    local cli_dir="${CLI_DIR:-$(dirname "$GLOBAL_CONFIG_FILE")}"
     local commands_dir="${cli_dir}/commands"
     local plugins_dir="${cli_dir}/plugins"
     
     local categories=""
     
-    # Busca em commands/ (apenas primeiro nível)
+    # Search in commands/(first level only)
     if [ -d "$commands_dir" ]; then
         for cat_dir in "$commands_dir"/*; do
             [ ! -d "$cat_dir" ] && continue
@@ -62,17 +59,17 @@ discover_categories() {
         done
     fi
     
-    # Busca em plugins/ (apenas primeiro nível de cada plugin)
+    # Search in plugins/ (first level only for each plugin)
     if [ -d "$plugins_dir" ]; then
         for plugin_dir in "$plugins_dir"/*; do
             [ ! -d "$plugin_dir" ] && continue
             local plugin_name=$(basename "$plugin_dir")
             
-            # Ignora arquivos especiais
+            # Ignore special files
             [ "$plugin_name" = "registry.yaml" ] && continue
             [ "$plugin_name" = "README.md" ] && continue
             
-            # Adiciona as categorias de primeiro nível deste plugin
+            # Add first-level categories of this plugin
             for cat_dir in "$plugin_dir"/*; do
                 [ ! -d "$cat_dir" ] && continue
                 local cat_name=$(basename "$cat_dir")
@@ -81,36 +78,36 @@ discover_categories() {
         done
     fi
     
-    # Remove duplicatas e linhas vazias
+    # Remove duplicates and empty lines
     echo "$categories" | grep -v '^$' | sort -u
 }
 
-# Obtém todas as categorias (YAML + descobertas)
+# Get all categories (YAML + discovered)
 get_all_categories() {
     local yaml_file="$1"
     local categories=""
     
-    # Primeiro, tenta do YAML (opcional)
+    # First, try from YAML (optional)
     if [ -f "$yaml_file" ]; then
         categories=$(parse_yaml_categories "$yaml_file" 2>/dev/null || true)
     fi
     
-    # Depois, descobre do filesystem
+    # Then, discover from filesystem
     local discovered=$(discover_categories)
     
-    # Combina e remove duplicatas
+    # Combine and remove duplicates
     echo -e "${categories}\n${discovered}" | grep -v '^$' | sort -u
 }
 
-# Função para obter informações de uma categoria ou subcategoria
+# Function to get information about a category or subcategory
 get_category_info() {
     local yaml_file="$1"
     local category="$2"
-    local field="$3"  # name ou description
+    local field="$3"  # name or description
     
     local cli_dir="${CLI_DIR:-$(dirname "$yaml_file")}"
     
-    # Tenta ler do config.yaml da categoria/subcategoria em commands/
+    # Try reading from the category/subcategory config.yaml in commands/
     local category_config="$cli_dir/commands/$category/config.yaml"
     if [ -f "$category_config" ]; then
         local value=$(yq eval ".$field" "$category_config" 2>/dev/null)
@@ -120,13 +117,13 @@ get_category_info() {
         fi
     fi
     
-    # Busca em plugins/ se não encontrou em commands/
+    # Search in plugins/ if not found in commands/
     if [ -d "$cli_dir/plugins" ]; then
         for plugin_dir in "$cli_dir/plugins"/*; do
             [ ! -d "$plugin_dir" ] && continue
             local plugin_name=$(basename "$plugin_dir")
             
-            # Ignora arquivos especiais
+            # Ignore special files
             [ "$plugin_name" = "registry.yaml" ] && continue
             [ "$plugin_name" = "README.md" ] && continue
             
@@ -142,19 +139,19 @@ get_category_info() {
     fi
 }
 
-# --- Funções para Discovery de Comandos e Subcategorias (baseado em script executável) ---
+# --- Functions for Discovery of Commands and Subcategories (based on executable script)) ---
 
-# Verifica se um diretório é um comando (tem script executável)
+# Checks if a directory is a command (has executable script)
 is_command_dir() {
     local item_dir="$1"
     
-    # Verifica se tem config.yaml
+    # Checks if config.yaml exists
     [ ! -f "$item_dir/config.yaml" ] && return 1
     
-    # Lê o campo script do config.yaml usando yq
+    # Reads the script field from config.yaml using yq
     local script_name=$(yq eval '.script' "$item_dir/config.yaml" 2>/dev/null)
     
-    # Se tem campo script e o arquivo existe, é um comando
+    # If script field exists and the file exists, it's a command
     if [ -n "$script_name" ] && [ "$script_name" != "null" ] && [ -f "$item_dir/$script_name" ]; then
         return 0
     fi
@@ -162,12 +159,12 @@ is_command_dir() {
     return 1
 }
 
-# Descobre comandos e subcategorias em um caminho (categoria pode ser aninhada)
-# Retorna: comandos (diretórios com script) e subcategorias (diretórios sem script)
+# Discover commands and subcategories in a path (category can be nested)
+# Returns: commands (directories with script) and subcategories (directories without script)
 discover_items_in_category() {
     local base_dir="$1"
-    local category_path="$2"  # Pode ser "install", "install/python", etc.
-    local type="${3:-all}"     # "commands", "subcategories", ou "all"
+    local category_path="$2"  # Can be "install", "install/python", etc.
+    local type="${3:-all}"     # "commands", "subcategories", or "all"
     
     local full_path="$base_dir/$category_path"
     
@@ -175,19 +172,19 @@ discover_items_in_category() {
         return 0
     fi
     
-    # Lista diretórios no nível atual
+    # Lists directories at the current level
     for item_dir in "$full_path"/*; do
         [ ! -d "$item_dir" ] && continue
         
         local item_name=$(basename "$item_dir")
         
-        # Verifica se é um comando (tem script executável)
+        # Checks if it is a command (has executable script)
         if is_command_dir "$item_dir"; then
             if [ "$type" = "commands" ] || [ "$type" = "all" ]; then
                 echo "command:$item_name"
             fi
         else
-            # Se não é comando, é uma subcategoria
+            # If it's not a command, it's a subcategory
             if [ "$type" = "subcategories" ] || [ "$type" = "all" ]; then
                 echo "subcategory:$item_name"
             fi
@@ -195,26 +192,26 @@ discover_items_in_category() {
     done
 }
 
-# Obtém comandos de uma categoria (pode ser aninhada como "install/python")
+# Gets commands from a category (can be nested like "install/python")
 get_category_commands() {
-    local cli_dir="${CLI_DIR:-$(dirname "$YAML_CONFIG")}"
+    local cli_dir="${CLI_DIR:-$(dirname "$GLOBAL_CONFIG_FILE")}"
     local category="$1"
     
     local commands_dir="${cli_dir}/commands"
     local plugins_dir="${cli_dir}/plugins"
     
-    # Busca em commands/
+    # Search in commands/
     if [ -d "$commands_dir" ]; then
         discover_items_in_category "$commands_dir" "$category" "commands" | sed 's/^command://'
     fi
     
-    # Busca em plugins/
+    # Search in plugins/
     if [ -d "$plugins_dir" ]; then
         for plugin_dir in "$plugins_dir"/*; do
             [ ! -d "$plugin_dir" ] && continue
             local plugin_name=$(basename "$plugin_dir")
             
-            # Ignora arquivos especiais
+            # Ignore special files
             [ "$plugin_name" = "registry.yaml" ] && continue
             [ "$plugin_name" = "README.md" ] && continue
             
@@ -223,9 +220,9 @@ get_category_commands() {
     fi
 }
 
-# Obtém subcategorias de uma categoria
+# Gets subcategories from a category
 get_category_subcategories() {
-    local cli_dir="${CLI_DIR:-$(dirname "$YAML_CONFIG")}"
+    local cli_dir="${CLI_DIR:-$(dirname "$GLOBAL_CONFIG_FILE")}"
     local category="$1"
     
     local commands_dir="${cli_dir}/commands"
@@ -233,18 +230,18 @@ get_category_subcategories() {
     
     local subcategories=""
     
-    # Busca em commands/
+    # Search in commands/
     if [ -d "$commands_dir" ]; then
         subcategories=$(discover_items_in_category "$commands_dir" "$category" "subcategories" | sed 's/^subcategory://')
     fi
     
-    # Busca em plugins/
+    # Search in plugins/
     if [ -d "$plugins_dir" ]; then
         for plugin_dir in "$plugins_dir"/*; do
             [ ! -d "$plugin_dir" ] && continue
             local plugin_name=$(basename "$plugin_dir")
             
-            # Ignora arquivos especiais
+            # Ignore special files
             [ "$plugin_name" = "registry.yaml" ] && continue
             [ "$plugin_name" = "README.md" ] && continue
             
@@ -253,15 +250,15 @@ get_category_subcategories() {
         done
     fi
     
-    # Remove duplicatas e linhas vazias
+    # Remove duplicates and empty lines
     echo "$subcategories" | grep -v '^$' | sort -u
 }
 
 # ============================================================
-# LEGACY - Mantido para compatibilidade
+# LEGACY - Kept for compatibility
 # ============================================================
 
-# Descobre comandos em um diretório lendo campo 'id' dos config.yaml
+# Discovers commands in a directory by reading 'id' field from config.yaml
 discover_commands_in_dir() {
     local base_dir="$1"
     local category="$2"
@@ -270,13 +267,13 @@ discover_commands_in_dir() {
         return 0
     fi
     
-    # Função legada - não usada mais
+    # Legacy function - no longer used
     return 1
 }
 
-# --- Funções para ler Config de Comando Individual ---
+# --- Functions to read Individual Command Config ---
 
-# Lê um campo da config de um comando
+# Reads a field from a command config
 get_command_config_field() {
     local config_file="$1"
     local field="$2"
@@ -287,7 +284,7 @@ get_command_config_field() {
     
     local value=$(yq eval ".$field" "$config_file" 2>/dev/null)
     
-    # Se for array ou lista, converte para formato compatível
+    # If it's an array or list, convert to compatible format
     if echo "$value" | grep -q '^\['; then
         echo "$value" | sed 's/\[//g' | sed 's/\]//g' | sed 's/, /,/g'
     elif [ "$value" != "null" ]; then
@@ -295,26 +292,26 @@ get_command_config_field() {
     fi
 }
 
-# Encontra o arquivo de config de um comando baseado no caminho de diretórios
+# Finds the config file of a command based on directory path
 find_command_config() {
-    local category="$1"       # Pode ser "install" ou "install/python"
+    local category="$1"       # Can be "install" or "install/python"
     local command_id="$2"
-    local cli_dir="${CLI_DIR:-$(dirname "$YAML_CONFIG")}"
+    local cli_dir="${CLI_DIR:-$(dirname "$GLOBAL_CONFIG_FILE")}"
     
-    # Busca em commands/
+    # Search in commands/
     local config_path="$cli_dir/commands/$category/$command_id/config.yaml"
     if [ -f "$config_path" ]; then
         echo "$config_path"
         return 0
     fi
     
-    # Busca em plugins/
+    # Search in plugins/
     if [ -d "$cli_dir/plugins" ]; then
         for plugin_dir in "$cli_dir/plugins"/*; do
             [ ! -d "$plugin_dir" ] && continue
             local plugin_name=$(basename "$plugin_dir")
             
-            # Ignora arquivos especiais
+            # Ignore special files
             [ "$plugin_name" = "registry.yaml" ] && continue
             [ "$plugin_name" = "README.md" ] && continue
             
@@ -329,9 +326,9 @@ find_command_config() {
     return 1
 }
 
-# Obtém informação de um comando específico
+# Gets information from a specific command
 get_command_info() {
-    local yaml_file="$1"  # Mantido para compatibilidade, mas não usado
+    local yaml_file="$1"  # Kept for compatibility, but not used
     local category="$2"
     local command_id="$3"
     local field="$4"  # name, description, script, sudo, os, group
@@ -345,9 +342,9 @@ get_command_info() {
     get_command_config_field "$config_file" "$field"
 }
 
-# Função para verificar se comando é compatível com o SO atual
+# Function to check if command is compatible with current OS
 is_command_compatible() {
-    local yaml_file="$1"  # Mantido para compatibilidade
+    local yaml_file="$1"  # Kept for compatibility
     local category="$2"
     local command_id="$3"
     local current_os="$4"  # linux ou mac
@@ -360,12 +357,12 @@ is_command_compatible() {
     
     local supported_os=$(get_command_config_field "$config_file" "os")
     
-    # Se não tem restrição de OS, é compatível
+    # If there's no OS restriction, it's compatible
     if [ -z "$supported_os" ]; then
         return 0
     fi
     
-    # Verifica se o OS atual está na lista
+    # Checks if current OS is in the list
     if echo "$supported_os" | grep -qw "$current_os"; then
         return 0
     fi
@@ -373,9 +370,9 @@ is_command_compatible() {
     return 1
 }
 
-# Função para verificar se comando requer sudo
+# Function to check if command requires sudo
 requires_sudo() {
-    local yaml_file="$1"  # Mantido para compatibilidade
+    local yaml_file="$1"  # Kept for compatibility
     local category="$2"
     local command_id="$3"
     
@@ -394,9 +391,9 @@ requires_sudo() {
     return 1
 }
 
-# Função para obter o grupo de um comando
+# Function to get the group of a command
 get_command_group() {
-    local yaml_file="$1"  # Mantido para compatibilidade
+    local yaml_file="$1"  # Kept for compatibility
     local category="$2"
     local command_id="$3"
     
@@ -409,9 +406,9 @@ get_command_group() {
     get_command_config_field "$config_file" "group"
 }
 
-# Função para obter lista única de grupos em uma categoria
+# Function to get unique list of groups in a category
 get_category_groups() {
-    local yaml_file="$1"  # Mantido para compatibilidade
+    local yaml_file="$1"  # Kept for compatibility
     local category="$2"
     local current_os="$3"
     
@@ -419,7 +416,7 @@ get_category_groups() {
     local groups=""
     
     for cmd in $commands; do
-        # Pula comandos incompatíveis
+        # Skip incompatible commands
         if ! is_command_compatible "$yaml_file" "$category" "$cmd" "$current_os"; then
             continue
         fi
@@ -427,7 +424,7 @@ get_category_groups() {
         local group=$(get_command_group "$yaml_file" "$category" "$cmd")
         
         if [ -n "$group" ]; then
-            # Adiciona grupo se ainda não estiver na lista
+            # Add group if not already in the list
             if ! echo "$groups" | grep -qw "$group"; then
                 groups="${groups}${group}"$'\n'
             fi

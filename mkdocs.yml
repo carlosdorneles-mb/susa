@@ -1,10 +1,10 @@
 site_name: Susa CLI
 site_description: Sistema de CLI em Shell Script para automação de tarefas diárias e instalação de software
 site_author: Carlos Dorneles
-site_url: https://cdorneles.github.io/scripts
+site_url: https://carlosdorneles-mb.github.io/susa
 
-repo_name: cdorneles/scripts
-repo_url: https://github.com/cdorneles/scripts
+repo_name: carlosdorneles-mb/susa
+repo_url: https://github.com/carlosdorneles-mb/susa
 edit_uri: edit/main/cli/docs/
 
 theme:
@@ -59,7 +59,6 @@ nav:
   - Home: index.md
   - Início Rápido:
     - Instalação: quick-start.md
-    - Primeiro Uso: first-steps.md
   - Guias:
     - Subcategorias: guides/subcategories.md
     - Adicionando Comandos: guides/adding-commands.md
@@ -78,4 +77,4 @@ nav:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/cdorneles
+      link: https://github.com/carlosdorneles-mb

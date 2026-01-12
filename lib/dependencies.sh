@@ -1,14 +1,8 @@
 #!/bin/bash
 
-# Obtém o diretório da lib
-LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$LIB_DIR/logger.sh"
-
-# --- Dependencies Installer Functions ---
-
 # --- Curl Helper Function ---
 
-# Garante que o curl está instalado. Se não estiver, tenta instalar.
+# Ensure curl is installed. If not, try installing.
 ensure_curl_installed() {
   if command -v curl &>/dev/null; then
     return 0
@@ -52,7 +46,7 @@ ensure_curl_installed() {
 
 # --- JQ Helper Function ---
 
-# Garante que o jq está instalado. Se não estiver, tenta instalar.
+# Make sure jq is installed. If not, try installing.
 ensure_jq_installed() {
   if command -v jq &>/dev/null; then
     return 0
@@ -103,16 +97,16 @@ ensure_yq_installed() {
 
   log_warning "yq não encontrado. Iniciando instalação da versão mais recente..."
 
-  # Garante dependências para descobrir a versão e baixar
+  # Ensures dependencies to discover version and download
   ensure_curl_installed || return 1
   ensure_jq_installed || return 1
 
-  # 1. Descobrir a versão mais recente
+  # 1. Find out the latest version
   local latest_tag
   latest_tag=$(curl -s https://api.github.com/repos/mikefarah/yq/releases/latest | jq -r '.tag_name')
   local version_no_v="${latest_tag#v}"
 
-  # 2. Detectar Plataforma e Arquitetura
+  # 2. Detect Platform and Architecture
   local platform="linux"
   [[ "$OS_TYPE" == "macos" ]] && platform="darwin"
 
@@ -125,7 +119,7 @@ ensure_yq_installed() {
     i386|i686)     arch="386"   ;;
   esac
 
-  # 3. Download e Instalação
+  # 3. Download and Installation
   local binary="yq_${platform}_${arch}"
   local download_url="https://github.com/mikefarah/yq/releases/download/${latest_tag}/${binary}"
   local temp_dir
@@ -155,7 +149,7 @@ ensure_yq_installed() {
 
 # --- FZF Helper Function ---
 
-# Verifica se o fzf está instalado. Se não estiver, instala a versão mais recente do GitHub.
+# Checks if fzf is installed. If not, install the latest version from GitHub.
 ensure_fzf_installed() {
   if command -v fzf &>/dev/null; then
     return 0
@@ -163,16 +157,16 @@ ensure_fzf_installed() {
 
   log_warning "fzf não encontrado. Iniciando instalação da versão mais recente..."
 
-  # Garante dependências para descobrir a versão e baixar
+  # Ensures dependencies to discover version and download
   ensure_curl_installed || return 1
   ensure_jq_installed || return 1
 
-  # 1. Descobrir a versão mais recente e preparar variáveis
+  # 1. Find out the latest version and prepare variables
   local latest_tag
   latest_tag=$(curl -s https://api.github.com/repos/junegunn/fzf/releases/latest | jq -r '.tag_name')
   local version_no_v="${latest_tag#v}"
 
-  # 2. Detetar Plataforma e Arquitetura
+  # 2. Detect Platform and Architecture
   local platform="linux"
   [[ "$OS_TYPE" == "macos" ]] && platform="darwin"
 
@@ -185,7 +179,7 @@ ensure_fzf_installed() {
     i386|i686)     arch="386"   ;;
   esac
 
-  # 3. Download e Instalação
+  # 3. Download and Installation
   local tarball="fzf-${version_no_v}-${platform}_${arch}.tar.gz"
   local download_url="https://github.com/junegunn/fzf/releases/download/${latest_tag}/${tarball}"
   local temp_dir

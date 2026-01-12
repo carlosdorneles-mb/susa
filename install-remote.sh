@@ -8,7 +8,7 @@ set -euo pipefail
 # Uso: curl -LsSf https://raw.githubusercontent.com/USER/REPO/main/install-remote.sh | sh
 
 # Configurações
-REPO_URL="${CLI_REPO_URL:-https://github.com/cdorneles/scripts.git}"
+REPO_URL="${CLI_REPO_URL:-https://github.com/carlosdorneles-mb/susa.git}"
 REPO_BRANCH="${CLI_REPO_BRANCH:-main}"
 INSTALL_DIR="${CLI_INSTALL_DIR:-$HOME/.local/susa}"
 TEMP_DIR=$(mktemp -d)
@@ -183,7 +183,7 @@ main() {
         echo -e "  ${GREEN}susa --version${NC}"
         echo -e "  ${GREEN}susa --help${NC}"
         echo ""
-        log_info "Documentação: https://github.com/cdorneles/scripts"
+        log_info "Documentação: https://github.com/carlosdorneles-mb/susa"
         echo ""
     else
         log_error "Falha durante a instalação"

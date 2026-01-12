@@ -1,67 +1,139 @@
-# Documentação de Funcionalidades do CLI
+# 🎯 Funcionalidades do Susa CLI
 
-## Índice
+> Guia completo das funcionalidades e capacidades do framework Susa CLI
 
-- [Visão Geral](#visão-geral)
-- [Arquitetura de Configuração](#arquitetura-de-configuração)
+## 📋 Índice
+
+- [Visão Geral](#visao-geral)
+- [Conceitos Chave](#conceitos-chave)
+- [Arquitetura de Configuração](#arquitetura-de-configuracao)
 - [Sistema de Discovery](#sistema-de-discovery)
-- [Sistema de Categorias e Subcategorias](#sistema-de-categorias-e-subcategorias)
+- [Categorias e Subcategorias](#categorias-e-subcategorias)
 - [Sistema de Grupos](#sistema-de-grupos)
-- [Filtragem por Sistema Operacional](#filtragem-por-sistema-operacional)
+- [Filtragem por SO](#filtragem-por-sistema-operacional)
 - [Gerenciamento de Sudo](#gerenciamento-de-sudo)
-- [Help Customizado para Comandos](#help-customizado-para-comandos)
+- [Help Customizado](#help-customizado-para-comandos)
 - [Sistema de Plugins](#sistema-de-plugins)
-- [Bibliotecas Disponíveis](#bibliotecas-disponíveis)
-- [Como Adicionar Novos Comandos](#como-adicionar-novos-comandos)
+- [Bibliotecas](#bibliotecas-disponiveis)
+- [Adicionar Comandos](#como-adicionar-novos-comandos)
+- [Referencia Rapida](#referencia-rapida)
 
 ---
 
-## Visão Geral
+## 🎯 Visão Geral
 
-Este CLI é um framework modular de linha de comando baseado em **discovery automático de estrutura de diretórios** e **configurações YAML descentralizadas**. O sistema descobre comandos e categorias automaticamente da estrutura `commands/` e `plugins/`, com cada comando tendo seu próprio arquivo `config.yaml`.
+O **Susa CLI** é um framework modular e extensível para criar ferramentas de linha de comando em Bash. Diferente de CLIs tradicionais, o Susa usa **discovery automático** e **configurações descentralizadas**, eliminando a necessidade de manter um grande arquivo de configuração centralizado.
 
-### Características Principais
+### ✨ Características Principais
 
-- **Discovery Automático**: Comandos descobertos da estrutura de diretórios
-- **Configuração Descentralizada**: Cada comando/categoria tem seu próprio `config.yaml`
-- **Multi-plataforma**: Suporte para Linux e macOS com filtragem automática
-- **Subcategorias Multi-nível**: Navegação hierárquica ilimitada (`install/python/tools`)
-- **Sistema de Plugins**: Extensão via repositórios Git externos
-- **Parser YAML com yq**: Dependência gerenciada automaticamente
-- **Agrupamento de Comandos**: Organize comandos relacionados em grupos visuais
-- **Indicadores Visuais**: Marcadores para comandos que requerem sudo
-- **Help Personalizado**: Cada comando pode ter sua própria documentação
-- **Validação de Compatibilidade**: Verifica SO e permissões antes da execução
+| Funcionalidade | Descrição |
+|----------------|------------|
+| 🔍 **Discovery Automático** | Comandos descobertos automaticamente da estrutura de diretórios |
+| 📄 **Config Descentralizada** | Cada comando tem seu próprio `config.yaml` |
+| 🌍 **Multi-plataforma** | Suporte para Linux e macOS com filtragem automática |
+| 📂 **Subcategorias Ilimitadas** | Hierarquia de comandos sem limites de profundidade |
+| 🔌 **Sistema de Plugins** | Extensão via repositórios Git sem modificar código |
+| 📦 **12 Bibliotecas Úteis** | Logger, detecção de SO, gerenciamento de dependências, etc |
+| 🎨 **Grupos Visuais** | Organize comandos relacionados em grupos |
+| 🔐 **Indicadores de Sudo** | Marcadores visuais para comandos privilegiados |
+| 📖 **Help Personalizado** | Documentação customizada por comando |
+| ✅ **Validação Automática** | Verifica SO e permissões antes da execução |
+
+### 🚀 Caso de Uso Ideal
+
+O Susa CLI é perfeito para:
+
+- ✅ **DevOps**: Automatizar instalações e configurações
+- ✅ **Administração**: Gerenciar servidores e ambientes
+- ✅ **Desenvolvimento**: Scripts de setup e deploy
+- ✅ **Equipes**: Padronizar workflows entre desenvolvedores
 
 ---
 
-## Arquitetura de Configuração
+## 💡 Conceitos Chave
 
-O sistema usa **configurações YAML descentralizadas** com discovery automático.
+Antes de mergulhar nos detalhes, entenda estes conceitos fundamentais:
 
-### Arquivo Global: `cli.yaml`
+### 🎯 Discovery Automático
 
-Configuração principal do CLI (apenas metadados):
+O CLI **descobre comandos automaticamente** da estrutura de diretórios. Não é necessário registrar comandos em um arquivo central.
 
-```yaml
-command: "cli"                        # Nome do executável
-name: "MyCLI"                         # Nome exibido
-description: "Meu CLI personalizado"  # Descrição na ajuda
-version: "2.0.0"                      # Versão do Susa CLI
-commands_dir: "commands"              # Diretório de comandos
-plugins_dir: "plugins"                # Diretório de plugins
+```bash
+# Criar nova pasta = novo comando disponível
+mkdir -p commands/install/docker
+echo "name: Docker" > commands/install/docker/config.yaml
+echo "#!/bin/bash\necho 'Installing Docker'" > commands/install/docker/main.sh
+
+# Comando já está disponível!
+susa setup docker
 ```
 
-**Campos:**
+### 📄 Configuração Descentralizada
 
-| Campo | Descrição |
-| ----- | --------- |
-| `command` | Nome do comando usado para invocar o CLI |
-| `name` | Nome amigável exibido na versão e ajuda |
-| `description` | Descrição exibida no help principal |
-| `version` | Versão semântica do CLI |
-| `commands_dir` | Diretório onde estão os comandos (padrão: `commands`) |
-| `plugins_dir` | Diretório onde estão os plugins (padrão: `plugins`) |
+Cada comando tem seu próprio `config.yaml` com metadados:
+
+```yaml
+name: "Docker"              # Nome amigável
+description: "Instala Docker" # Descrição curta
+script: "main.sh"           # Script a executar
+sudo: true                   # Requer privilégios?
+os: ["linux"]                # SOs compatíveis
+```
+
+### 📂 Hierarquia de Comandos
+
+Comandos são organizados em categorias e subcategorias:
+
+```text
+setup/                 # Categoria
+├── docker             # Comando
+└── python/            # Subcategoria
+    ├── basic          # Comando
+    └── tools/         # Sub-subcategoria
+        └── pip        # Comando
+```
+
+### 🔌 Plugins
+
+Plugins são repositórios Git que adicionam comandos sem modificar o código principal:
+
+```bash
+susa self plugin install user/myplugin
+# Comandos do plugin ficam disponíveis imediatamente!
+```
+
+---
+
+## ⚙️ Arquitetura de Configuração
+
+O Susa CLI utiliza uma arquitetura de **configurações YAML descentralizadas** com três níveis:
+
+### 1️⃣ Arquivo Global: `cli.yaml`
+
+Configuração principal contendo apenas metadados do CLI:
+
+```yaml
+command: "susa"                      # Nome do executável
+name: "Susa CLI"                     # Nome exibido
+description: "CLI modular e extensível" # Descrição
+version: "2.0.0"                     # Versão atual
+commands_dir: "commands"             # Onde ficam os comandos
+plugins_dir: "plugins"               # Onde ficam os plugins
+```
+
+#### 📋 Referência de Campos
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|------------|
+| `command` | `string` | ✅ | Nome do executável (ex: `susa`) |
+| `name` | `string` | ✅ | Nome amigável exibido na versão |
+| `description` | `string` | ✅ | Descrição exibida no help |
+| `version` | `string` | ✅ | Versão semântica (ex: `2.0.0`) |
+| `commands_dir` | `string` | ❌ | Diretório de comandos (padrão: `commands`) |
+| `plugins_dir` | `string` | ❌ | Diretório de plugins (padrão: `plugins`) |
+
+!!! tip "Dica"
+    O arquivo `cli.yaml` raramente precisa ser editado. Ele contém apenas metadados globais do CLI.
 
 ### Arquivos de Categoria: `<categoria>/config.yaml`
 
@@ -98,17 +170,56 @@ group: "development"              # Grupo visual (opcional)
 
 ---
 
-## Sistema de Discovery
+## 🔍 Sistema de Discovery
 
-O CLI **descobre comandos e categorias automaticamente** da estrutura de diretórios.
+O **discovery automático** é o coração do Susa CLI. Ele elimina a necessidade de registrar comandos manualmente em arquivos de configuração centralizados.
 
-### Como Funciona
+### 🔄 Como Funciona
 
-1. **Scanner de Diretórios**: Varre `commands/` e `plugins/*/`
-2. **Detecção de Tipo**:
-   - **Comando**: Diretório com `config.yaml` + campo `script` + arquivo existe
-   - **Subcategoria**: Diretório sem script executável
-3. **Hierarquia**: Suporta níveis ilimitados de subcategorias
+O sistema funciona em 3 etapas:
+
+```mermaid
+graph LR
+    A[Scanner] --> B[Detecção]
+    B --> C[Disponibilização]
+    C --> D[Comando Pronto]
+```
+
+#### 1. Scanner de Diretórios
+
+Varre recursivamente:
+- 📁 `commands/` - Comandos nativos
+- 📁 `plugins/*/` - Comandos de plugins
+
+#### 2. Detecção de Tipo
+
+Para cada diretório encontrado, determina:
+
+| Condição | Tipo | Disponível como |
+|----------|------|------------------|
+| ✅ Tem `config.yaml` + campo `script` + arquivo existe | **Comando** | Executável |
+| ✅ Tem `config.yaml` + **sem** script | **Categoria** | Navegável |
+| ❌ Sem `config.yaml` | **Ignorado** | - |
+
+#### 3. Disponibilização
+
+Comandos descobertos ficam imediatamente disponíveis:
+
+```bash
+# Criar estrutura
+mkdir -p commands/deploy/production
+cat > commands/deploy/production/config.yaml << EOF
+name: "Production"
+description: "Deploy para produção"
+script: "main.sh"
+EOF
+
+# Comando JÁ está disponível!
+susa deploy production
+```
+
+!!! success "Vantagem"
+    Adicionar um novo comando é tão simples quanto criar uma pasta com dois arquivos!
 
 ### Estrutura de Diretórios
 
@@ -173,18 +284,56 @@ is_command_dir() {
 
 ---
 
-## Sistema de Categorias e Subcategorias
+## 📂 Categorias e Subcategorias
 
-O CLI suporta **navegação hierárquica ilimitada** de categorias.
+O Susa CLI suporta **hierarquia ilimitada** de categorias, permitindo organização complexa de comandos.
 
-### Navegação
+### 🗺️ Navegação Hierárquica
+
+Navegue pela hierarquia adicionando níveis ao comando:
 
 ```bash
-cli                           # Lista categorias de nível 1
-susa setup                   # Lista comandos e subcategorias de setup
-susa setup python            # Lista comandos e sub-subcategorias de python
-susa setup python tools      # Lista comandos de tools
-susa setup python tools pip  # Executa comando pip
+# Nível 0: Ver categorias disponíveis
+susa
+# Output: self, setup
+
+# Nível 1: Ver comandos da categoria
+susa setup
+# Output: docker, nodejs, python, ...
+
+# Nível 2: Ver comandos da subcategoria
+susa setup python
+# Output: basic, venv, tools, ...
+
+# Nível 3: Ver comandos da sub-subcategoria
+susa setup python tools
+# Output: pip, poetry, ...
+
+# Executar comando final
+susa setup python tools pip
+# Output: Instalando pip...
+```
+
+### 📊 Visualização da Hierarquia
+
+```text
+📦 susa (CLI raiz)
+├─ 🏠 self (categoria)
+│  ├─ 📌 version (comando)
+│  └─ 🔌 plugin (subcategoria)
+│     ├─ 📥 install (comando)
+│     ├─ 📋 list (comando)
+│     ├─ 🔄 update (comando)
+│     └─ 🗑️  remove (comando)
+└─ ⚙️  setup (categoria)
+   ├─ 🐳 docker (comando)
+   ├─ 📦 nodejs (comando)
+   └─ 🐍 python (subcategoria)
+      ├─ ⭐ basic (comando)
+      ├─ 📦 venv (comando)
+      └─ 🔧 tools (sub-subcategoria)
+         ├─ 📥 pip (comando)
+         └─ 📖 poetry (comando)
 ```
 
 ### Exemplo de Hierarquia
@@ -579,7 +728,7 @@ Para mais detalhes, veja [Sistema de Plugins](../plugins/overview.md).
 
 ---
 
-## Bibliotecas Disponíveis
+## Bibliotecas do Sistema
 
 O CLI fornece **12 bibliotecas** utilitárias que podem ser usadas nos scripts de comando.
 
@@ -664,7 +813,7 @@ print_current_context
 Parser YAML com yq (uso interno principalmente):
 
 ```bash
-get_yaml_global_field "$YAML" "field"
+get_yaml_field "$YAML" "field"
 get_category_info "$YAML" "category" "field"
 get_command_info "$YAML" "category" "command" "field"
 is_command_dir "$dir"
@@ -1105,7 +1254,6 @@ version=$(yq eval '.version' config.yaml)
 - **[Sistema de Plugins](../plugins/overview.md)** - Extensão via Git
 - **[Arquitetura de Plugins](../plugins/architecture.md)** - Detalhes técnicos
 - **[Referência de Bibliotecas](../reference/libraries.md)** - API completa
-- **[Changelog v2](../reference/changelog-v2.md)** - Mudanças arquiteturais
 - **[Contribuir](../about/contributing.md)** - Como contribuir
 
 ### Automação (Makefile)

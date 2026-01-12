@@ -200,7 +200,7 @@ CLI_DIR=/opt/mycli ./susa setup docker
 
 ---
 
-### `YAML_CONFIG`
+### `GLOBAL_CONFIG_FILE`
 
 Caminho para o arquivo cli.yaml (normalmente detectado automaticamente).
 
@@ -209,7 +209,7 @@ Caminho para o arquivo cli.yaml (normalmente detectado automaticamente).
 **Exemplo:**
 
 ```bash
-YAML_CONFIG=/tmp/test-cli.yaml ./susa --version
+GLOBAL_CONFIG_FILE=/tmp/test-cli.yaml ./susa --version
 ```
 
 ---

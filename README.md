@@ -107,7 +107,7 @@ susa self completion --install
 
 ## 📚 Documentação Completa
 
-- **[Documentação Completa](https://cdorneles.github.io/scripts/)** - Guias e referências
+- **[Documentação Completa](https://carlosdorneles-mb.github.io/susa/)** - Guias e referências
 - **[Quick Start](docs/quick-start.md)** - Primeiros passos
 - **[Guia de Funcionalidades](docs/guides/features.md)** - Recursos detalhados
 - **[Adicionar Comandos](docs/guides/adding-commands.md)** - Tutorial passo-a-passo
@@ -124,4 +124,4 @@ MIT License - veja [LICENSE](docs/about/license.md).
 
 ---
 
-**Feito com ❤️ por [Carlos Dorneles](https://github.com/cdorneles)**
+**Feito com ❤️ por [Carlos Dorneles](https://github.com/carlosdorneles-mb)**

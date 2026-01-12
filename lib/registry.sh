@@ -3,14 +3,11 @@
 # ============================================================
 # Plugin Registry Management
 # ============================================================
-# Funções para gerenciar o arquivo registry.yaml de plugins
-
-# Obtém o diretório da lib
-LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Functions to manage the plugins registry.yaml file
 
 # --- Registry Helper Functions ---
 
-# Adiciona um plugin ao registry
+# Adds a plugin to the registry
 registry_add_plugin() {
     local registry_file="$1"
     local plugin_name="$2"
@@ -19,7 +16,7 @@ registry_add_plugin() {
     
     local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     
-    # Cria arquivo se não existir
+    # Create file if it doesn't exist
     if [ ! -f "$registry_file" ]; then
         cat > "$registry_file" << EOF
 # Plugin Registry
@@ -29,28 +26,28 @@ plugins: []
 EOF
     fi
     
-    # Verifica se plugin já existe
+    # Check if plugin already exists
     if grep -q "name: \"$plugin_name\"" "$registry_file" 2>/dev/null; then
         return 1
     fi
     
-    # Cria entrada temporária
+    # Create temporary entry
     local temp_entry="  - name: \"$plugin_name\"
     source: \"$source_url\"
     version: \"$version\"
     installed_at: \"$timestamp\""
     
-    # Se o array está vazio, substitui []
+    # If array is empty, replace []
     if grep -q "plugins: \[\]" "$registry_file"; then
         sed -i.bak "s/plugins: \[\]/plugins:\n$temp_entry/" "$registry_file"
         rm -f "${registry_file}.bak"
     else
-        # Adiciona ao final do array
+        # Add to end of array
         echo "$temp_entry" >> "$registry_file"
     fi
 }
 
-# Remove um plugin do registry
+# Removes a plugin from the registry
 registry_remove_plugin() {
     local registry_file="$1"
     local plugin_name="$2"
@@ -59,7 +56,7 @@ registry_remove_plugin() {
         return 1
     fi
     
-    # Remove o bloco do plugin (4 linhas agora)
+    # Remove the plugin block (4 lines now)
     awk -v plugin="$plugin_name" '
     BEGIN { skip=0 }
     /- name:/ && $0 ~ "\""plugin"\"" { skip=4; next }
@@ -70,7 +67,7 @@ registry_remove_plugin() {
     mv "${registry_file}.tmp" "$registry_file"
 }
 
-# Lista todos os plugins do registry
+# Lists all plugins from the registry
 registry_list_plugins() {
     local registry_file="$1"
     
@@ -90,7 +87,7 @@ registry_list_plugins() {
     ' "$registry_file"
 }
 
-# Obtém informação de um plugin específico
+# Gets information about a specific plugin
 registry_get_plugin_info() {
     local registry_file="$1"
     local plugin_name="$2"

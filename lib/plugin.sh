@@ -3,23 +3,19 @@
 # ============================================================
 # Plugin Helper Functions
 # ============================================================
-# Funções compartilhadas para gerenciamento de plugins
-
-# Obtém o diretório da lib
-LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # --- Plugin Helper Functions ---
 
-# Verifica se git está instalado
+# Checks if git is installed
 ensure_git_installed() {
     if ! command -v git &>/dev/null; then
-        log_error "Git não encontrado. Instale git primeiro."
+        log_error "Git not found. Install git first."
         return 1
     fi
     return 0
 }
 
-# Detecta versão de um plugin no diretório
+# Detects the version of a plugin in the directory
 detect_plugin_version() {
     local plugin_dir="$1"
     local version="1.0.0"
@@ -33,19 +29,19 @@ detect_plugin_version() {
     echo "$version"
 }
 
-# Conta comandos de um plugin
+# Counts commands from a plugin
 count_plugin_commands() {
     local plugin_dir="$1"
     find "$plugin_dir" -name "config.yaml" -type f | wc -l
 }
 
-# Clona plugin de um repositório Git
+# Clones plugin from a Git repository
 clone_plugin() {
     local url="$1"
     local dest_dir="$2"
     
     if git clone "$url" "$dest_dir" 2>&1; then
-        # Remove .git para economizar espaço
+        # Remove .git to save space
         rm -rf "$dest_dir/.git"
         return 0
     else
@@ -53,11 +49,11 @@ clone_plugin() {
     fi
 }
 
-# Converte user/repo para URL completa do GitHub
+# Converts user/repo to full GitHub URL
 normalize_git_url() {
     local url="$1"
     
-    # Se for formato user/repo, converte para URL completa
+    # If it's user/repo format, convert to full URL
     if [[ "$url" =~ ^[a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+$ ]]; then
         echo "https://github.com/${url}.git"
     else
@@ -65,7 +61,7 @@ normalize_git_url() {
     fi
 }
 
-# Extrai nome do plugin da URL
+# Extracts plugin name from URL
 extract_plugin_name() {
     local url="$1"
     basename "$url" .git

@@ -1,9 +1,5 @@
 #!/bin/bash
 
-# Obtém o diretório da lib
-LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$LIB_DIR/color.sh"
-
 # --- Sudo Helper Functions --- #
 
 check_sudo() {

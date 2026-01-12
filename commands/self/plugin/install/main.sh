@@ -1,21 +1,22 @@
 #!/bin/bash
 
-# Obtém o diretório do CLI
-SCRIPT_DIR="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CLI_DIR="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
-PLUGINS_DIR="$CLI_DIR/plugins"
+# ============================================================
+# Susa CLI - Comando de Instalação de Plugins
+# ============================================================
 
-# Source libs
-source "$CLI_DIR/lib/color.sh"
-source "$CLI_DIR/lib/logger.sh"
-source "$CLI_DIR/lib/string.sh"
+set -euo pipefail
+
+setup_command_env
+
 source "$CLI_DIR/lib/registry.sh"
 source "$CLI_DIR/lib/plugin.sh"
 
-show_help() {
-    echo -e "${BOLD}susa self plugin install${NC} - Instala um plugin"
+show_help() {    
+    show_description
     echo ""
-    echo -e "${LIGHT_GREEN}Uso:${NC}"
+    show_usage "<git-url|user/repo>"
+    echo ""
+    echo -e "${LIGHT_GREEN}Formato:${NC}"
     echo -e "  susa self plugin install ${GRAY}<git-url>${NC}"
     echo -e "  susa self plugin install ${GRAY}<github-user>/<repo>${NC}"
     echo ""

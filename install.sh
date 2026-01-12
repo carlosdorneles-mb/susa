@@ -13,7 +13,7 @@ CONFIG_FILE="$CLI_SOURCE_DIR/cli.yaml"
 source "$CLI_SOURCE_DIR/lib/yaml.sh"
 
 # Lê o nome do CLI do arquivo de configuração
-CLI_NAME=$(get_yaml_global_field "$CONFIG_FILE" "command")
+CLI_NAME=$(get_yaml_field "$CONFIG_FILE" "command")
 if [ -z "$CLI_NAME" ]; then
     CLI_NAME="cli"
 fi

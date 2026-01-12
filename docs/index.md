@@ -25,7 +25,7 @@ Sistema modular de CLI em Shell Script para automação de tarefas e gerenciamen
 
 ```bash
 # macOS e Linux
-curl -LsSf https://raw.githubusercontent.com/cdorneles/scripts/main/cli/install-remote.sh | sh
+curl -LsSf https://raw.githubusercontent.com/carlosdorneles-mb/susa/main/cli/install-remote.sh | sh
 ```
 
 Este comando irá:
@@ -36,22 +36,11 @@ Este comando irá:
 - ✅ Executar a instalação
 - ✅ Configurar o PATH automaticamente
 
-### Instalação Manual
-
-```bash
-git clone https://github.com/cdorneles/scripts.git
-cd scripts/cli
-./install.sh
-```
-
 ### Desinstalação
 
 ```bash
 # Desinstalar remotamente
-curl -LsSf https://raw.githubusercontent.com/cdorneles/scripts/main/cli/uninstall-remote.sh | sh
-
-# Ou localmente (se você clonou o repositório)
-cd scripts/cli && ./uninstall.sh
+curl -LsSf https://raw.githubusercontent.com/carlosdorneles-mb/susa/main/cli/uninstall-remote.sh | sh
 ```
 
 ### Verificar Instalação
@@ -193,9 +182,3 @@ Contribuições são bem-vindas! Veja o [guia de contribuição](about/contribut
 ## 📄 Licença
 
 Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](about/license.md) para mais detalhes.
-
-## 🔗 Links Úteis
-
-- [Repositório GitHub](https://github.com/cdorneles/scripts)
-- [Issues](https://github.com/cdorneles/scripts/issues)
-- [Changelog](reference/changelog-v2.md)

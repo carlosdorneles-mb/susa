@@ -1,9 +1,5 @@
 #!/bin/bash
 
-# Obtém o diretório da lib
-LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$LIB_DIR/color.sh"
-
 # --- Kubernets Helper Functions --- #
 
 # Checks if kubectl is installed. Prints an error and exits if not found and "exit_on_error" is passed as an argument.

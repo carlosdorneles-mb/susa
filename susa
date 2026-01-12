@@ -7,25 +7,29 @@ set -euo pipefail
 # ============================================================
 
 # Resolve o link simbólico para encontrar o diretório real
-SCRIPT_PATH="${BASH_SOURCE[0]}"
-while [ -L "$SCRIPT_PATH" ]; do
-    SCRIPT_DIR="$(cd -P "$(dirname "$SCRIPT_PATH")" && pwd)"
-    SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
-    [[ $SCRIPT_PATH != /* ]] && SCRIPT_PATH="$SCRIPT_DIR/$SCRIPT_PATH"
+CURRENT_SCRIPT="${BASH_SOURCE[0]}"
+while [ -L "$CURRENT_SCRIPT" ]; do
+    SYMLINK_DIR="$(cd -P "$(dirname "$CURRENT_SCRIPT")" && pwd)"
+    CURRENT_SCRIPT="$(readlink "$CURRENT_SCRIPT")"
+    [[ $CURRENT_SCRIPT != /* ]] && CURRENT_SCRIPT="$SYMLINK_DIR/$CURRENT_SCRIPT"
 done
-CLI_DIR="$(cd -P "$(dirname "$SCRIPT_PATH")" && pwd)"
-YAML_CONFIG="$CLI_DIR/cli.yaml"
+
+CLI_DIR="$(cd -P "$(dirname "$CURRENT_SCRIPT")" && pwd)"
+LIB_DIR="$CLI_DIR/lib"
+PLUGINS_DIR="$CLI_DIR/plugins"
+GLOBAL_CONFIG_FILE="$CLI_DIR/cli.yaml"
 
 # ============================================================
 # Carrega Bibliotecas
 # ============================================================
 
-source "$CLI_DIR/lib/logger.sh"
-source "$CLI_DIR/lib/color.sh"
-source "$CLI_DIR/lib/os.sh"
-source "$CLI_DIR/lib/string.sh"
-source "$CLI_DIR/lib/sudo.sh"
-source "$CLI_DIR/lib/yaml.sh"
+source "$LIB_DIR/color.sh"
+source "$LIB_DIR/logger.sh"
+source "$LIB_DIR/string.sh"
+source "$LIB_DIR/os.sh"
+source "$LIB_DIR/sudo.sh"
+
+source "$LIB_DIR/yaml.sh"
 source "$LIB_DIR/cli.sh"
 source "$LIB_DIR/shell.sh"
 source "$LIB_DIR/dependencies.sh"
@@ -34,8 +38,8 @@ source "$LIB_DIR/kubernetes.sh"
 [ -f "$CLI_DIR/config/settings.conf" ] && source "$CLI_DIR/config/settings.conf"
 
 # Valida se o arquivo de configuração existe
-if [ ! -f "$YAML_CONFIG" ]; then
-    echo "Erro: Arquivo de configuração '$YAML_CONFIG' não encontrado" >&2
+if [ ! -f "$GLOBAL_CONFIG_FILE" ]; then
+    echo "Erro: Arquivo de configuração '$GLOBAL_CONFIG_FILE' não encontrado" >&2
     exit 1
 fi
 
@@ -43,30 +47,45 @@ fi
 # Funções
 # ============================================================
 
+show_logo() {
+    local version=$(show_number_version)
+    cat << LOGO
+   _____                 
+  / ____|                
+ | (___  _   _ ___  __ _ 
+  \___ \| | | / __|/ _' |
+  ____) | |_| \__ \ (_| |
+ |_____/ \__,_|___/\__,_| ${version}
+                         
+LOGO
+}
+
 show_help() {
-    local description=$(get_yaml_global_field "$YAML_CONFIG" "description")
-    local categories=$(get_all_categories "$YAML_CONFIG")
+    show_logo
+    
+    local description=$(get_yaml_field "$GLOBAL_CONFIG_FILE" "description")
+    local categories=$(get_all_categories "$GLOBAL_CONFIG_FILE")
 
     echo "$description"
     echo ""
     show_usage
     echo ""
-    echo -e "${LIGHT_GREEN}Commands:${NC}"
+    echo -e "${LIGHT_GREEN}Comandos:${NC}"
     
     for cat in $categories; do
-        local cat_desc=$(get_category_info "$YAML_CONFIG" "$cat" "description")
+        local cat_desc=$(get_category_info "$GLOBAL_CONFIG_FILE" "$cat" "description")
         printf "  ${LIGHT_CYAN}%-12s${NC} %s\n" "$cat" "$cat_desc"
     done
     
     echo ""
-    echo -e "${LIGHT_GREEN}Global options:${NC}"
+    echo -e "${LIGHT_GREEN}Opções globais:${NC}"
     printf "  ${LIGHT_CYAN}%-14s${NC} %s\n" "-h, --help" "Mostra esta mensagem de ajuda"
     printf "  ${LIGHT_CYAN}%-14s${NC} %s\n" "-V, --version" "Mostra a versão do CLI"
 }
 
 list_commands() {
     local category="$1"
-    local categories=$(get_all_categories "$YAML_CONFIG")
+    local categories=$(get_all_categories "$GLOBAL_CONFIG_FILE")
     
     # Verifica se é uma categoria de primeiro nível
     local is_top_level=false
@@ -83,7 +102,7 @@ list_commands() {
         fi
     fi
     
-    local category_desc=$(get_category_info "$YAML_CONFIG" "$category" "description")
+    local category_desc=$(get_category_info "$GLOBAL_CONFIG_FILE" "$category" "description")
     local commands=$(get_category_commands "$category")
     local subcategories=$(get_category_subcategories "$category")
     local current_os=$(get_simple_os)
@@ -97,7 +116,7 @@ list_commands() {
     if [ -n "$subcategories" ]; then
         echo -e "${LIGHT_GREEN}Subcategories:${NC}"
         for subcat in $subcategories; do
-            local subcat_desc=$(get_category_info "$YAML_CONFIG" "$category/$subcat" "description")
+            local subcat_desc=$(get_category_info "$GLOBAL_CONFIG_FILE" "$category/$subcat" "description")
             printf "  ${LIGHT_MAGENTA}%-15s${NC} %s\n" "$subcat" "$subcat_desc"
         done
         
@@ -109,29 +128,29 @@ list_commands() {
     
     # Lista comandos
     if [ -n "$commands" ]; then
-        echo -e "${LIGHT_GREEN}Commands:${NC}"
+        echo -e "${LIGHT_GREEN}Comandos:${NC}"
         
         local has_compatible_commands=false
         
         # Primeiro, lista comandos sem grupo
         for cmd in $commands; do
             # Verifica compatibilidade com o SO
-            if ! is_command_compatible "$YAML_CONFIG" "$category" "$cmd" "$current_os"; then
+            if ! is_command_compatible "$GLOBAL_CONFIG_FILE" "$category" "$cmd" "$current_os"; then
                 continue
             fi
             
             # Pula comandos que pertencem a um grupo
-            local cmd_group=$(get_command_group "$YAML_CONFIG" "$category" "$cmd")
+            local cmd_group=$(get_command_group "$GLOBAL_CONFIG_FILE" "$category" "$cmd")
             if [ -n "$cmd_group" ]; then
                 continue
             fi
             
             has_compatible_commands=true
-            local cmd_desc=$(get_command_info "$YAML_CONFIG" "$category" "$cmd" "description")
+            local cmd_desc=$(get_command_info "$GLOBAL_CONFIG_FILE" "$category" "$cmd" "description")
             
             # Adiciona indicador de sudo se necessário
             local sudo_indicator=""
-            if requires_sudo "$YAML_CONFIG" "$category" "$cmd"; then
+            if requires_sudo "$GLOBAL_CONFIG_FILE" "$category" "$cmd"; then
                 sudo_indicator=" ${YELLOW}[sudo]${NC}"
             fi
             
@@ -139,7 +158,7 @@ list_commands() {
         done
         
         # Depois, lista comandos agrupados
-        local groups=$(get_category_groups "$YAML_CONFIG" "$category" "$current_os")
+        local groups=$(get_category_groups "$GLOBAL_CONFIG_FILE" "$category" "$current_os")
         
         if [ -n "$groups" ]; then
             while IFS= read -r group; do
@@ -150,20 +169,20 @@ list_commands() {
                 
                 for cmd in $commands; do
                     # Verifica compatibilidade com o SO
-                    if ! is_command_compatible "$YAML_CONFIG" "$category" "$cmd" "$current_os"; then
+                    if ! is_command_compatible "$GLOBAL_CONFIG_FILE" "$category" "$cmd" "$current_os"; then
                         continue
                     fi
                     
-                    local cmd_group=$(get_command_group "$YAML_CONFIG" "$category" "$cmd")
+                    local cmd_group=$(get_command_group "$GLOBAL_CONFIG_FILE" "$category" "$cmd")
                     
                     # Lista apenas comandos deste grupo
                     if [ "$cmd_group" = "$group" ]; then
                         has_compatible_commands=true
-                        local cmd_desc=$(get_command_info "$YAML_CONFIG" "$category" "$cmd" "description")
+                        local cmd_desc=$(get_command_info "$GLOBAL_CONFIG_FILE" "$category" "$cmd" "description")
                         
                         # Adiciona indicador de sudo se necessário
                         local sudo_indicator=""
-                        if requires_sudo "$YAML_CONFIG" "$category" "$cmd"; then
+                        if requires_sudo "$GLOBAL_CONFIG_FILE" "$category" "$cmd"; then
                             sudo_indicator=" ${YELLOW}[sudo]${NC}"
                         fi
                         
@@ -197,13 +216,13 @@ execute_command() {
     fi
     
     # Verifica compatibilidade com o SO
-    if ! is_command_compatible "$YAML_CONFIG" "$category" "$command" "$current_os"; then
+    if ! is_command_compatible "$GLOBAL_CONFIG_FILE" "$category" "$command" "$current_os"; then
         log_error "Comando '$command' não é compatível com o sistema operacional atual ($current_os)"
         exit 1
     fi
     
     # Obtém o script name e monta o path
-    local script_name=$(get_command_info "$YAML_CONFIG" "$category" "$command" "script")
+    local script_name=$(get_command_info "$GLOBAL_CONFIG_FILE" "$category" "$command" "script")
     local command_dir=$(dirname "$config_file")
     local script_path="$command_dir/$script_name"
     
@@ -225,14 +244,16 @@ execute_command() {
     if [ "$show_command_help" = true ]; then
         # Verifica se existe a função show_help sem executar o script
         if grep -q "^show_help()" "$script_path" 2>/dev/null; then
+            export SUSA_SHOW_HELP_CALLED=true
             source "$script_path"
             show_help
+            unset SUSA_SHOW_HELP_CALLED
         fi
         exit 0
     fi
     
     # Verifica se requer sudo e avisa o usuário
-    if requires_sudo "$YAML_CONFIG" "$category" "$command"; then
+    if requires_sudo "$GLOBAL_CONFIG_FILE" "$category" "$command"; then
         check_sudo
     fi
     

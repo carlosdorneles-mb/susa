@@ -167,4 +167,4 @@ susa deploy aws ec2      # Executa deploy EC2
 ## 🔗 Próximos Passos
 
 - [Arquitetura de Plugins](architecture.md) - Detalhes técnicos
-- [Exemplos de Plugins](https://github.com/cdorneles/cli-plugins) - Repositório de exemplos
+- [Exemplos de Plugins](https://github.com/carlosdorneles-mb/cli-plugins) - Repositório de exemplos

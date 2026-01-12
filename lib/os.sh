@@ -22,7 +22,7 @@ else
   OS_TYPE="unknown"
 fi
 
-# Função para obter o nome simplificado do OS (linux ou mac)
+# Function to get the simplified name of the OS (linux or mac)
 get_simple_os() {
     if [[ "$OS_TYPE" == "macos" ]]; then
         echo "mac"

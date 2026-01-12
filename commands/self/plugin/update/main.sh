@@ -1,22 +1,20 @@
 #!/bin/bash
 
-# Obtém o diretório do CLI
-SCRIPT_DIR="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CLI_DIR="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
-PLUGINS_DIR="$CLI_DIR/plugins"
-REGISTRY_FILE="$PLUGINS_DIR/registry.yaml"
+# ============================================================
+# Susa CLI - Comando de Atualização de Plugins
+# ============================================================
 
-# Source libs
-source "$CLI_DIR/lib/color.sh"
-source "$CLI_DIR/lib/logger.sh"
+set -euo pipefail
+
+setup_command_env
+
 source "$CLI_DIR/lib/registry.sh"
 source "$CLI_DIR/lib/plugin.sh"
 
 show_help() {
-    echo -e "${BOLD}susa self plugin update${NC} - Atualiza um plugin"
+    show_description
     echo ""
-    echo -e "${LIGHT_GREEN}Uso:${NC}"
-    echo -e "  susa self plugin update ${GRAY}<plugin-name>${NC}"
+    show_usage "<plugin-name>"
     echo ""
     echo -e "${LIGHT_GREEN}Exemplos:${NC}"
     echo -e "  susa self plugin update backup-tools"
