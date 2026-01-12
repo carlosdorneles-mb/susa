@@ -1,0 +1,5 @@
+name: "Completion"
+description: "Configura autocompletar para o shell"
+script: "main.sh"
+sudo: false
+os: ["linux", "mac"]

@@ -13,6 +13,7 @@ Sistema modular de CLI em Shell Script para automação de tarefas e gerenciamen
 - 📚 **12 Bibliotecas Úteis** - Logger, detecção de SO, gerenciamento de dependências
 - 🎨 **Interface Rica** - Logs coloridos, agrupamento visual, help customizado
 - ⚙️ **Parser YAML Robusto** - yq v4+ com instalação automática
+- ⏯️ **Autocompletar** - Tab completion dinâmico para bash e zsh
 
 ## 🚀 Instalação Rápida
 
@@ -194,7 +195,26 @@ Este projeto está licenciado sob a MIT License - veja [LICENSE](docs/about/lice
 ---
 
 ## 💡 Exemplos de Uso
+### Autocompletar (Tab Completion)
 
+```bash
+# Instalar completion automaticamente
+susa self completion --install
+
+# Instalar para um shell específico
+susa self completion bash --install
+susa self completion zsh --install
+
+# Ver o script de completion
+susa self completion bash --print
+
+# Remover completion
+susa self completion --uninstall
+
+# Depois de instalado, use TAB para autocompletar:
+susa <TAB>          # Lista categorias: setup, self
+susa setup <TAB>    # Lista comandos: asdf, docker, python...
+```
 ### Gerenciar Plugins
 
 ```bash

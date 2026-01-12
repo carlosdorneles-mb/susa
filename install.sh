@@ -68,14 +68,38 @@ fi
 echo ""
 echo "✓ Instalação concluída!"
 echo ""
+
+# Oferece instalar completion
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "   Shell Completion (Autocompletar)"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "Deseja instalar o autocompletar (tab completion)?"
+echo "Isso permite usar TAB para completar comandos automaticamente."
+echo ""
+read -p "Instalar completion? (s/N): " -n 1 -r
+echo ""
+
+if [[ $REPLY =~ ^[SsYy]$ ]]; then
+    echo ""
+    echo "→ Instalando completion..."
+    "$CLI_SOURCE_DIR/susa" self completion --install
+    echo ""
+fi
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
 echo "Uso:"
 echo "  $CLI_NAME <categoria> <comando> [opções]"
 echo ""
 echo "Exemplos:"
-echo "  $CLI_NAME install docker"
-echo "  $CLI_NAME update system"
-echo "  $CLI_NAME daily deploy dev"
+echo "  $CLI_NAME setup docker"
+echo "  $CLI_NAME self version"
+echo "  $CLI_NAME self plugin list"
+echo ""
+echo "Para instalar completion depois:"
+echo "  $CLI_NAME self completion --install"
 echo ""
 echo "Para ver a ajuda completa:"
-echo "  $CLI_NAME help"
+echo "  $CLI_NAME --help"
 echo ""

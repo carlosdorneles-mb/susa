@@ -65,6 +65,7 @@ nav:
     - Adicionando Comandos: guides/adding-commands.md
     - Funcionalidades: guides/features.md
     - Configuração: guides/configuration.md
+    - Shell Completion: guides/shell-completion.md
   - Plugins:
     - Visão Geral: plugins/overview.md
     - Arquitetura: plugins/architecture.md
