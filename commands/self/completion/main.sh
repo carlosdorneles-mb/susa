@@ -1,9 +1,4 @@
 #!/bin/bash
-
-# ============================================================
-# Susa CLI - Shell Completion Generator
-# ============================================================
-
 set -euo pipefail
 
 setup_command_env
@@ -11,6 +6,7 @@ setup_command_env
 # Source completion library
 source "$CLI_DIR/lib/completion.sh"
 
+# Help function
 show_help() {
     show_description
     echo ""
@@ -42,7 +38,7 @@ show_help() {
     echo "    source ~/.zshrc    (para Zsh)"
 }
 
-# Descobre categorias disponíveis dinamicamente
+# Discover available categories dynamically
 get_categories() {
     local commands_dir="$CLI_DIR/commands"
     local categories=""
@@ -59,7 +55,7 @@ get_categories() {
     echo "$categories"
 }
 
-# Descobre comandos de uma categoria
+# Discover commands from a category dynamically
 get_category_commands() {
     local category="$1"
     local category_dir="$CLI_DIR/commands/$category"
@@ -80,7 +76,7 @@ get_category_commands() {
     echo "$commands"
 }
 
-# Gera script de completion para Bash
+# Generate completion script for Bash
 generate_bash_completion() {
     cat << 'BASH_COMPLETION_EOF'
 # Susa CLI - Bash Completion
@@ -192,7 +188,7 @@ complete -F _susa_completion susa
 BASH_COMPLETION_EOF
 }
 
-# Gera script de completion para Zsh
+# Generate script completion for Zsh
 generate_zsh_completion() {
     cat << 'ZSH_COMPLETION_EOF'
 #compdef susa
@@ -311,10 +307,10 @@ install_bash_completion() {
     local completion_file=$(get_completion_file_path "bash")
     local shell_config=$(detect_shell_config)
     
-    # Cria diretório se não existir
+    # Create directory if it doesn't exist
     mkdir -p "$completion_dir"
     
-    # Gera e salva o script
+    # Generate and save the script
     generate_bash_completion > "$completion_file"
     chmod +x "$completion_file"
     
@@ -325,7 +321,7 @@ install_bash_completion() {
     echo -e "  2. Teste: ${LIGHT_CYAN}susa <TAB><TAB>${NC}"
 }
 
-# Instala completion para Zsh
+# Install completion for Zsh
 install_zsh_completion() {
     log_info "Instalando autocompletar para Zsh..."
     
@@ -341,14 +337,14 @@ install_zsh_completion() {
     local completion_file=$(get_completion_file_path "zsh")
     local shell_config=$(detect_shell_config)
     
-    # Cria diretório se não existir
+    # Create directory if it doesn't exist
     mkdir -p "$completion_dir"
     
-    # Gera e salva o script
+    # Generate and save the script
     generate_zsh_completion > "$completion_file"
     chmod +x "$completion_file"
     
-    # Adiciona ao fpath se necessário
+    # Add to path if necessary
     if [ -f "$shell_config" ]; then
         if ! grep -q "fpath=.*$completion_dir" "$shell_config"; then
             echo "" >> "$shell_config"
@@ -396,23 +392,78 @@ uninstall_completion() {
     fi
 }
 
-# Parse argumentos
+# Handle install action
+handle_install() {
+    local shell_type="$1"
+    
+    # Detecta shell se não especificado
+    if [ -z "$shell_type" ]; then
+        shell_type=$(detect_shell_type)
+        if [ "$shell_type" = "unknown" ]; then
+            log_error "Não foi possível detectar seu shell. Especifique: bash ou zsh"
+            return 1
+        fi
+        log_debug "Shell detectado: $shell_type"
+    fi
+    
+    case "$shell_type" in
+        bash)
+            install_bash_completion
+            ;;
+        zsh)
+            install_zsh_completion
+            ;;
+        fish)
+            log_error "Fish shell ainda não suportado"
+            return 1
+            ;;
+        *)
+            log_error "Shell não suportado: $shell_type"
+            return 1
+            ;;
+    esac
+}
+
+# Handle print action
+handle_print() {
+    local shell_type="$1"
+    
+    if [ -z "$shell_type" ]; then
+        log_error "Especifique o shell: bash ou zsh"
+        return 1
+    fi
+    
+    case "$shell_type" in
+        bash)
+            generate_bash_completion
+            ;;
+        zsh)
+            generate_zsh_completion
+            ;;
+        *)
+            log_error "Shell não suportado: $shell_type"
+            return 1
+            ;;
+    esac
+}
+
+# Main function
 main() {
     local shell_type=""
-    local action="help"
+    local action=""
     
-    # Se não houver argumentos, mostra help
+    # If there are no arguments, show help
     if [ $# -eq 0 ]; then
         show_help
         return 0
     fi
     
-    # Parse argumentos
+    # Parse arguments
     while [ $# -gt 0 ]; do
         case "$1" in
             -h|--help)
-                action="help"
-                shift
+                show_help
+                return 0
                 ;;
             -i|--install)
                 action="install"
@@ -439,65 +490,27 @@ main() {
         esac
     done
     
-    # Executa ação
+    # If no action was specified, show help
+    if [ -z "$action" ]; then
+        show_help
+        return 0
+    fi
+    
+    # Performs corresponding action
     case "$action" in
         install)
-            # Detecta shell se não especificado
-            if [ -z "$shell_type" ]; then
-                shell_type=$(detect_shell_type)
-                if [ "$shell_type" = "unknown" ]; then
-                    log_error "Não foi possível detectar seu shell. Especifique: bash ou zsh"
-                    return 1
-                fi
-                log_debug "Shell detectado: $shell_type"
-            fi
-            
-            case "$shell_type" in
-                bash)
-                    install_bash_completion
-                    ;;
-                zsh)
-                    install_zsh_completion
-                    ;;
-                fish)
-                    log_error "Fish shell ainda não suportado"
-                    return 1
-                    ;;
-                *)
-                    log_error "Shell não suportado: $shell_type"
-                    return 1
-                    ;;
-            esac
+            handle_install "$shell_type"
             ;;
         uninstall)
             uninstall_completion
             ;;
         print)
-            if [ -z "$shell_type" ]; then
-                log_error "Especifique o shell: bash ou zsh"
-                return 1
-            fi
-            
-            case "$shell_type" in
-                bash)
-                    generate_bash_completion
-                    ;;
-                zsh)
-                    generate_zsh_completion
-                    ;;
-                *)
-                    log_error "Shell não suportado: $shell_type"
-                    return 1
-                    ;;
-            esac
-            ;;
-        help)
-            show_help
+            handle_print "$shell_type"
             ;;
     esac
 }
 
-# Executa (não executa se já foi chamado via source para show_help)
+# Executes (does not execute if it has already been called via source for show_help)
 if [ "${SUSA_SHOW_HELP_CALLED:-false}" != "true" ]; then
     main "$@"
 fi

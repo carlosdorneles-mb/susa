@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Obtém o diretório da lib
+# Get the lib directory
 source "$LIB_DIR/color.sh"
 source "$LIB_DIR/yaml.sh"
 

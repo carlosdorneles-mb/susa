@@ -1,6 +1,4 @@
 # Plugin Registry
-# Este arquivo mantém o registro de todos os plugins instalados
-
-version: "1.0.0"
+# This file keeps track of all installed plugins
 
 plugins:

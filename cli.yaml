@@ -1,9 +1,8 @@
 # CLI Global Configuration
-
 name: "Susa CLI"
 description: "Gerenciador de Shell Scripts para automação de tarefas diárias e instalação de software"
 version: "1.0.0"
 
-# Diretórios de comandos
+# Command directories
 commands_dir: "commands"
 plugins_dir: "plugins"
