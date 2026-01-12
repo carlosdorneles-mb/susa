@@ -1,0 +1,7 @@
+category: install
+id: asdf
+name: "ASDF"
+description: "Instala ASDF Version Manager"
+script: "main.sh"
+sudo: false
+os: ["linux", "mac"]
