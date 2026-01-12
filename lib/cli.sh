@@ -43,7 +43,7 @@ build_command_path() {
 #   show_usage "<file> <destination>"
 #   show_usage --no-options
 show_usage() {
-    local cli_name=$(get_yaml_field "$GLOBAL_CONFIG_FILE" "command")
+    local cli_name="susa"
     local command_path=$(build_command_path)
     local show_options=true
     local custom_args=""

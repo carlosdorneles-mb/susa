@@ -1,24 +1,16 @@
 #!/bin/bash
 
-# ============================================================
-# Instalador do CLI
-# ============================================================
+# ===============
+# CLI Installer
+# ===============
 
 set -e
 
 CLI_SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="$CLI_SOURCE_DIR/cli.yaml"
+CLI_NAME="susa"
 
-# Carrega a biblioteca YAML
-source "$CLI_SOURCE_DIR/lib/yaml.sh"
-
-# Lê o nome do CLI do arquivo de configuração
-CLI_NAME=$(get_yaml_field "$CONFIG_FILE" "command")
-if [ -z "$CLI_NAME" ]; then
-    CLI_NAME="cli"
-fi
-
-# Detecta o sistema operacional e define o diretório de instalação
+# Detects the operating system and sets the installation directory
 if [[ "$OSTYPE" == "darwin"* ]]; then
     # macOS
     OS_TYPE="macOS"
@@ -31,70 +23,86 @@ else
     SHELL_CONFIG="~/.bashrc ou ~/.zshrc"
 fi
 
-# Cria diretório de instalação se não existir
+# Create installation directory if it doesn't exist
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  Instalando Susa CLI"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
 if [ ! -d "$INSTALL_DIR" ]; then
-    echo "→ Criando diretório $INSTALL_DIR..."
+    echo "→ Criando diretório de instalação..."
     mkdir -p "$INSTALL_DIR"
+    echo "  ✓ Diretório criado: $INSTALL_DIR"
+else
+    echo "→ Verificando diretório de instalação..."
+    echo "  ✓ Diretório existe: $INSTALL_DIR"
 fi
 
-# Cria symlink para o CLI
+# Create symlink for the CLI
 echo "→ Criando link simbólico..."
 ln -sf "$CLI_SOURCE_DIR/susa" "$INSTALL_DIR/$CLI_NAME"
+echo "  ✓ Executável instalado"
 
-# Verifica se o diretório está no PATH
+# Checks if the directory is in the PATH
+echo ""
 if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "  ⚠  Configuração do PATH necessária"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
-    echo "⚠  ATENÇÃO: $INSTALL_DIR não está no seu PATH"
+    echo "$INSTALL_DIR não está no seu PATH."
     echo ""
-    echo "Adicione a seguinte linha ao seu $SHELL_CONFIG:"
+    echo "Adicione ao seu $SHELL_CONFIG:"
     echo ""
-    echo "    export PATH=\"\$HOME/.local/bin:\$PATH\""
+    echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
     echo ""
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        echo "Depois execute: source ~/.zshrc  (ou ~/.bash_profile)"
+        echo "Execute: source ~/.zshrc  (ou ~/.bash_profile)"
     else
-        echo "Depois execute: source ~/.bashrc  (ou ~/.zshrc)"
+        echo "Execute: source ~/.bashrc  (ou ~/.zshrc)"
     fi
-    echo ""
 else
-    echo "✓ Diretório já está no PATH"
+    echo "→ Verificando PATH..."
+    echo "  ✓ Diretório já está no PATH"
 fi
-
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  Shell Completion (Autocompletar)"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "✓ Instalação concluída!"
+echo "Instalar autocompletar (tab completion)?"
+echo "Permite usar TAB para completar comandos."
 echo ""
-
-# Oferece instalar completion
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "   Shell Completion (Autocompletar)"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-echo "Deseja instalar o autocompletar (tab completion)?"
-echo "Isso permite usar TAB para completar comandos automaticamente."
-echo ""
-read -p "Instalar completion? (s/N): " -n 1 -r
+read -p "Instalar agora? (s/N): " -n 1 -r
 echo ""
 
 if [[ $REPLY =~ ^[SsYy]$ ]]; then
     echo ""
-    echo "→ Instalando completion..."
-    "$CLI_SOURCE_DIR/susa" self completion --install
+    echo "→ Instalando autocompletar..."
+    if "$CLI_SOURCE_DIR/susa" self completion --install 2>&1 | grep -q "instalado em:"; then
+        echo "  ✓ Autocompletar instalado"
+        echo ""
+        echo "  Nota: Reinicie o terminal ou execute 'source' no seu shell config"
+    fi
+else
     echo ""
+    echo "  Você pode instalar depois com:"
+    echo "  $CLI_NAME self completion --install"
 fi
 
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "Uso:"
-echo "  $CLI_NAME <categoria> <comando> [opções]"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  Comandos Úteis"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "Exemplos:"
-echo "  $CLI_NAME setup docker"
-echo "  $CLI_NAME self version"
-echo "  $CLI_NAME self plugin list"
+echo "  Uso básico:"
+echo "    $CLI_NAME <categoria> <comando> [opções]"
 echo ""
-echo "Para instalar completion depois:"
-echo "  $CLI_NAME self completion --install"
+echo "  Exemplos:"
+echo "    $CLI_NAME setup docker        # Instalar Docker"
+echo "    $CLI_NAME self info           # Info da instalação"
+echo "    $CLI_NAME self version        # Versão do CLI"
 echo ""
-echo "Para ver a ajuda completa:"
-echo "  $CLI_NAME --help"
+echo "  Ajuda completa:"
+echo "    $CLI_NAME --help"
 echo ""

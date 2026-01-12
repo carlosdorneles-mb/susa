@@ -4,10 +4,8 @@ set -euo pipefail
 # ============================================================
 # Remote Uninstaller for Susa CLI
 # ============================================================
-# Desinstala o Susa CLI
-# Uso: curl -LsSf https://raw.githubusercontent.com/USER/REPO/main/uninstall-remote.sh | sh
 
-# Configurações
+# Settings
 CLI_NAME="${CLI_NAME:-susa}"
 INSTALL_DIR="${CLI_INSTALL_DIR:-$HOME/.local/susa}"
 BIN_DIR="$HOME/.local/bin"
@@ -19,7 +17,7 @@ YELLOW='\033[0;33m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# Funções de log
+# Log functions
 log_info() {
     echo -e "${CYAN}[INFO]${NC} $1"
 }
@@ -36,7 +34,7 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1" >&2
 }
 
-# Detecta sistema operacional
+# Detect operating system
 detect_os() {
     if [[ "$(uname)" == "Darwin" ]]; then
         echo "macOS"
@@ -57,13 +55,13 @@ show_banner() {
     echo ""
 }
 
-# Função principal de desinstalação
+# Main uninstall function
 uninstall_susa() {
     local os_type=$(detect_os)
     log_info "Sistema detectado: $os_type"
     echo ""
 
-    # Executa o script de desinstalação local
+    # Run the local uninstall script
     if [ -d "$INSTALL_DIR" ] && [ -f "$INSTALL_DIR/uninstall.sh" ]; then
         log_info "Executando script de desinstalação local..."
         bash "$INSTALL_DIR/uninstall.sh"
@@ -85,11 +83,11 @@ uninstall_susa() {
     echo ""
 }
 
-# Execução principal
+# Main execution
 main() {
     show_banner
 
-    # Confirmação
+    # Confirmation
     echo -ne "${YELLOW}Deseja realmente desinstalar o Susa CLI? [s/N]:${NC} "
     read -r confirm
     echo ""
@@ -102,12 +100,12 @@ main() {
     fi
 }
 
-# Verifica se está sendo executado via pipe
+# Checks if it is being executed via pipe
 if [ -t 0 ]; then
-    # Terminal interativo
+    # Interactive terminal
     main
 else
-    # Via pipe (curl | sh), desinstala direto
+    # Via pipe (curl | sh), uninstalls directly
     show_banner
     log_warning "Executando desinstalação automática (não interativa)..."
     echo ""

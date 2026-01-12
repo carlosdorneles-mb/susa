@@ -1,22 +1,14 @@
 #!/bin/bash
 
-# ============================================================
-# Desinstalador do Susa CLI
-# ============================================================
+# =================
+# CLI Uninstaller
+# =================
 
 CLI_SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="$CLI_SOURCE_DIR/cli.yaml"
+CLI_NAME="susa"
 
-# Carrega a biblioteca YAML
-source "$CLI_SOURCE_DIR/lib/yaml.sh"
-
-# Lê o nome do CLI do arquivo de configuração
-CLI_NAME=$(get_yaml_field "$CONFIG_FILE" "command")
-if [ -z "$CLI_NAME" ]; then
-    CLI_NAME="susa"
-fi
-
-# Detecta o sistema operacional
+# Detects the operating system
 if [[ "$OSTYPE" == "darwin"* ]]; then
     OS_TYPE="macOS"
 else
@@ -25,21 +17,33 @@ fi
 
 INSTALL_DIR="$HOME/.local/bin"
 
-# Remove completion usando o comando existente
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  Desinstalando Susa CLI"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+# Remove completion using existing command
 if [ -x "$CLI_SOURCE_DIR/susa" ]; then
-    echo "→ Removendo completion..."
-    "$CLI_SOURCE_DIR/susa" self completion --uninstall 2>/dev/null || true
+    echo "→ Removendo autocompletar..."
+    if "$CLI_SOURCE_DIR/susa" self completion --uninstall 2>&1 | grep -q "removido com sucesso"; then
+        echo "  ✓ Autocompletar removido"
+    fi
 fi
 
-# Remove o symlink
+# Remove the symbolic link
 if [ -L "$INSTALL_DIR/$CLI_NAME" ]; then
-    echo "→ Removendo link simbólico..."
+    echo "→ Removendo executável..."
     rm "$INSTALL_DIR/$CLI_NAME"
-    echo "✓ Executável removido"
+    echo "  ✓ Executável removido"
 else
-    echo "⚠  Susa CLI não está instalado em $INSTALL_DIR"
+    echo "→ Executável não encontrado em $INSTALL_DIR"
 fi
 
 echo ""
-echo "✓ Susa CLI desinstalado com sucesso!"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  ✓ Susa CLI desinstalado com sucesso!"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "Nota: Reinicie o terminal para aplicar todas as mudanças"
 echo ""

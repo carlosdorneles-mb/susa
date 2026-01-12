@@ -1,13 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 
-# ============================================================
-# Remote Installer for Susa CLI
-# ============================================================
-# Instala o Susa CLI diretamente do GitHub
-# Uso: curl -LsSf https://raw.githubusercontent.com/USER/REPO/main/install-remote.sh | sh
+# =========================
+# Remote Installer for CLI
+# =========================
 
-# Configurações
+# Settings
 REPO_URL="${CLI_REPO_URL:-https://github.com/carlosdorneles-mb/susa.git}"
 REPO_BRANCH="${CLI_REPO_BRANCH:-main}"
 INSTALL_DIR="${CLI_INSTALL_DIR:-$HOME/.local/susa}"
@@ -20,7 +18,7 @@ YELLOW='\033[0;33m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# Funções de log
+# Log functions
 log_info() {
     echo -e "${CYAN}[INFO]${NC} $1"
 }
@@ -37,7 +35,7 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1" >&2
 }
 
-# Cleanup ao sair
+# Cleanup
 cleanup() {
     if [ -d "$TEMP_DIR" ]; then
         rm -rf "$TEMP_DIR"
@@ -45,7 +43,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Detecta sistema operacional
+# Detect operating system
 detect_os() {
     if [[ "$(uname)" == "Darwin" ]]; then
         echo "macos"
@@ -67,12 +65,12 @@ detect_os() {
     fi
 }
 
-# Verifica se comando existe
+# Verify that the command exists
 command_exists() {
     command -v "$1" &>/dev/null
 }
 
-# Garante que git está instalado
+# Ensure git is installed
 ensure_git() {
     if command_exists git; then
         return 0
@@ -132,7 +130,7 @@ show_banner() {
     echo ""
 }
 
-# Instalação principal
+# Main installation
 main() {
     show_banner
     
@@ -144,13 +142,13 @@ main() {
         exit 1
     fi
     
-    # Verifica/instala git
+    # Check/install git
     log_info "Verificando dependências..."
     if ! ensure_git; then
         exit 1
     fi
     
-    # Clona repositório
+    # Clones repository
     log_info "Baixando Susa CLI do repositório..."
     cd "$TEMP_DIR"
     
@@ -160,18 +158,18 @@ main() {
         exit 1
     fi
     
-    cd cli/cli  # Navega para o diretório do Susa CLI dentro do repo
+    cd cli/cli  # Navigate to the Susa CLI directory within the repo
     
-    # Verifica se install.sh existe
+    # Check if install.sh exists
     if [ ! -f "install.sh" ]; then
         log_error "Script de instalação não encontrado no repositório"
         exit 1
     fi
     
-    # Torna install.sh executável
+    # Make install.sh executable
     chmod +x install.sh
     
-    # Executa instalação
+    # Run installation
     log_info "Executando instalação..."
     echo ""
     
@@ -191,5 +189,5 @@ main() {
     fi
 }
 
-# Executa instalação
+# Run installation
 main "$@"
