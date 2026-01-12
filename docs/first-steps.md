@@ -66,7 +66,7 @@ susa
 susa
 
 # Navegar em categorias
-susa install
+susa setup
 susa self
 
 # Acessar subcategorias
@@ -77,10 +77,10 @@ susa self plugin
 
 ```bash
 # Instalar ASDF
-susa install asdf
+susa setup asdf
 
-# Ver comandos disponíveis em install
-susa install help
+# Ver comandos disponíveis em setup
+susa setup help
 ```
 
 ### Gerenciar Plugins

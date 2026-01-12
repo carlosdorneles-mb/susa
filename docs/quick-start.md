@@ -70,7 +70,7 @@ commands/
 **⚠️ IMPORTANTE:** O sistema verifica a **existência do script** para diferenciar comandos de subcategorias!
 
 | Tipo | Tem config.yaml? | Tem campo 'script'? | Tem arquivo script? | Comportamento |
-|------|------------------|---------------------|---------------------|---------------|
+| ---- | ---------------- | ------------------- | ------------------- | ------------- |
 | **Categoria** | ✅ Sim | ❌ Não | ❌ Não | Navegável |
 | **Subcategoria** | ✅ Sim | ❌ Não | ❌ Não | Navegável |
 | **Comando** | ✅ Sim | ✅ Sim | ✅ Sim | Executável |
@@ -160,6 +160,7 @@ chmod +x commands/tools/python/cmd2/main.sh
 ```
 
 ## 📋 Campos config.yaml
+
 Para Comandos (Executáveis)
 
 ```yaml
@@ -176,8 +177,7 @@ group: "Nome do Grupo"    # Opcional: agrupamento visual
 ```yaml
 name: "Nome da Subcategoria"
 description: "Descrição"
-# SEM campo 'script' = subcategoria navegáveeis
-group: "Nome do Grupo"       # Agrupamento visual
+# SEM campo 'script' = subcategoria navegável
 ```
 
 ## 🎯 Navegação Rápida
@@ -192,8 +192,7 @@ group: "Nome do Grupo"       # Agrupamento visual
 
 ## 💡 Dicas Importantes
 
-1. **Sem config.yaml = subcategoria navegável**
-2. **Todos os itens têm `config.yaml`** (categorias, subcategorias e comandos)
+1. **Todos os itens têm `config.yaml`** (categorias, subcategorias e comandos)
 2. **Campo `script:` indica que é executável**
 3. **Sem campo `script:` = subcategoria navegável**
 4. **Script deve existir e ter permissão de execução**

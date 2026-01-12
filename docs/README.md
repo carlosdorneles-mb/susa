@@ -90,7 +90,7 @@ Exemplos:
 ````markdown
 ```bash
 # Code block com highlight
-susa install docker
+susa setup docker
 ```
 
 !!! note "Nota"

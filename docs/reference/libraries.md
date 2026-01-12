@@ -11,6 +11,7 @@ Define constantes de cores para formatação de texto no console.
 ### Variáveis Disponíveis
 
 #### Cores Básicas
+
 ```bash
 RED              # Vermelho
 GREEN            # Verde
@@ -23,6 +24,7 @@ WHITE            # Branco
 ```
 
 #### Cores Claras
+
 ```bash
 LIGHT_RED        # Vermelho claro
 LIGHT_GREEN      # Verde claro
@@ -34,11 +36,13 @@ LIGHT_GRAY       # Cinza claro
 ```
 
 #### Cores Escuras
+
 ```bash
 CYAN_DARK        # Ciano escuro
 ```
 
 #### Estilos
+
 ```bash
 BOLD             # Negrito
 ITALIC           # Itálico
@@ -50,6 +54,7 @@ RESET            # Reset (alias para NC)
 ```
 
 ### Exemplo de Uso
+
 ```bash
 #!/bin/bash
 source "$(dirname "$0")/../../lib/color.sh"
@@ -68,95 +73,114 @@ Sistema de logs com níveis diferentes e timestamps automáticos.
 ### Funções
 
 #### `log()`
+
 Log básico sem nível específico.
 
 **Uso:**
+
 ```bash
 log "Mensagem informativa"
 ```
 
 **Saída:**
-```
+
+```text
 [MESSAGE] 2026-01-12 14:30:45 - Mensagem informativa
 ```
 
 ---
 
 #### `log_info()`
+
 Log de informação (azul ciano).
 
 **Uso:**
+
 ```bash
 log_info "Iniciando processo..."
 ```
 
 **Saída:**
-```
+
+```text
 [INFO] 2026-01-12 14:30:45 - Iniciando processo...
 ```
 
 ---
 
 #### `log_success()`
+
 Log de sucesso (verde).
 
 **Uso:**
+
 ```bash
 log_success "Instalação concluída com sucesso!"
 ```
 
 **Saída:**
-```
+
+```text
 [SUCCESS] 2026-01-12 14:30:45 - Instalação concluída com sucesso!
 ```
 
 ---
 
 #### `log_warning()`
+
 Log de aviso (amarelo).
 
 **Uso:**
+
 ```bash
 log_warning "Recurso em versão experimental"
 ```
 
 **Saída:**
-```
+
+```text
 [WARNING] 2026-01-12 14:30:45 - Recurso em versão experimental
 ```
 
 ---
 
 #### `log_error()`
+
 Log de erro (vermelho, escreve para stderr).
 
 **Uso:**
+
 ```bash
 log_error "Falha ao conectar ao servidor"
 ```
 
 **Saída (stderr):**
-```
+
+```text
 [ERROR] 2026-01-12 14:30:45 - Falha ao conectar ao servidor
 ```
 
 ---
 
 #### `log_debug()`
+
 Log de debug (cinza, só aparece se `DEBUG=true`).
 
 **Uso:**
+
 ```bash
 DEBUG=true
 log_debug "Variável X = $X"
 ```
 
 **Saída (somente com DEBUG=true):**
-```
+
+```text
 [DEBUG] 2026-01-12 14:30:45 - Variável X = 42
 ```
 
 **Ativação:**
+
 ```bash
 # Ativa debug com qualquer um dos valores:
 DEBUG=true
@@ -165,6 +189,7 @@ DEBUG=on
 ```
 
 ### Exemplo Completo
+
 ```bash
 #!/bin/bash
 source "$(dirname "$0")/../../lib/logger.sh"
@@ -191,15 +216,18 @@ Detecção de sistema operacional e funções relacionadas.
 ### Variáveis
 
 #### `OS_TYPE`
+
 Tipo do sistema operacional detectado.
 
 **Valores possíveis:**
+
 - `macos` - macOS / Darwin
 - `debian` - Ubuntu, Debian e derivados
 - `fedora` - Fedora, RHEL, CentOS, Rocky, AlmaLinux
 - `unknown` - Sistema não reconhecido
 
 **Exemplo:**
+
 ```bash
 source "$(dirname "$0")/../../lib/os.sh"
 
@@ -211,9 +239,11 @@ fi
 ### Funções
 
 #### `get_simple_os()`
+
 Retorna nome simplificado do OS (linux ou mac).
 
 **Retorno:**
+
 - `mac` - macOS
 - `linux` - Qualquer Linux (Debian, Fedora, etc.)
 - `unknown` - Sistema não reconhecido
@@ -1350,7 +1380,7 @@ Mostra mensagem de uso do CLI.
 show_usage
 # Output: Usage: cli <command> [options]
 
-show_usage install docker
+show_usage setup docker
 # Output: Usage: susa setup docker <command> [options]
 ```
 

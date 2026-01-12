@@ -163,7 +163,7 @@ Ativa modo debug com logs adicionais.
 **Exemplo:**
 
 ```bash
-DEBUG=true susa install docker
+DEBUG=true susa setup docker
 ```
 
 **Saída:**
@@ -240,7 +240,7 @@ Reinstale:
 Agora use:
 
 ```bash
-meuapp install docker
+meuapp setup docker
 meuapp --version
 ```
 
@@ -533,7 +533,7 @@ log_info "Conectando a API..."
 
 ```bash
 # Ativar modo debug
-DEBUG=true susa install docker
+DEBUG=true susa setup docker
 
 # Verificar se arquivo existe
 ls -la /caminho/para/cli/cli.yaml

@@ -1,263 +1,116 @@
 # Susa CLI
 
-Sistema modular de CLI em Shell Script para automação de tarefas e gerenciamento de ferramentas no Linux e macOS.
+Framework modular em Shell Script para criar CLIs extensíveis com descoberta automática de comandos, sistema de plugins e suporte a autocompletar.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## ✨ Características
 
 - 🔍 **Discovery Automático** - Comandos descobertos da estrutura de diretórios
-- 📦 **Sistema de Plugins** - Extensão via repositórios Git
-- 🎯 **Subcategorias Multi-nível** - Navegação hierárquica ilimitada
-- 🖥️ **Multi-plataforma** - Suporte para Linux (Debian, Fedora) e macOS
-- 📚 **12 Bibliotecas Úteis** - Logger, detecção de SO, gerenciamento de dependências
-- 🎨 **Interface Rica** - Logs coloridos, agrupamento visual, help customizado
-- ⚙️ **Parser YAML Robusto** - yq v4+ com instalação automática
-- ⏯️ **Autocompletar** - Tab completion dinâmico para bash e zsh
+- 📦 **Sistema de Plugins** - Extensível via repositórios Git
+- 🎯 **Subcategorias Multi-nível** - Hierarquia ilimitada de comandos
+- 🖥️ **Multi-plataforma** - Linux e macOS
+- 📚 **Bibliotecas Reutilizáveis** - Logger, detecção de SO, parser YAML e mais
+- ⚡ **Autocompletar** - Tab completion para bash e zsh
 
-## 🚀 Instalação Rápida
-
-### Instalação
+## 🚀 Instalação
 
 ```bash
-# macOS e Linux
 curl -LsSf https://raw.githubusercontent.com/carlosdorneles-mb/susa/main/install-remote.sh | sh
 ```
 
 ## 📖 Uso Básico
 
 ```bash
-# Listar categorias
-susa
-
-# Listar comandos de uma categoria
-susa setup
-
-# Executar comando
-susa setup docker
-
-# Navegar subcategorias
-susa setup python tools pip
-
-# Help de comando
-susa setup docker --help
-
-# Versão do Susa CLI
-susa --version
+susa                    # Listar categorias
+susa setup              # Listar comandos da categoria
+susa setup docker       # Executar comando
+susa setup --help       # Ajuda
+susa --version          # Versão
 ```
 
-## 📁 Estrutura
+## 📁 Estrutura Básica
 
 ```text
 susa/
-├── susa                     # Executável principal
-├── cli.yaml                 # Configuração global
-├── install.sh               # Instalador local
-├── install-remote.sh        # Instalador remoto (curl | sh)
-├── uninstall.sh            # Desinstalador
-├── Makefile                 # Automação
-│
-├── commands/                # Comandos nativos
-│   ├── setup/
-│   │   ├── config.yaml     # Config da categoria
-│   │   ├── docker/
-│   │   │   ├── config.yaml # Config do comando
-│   │   │   └── main.sh     # Script executável
-│   │   └── python/         # Subcategoria
-│   │       └── tools/      # Sub-subcategoria
-│   └── self/               # Comandos do próprio CLI
-│       ├── version/
-│       └── plugin/
-│
-├── plugins/                 # Plugins externos (Git)
-│   └── registry.yaml       # Registry de plugins
-│
-├── lib/                     # 12 bibliotecas compartilhadas
-│   ├── yaml.sh             # Parser YAML (yq)
-│   ├── dependencies.sh     # Gestão de dependências
-│   ├── logger.sh           # Sistema de logs
-│   ├── color.sh            # Cores ANSI
-│   ├── os.sh               # Detecção de SO
-│   ├── sudo.sh             # Gestão sudo
-│   ├── string.sh           # Manipulação strings
-│   ├── shell.sh            # Detecção shell
-│   ├── kubernetes.sh       # Funções K8s
-│   ├── plugin.sh           # Gestão plugins
-│   ├── registry.sh         # Gestão registry
-│   ├── cli.sh              # Funções CLI
-│   └── utils.sh            # Agregador
-│
-├── config/                  # Configurações opcionais
-│   └── settings.conf
-│
-└── docs/                    # Documentação MkDocs
-    ├── index.md
-    ├── quick-start.md
-    ├── guides/
-    ├── plugins/
-    ├── reference/
-    └── about/
+├── susa                    # Executável principal
+├── cli.yaml                # Configuração global
+├── commands/               # Comandos nativos
+│   ├── setup/             # Categoria de comandos
+│   │   ├── config.yaml
+│   │   └── docker/        # Comando individual
+│   │       ├── config.yaml
+│   │       └── main.sh
+│   └── self/              # Comandos internos (plugin, completion)
+├── plugins/               # Plugins externos (Git)
+│   └── registry.yaml
+├── lib/                   # Bibliotecas compartilhadas
+└── docs/                  # Documentação MkDocs
 ```
 
-## 🎯 Principais Funcionalidades
+## 🚀 Começar Rápido
 
-### Discovery Automático
+### Criar Novo Comando
 
-Comandos são descobertos automaticamente da estrutura de diretórios. Adicione uma pasta em `commands/` com `config.yaml` e pronto!
+```bash
+# 1. Estrutura
+mkdir -p commands/setup/meuapp
 
-### Sistema de Plugins
+# 2. Configuração (commands/setup/meuapp/config.yaml)
+cat > commands/setup/meuapp/config.yaml << EOF
+name: "Meu App"
+description: "Instala Meu App"
+script: "main.sh"
+EOF
 
-Estenda o Susa CLI sem modificar o código principal:
+# 3. Script (commands/setup/meuapp/main.sh)
+cat > commands/setup/meuapp/main.sh << 'EOF'
+#!/bin/bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$(cd "$SCRIPT_DIR/../../.." && pwd)/lib/logger.sh"
+
+log_info "Instalando Meu App..."
+# Sua lógica aqui
+log_success "Pronto!"
+EOF
+
+chmod +x commands/setup/meuapp/main.sh
+
+# 4. Usar
+susa setup meuapp
+```
+
+### Instalar Plugins
 
 ```bash
 susa self plugin install user/repo
 susa self plugin list
 ```
 
-### Subcategorias Multi-nível
-
-Organize comandos em hierarquias:
+### Ativar Autocompletar
 
 ```bash
-susa setup python tools pip
-#   └─┬─┘ └──┬──┘ └─┬─┘ └┬┘
-#  cat  subcat1  subcat2 cmd
+susa self completion --install
 ```
 
-### Bibliotecas Reutilizáveis
+## 📚 Documentação Completa
 
-12 bibliotecas prontas para uso em seus comandos:
-
-- **logger.sh** - Logs com níveis e timestamps
-- **os.sh** - Detecção de sistema operacional
-- **dependencies.sh** - Instalação automática de deps
-- **yaml.sh** - Parser YAML com yq
-- E mais 8 bibliotecas úteis!
-
-## 🛠️ Desenvolvimento
-
-### Adicionar Novo Comando
-
-```bash
-# 1. Criar estrutura
-mkdir -p commands/setup/meuapp
-
-# 2. Criar config.yaml
-cat > commands/setup/meuapp/config.yaml << EOF
-name: "Meu App"
-description: "Instala Meu App"
-script: "main.sh"
-sudo: false
-os: ["linux", "mac"]
-EOF
-
-# 3. Criar script
-cat > commands/setup/meuapp/main.sh << 'EOF'
-#!/bin/bash
-set -euo pipefail
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SUSA_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-
-source "$SUSA_DIR/lib/logger.sh"
-
-log_info "Instalando Meu App..."
-# Sua lógica aqui
-log_success "Instalado com sucesso!"
-EOF
-
-# 4. Dar permissão
-chmod +x commands/setup/meuapp/main.sh
-
-# 5. Testar
-susa setup meuapp
-```
-
-Pronto! O comando aparece automaticamente.
-
-## 📚 Documentação
-
-- **[Documentação Completa](https://cdorneles.github.io/scripts/)** - GitHub Pages
-- **[Quick Start](docs/quick-start.md)** - Instalação e primeiros passos
-- **[Guia de Funcionalidades](docs/guides/features.md)** - Recursos completos
-- **[Adicionar Comandos](docs/guides/adding-commands.md)** - Passo-a-passo
-- **[Referência de Bibliotecas](docs/reference/libraries.md)** - API das libs
-- **[Sistema de Plugins](docs/plugins/overview.md)** - Extensão via Git
+- **[Documentação Completa](https://cdorneles.github.io/scripts/)** - Guias e referências
+- **[Quick Start](docs/quick-start.md)** - Primeiros passos
+- **[Guia de Funcionalidades](docs/guides/features.md)** - Recursos detalhados
+- **[Adicionar Comandos](docs/guides/adding-commands.md)** - Tutorial passo-a-passo
+- **[Referência de Bibliotecas](docs/reference/libraries.md)** - API completa
+- **[Sistema de Plugins](docs/plugins/overview.md)** - Extensibilidade
 
 ## 🤝 Contribuindo
 
-Contribuições são bem-vindas! Veja [CONTRIBUTING.md](docs/about/contributing.md) para detalhes.
+Contribuições são bem-vindas! Veja [CONTRIBUTING.md](docs/about/contributing.md).
 
 ## 📄 Licença
 
-Este projeto está licenciado sob a MIT License - veja [LICENSE](docs/about/license.md) para detalhes.
-
----
-
-## 💡 Exemplos de Uso
-### Autocompletar (Tab Completion)
-
-```bash
-# Instalar completion automaticamente
-susa self completion --install
-
-# Instalar para um shell específico
-susa self completion bash --install
-susa self completion zsh --install
-
-# Ver o script de completion
-susa self completion bash --print
-
-# Remover completion
-susa self completion --uninstall
-
-# Depois de instalado, use TAB para autocompletar:
-susa <TAB>          # Lista categorias: setup, self
-susa setup <TAB>    # Lista comandos: asdf, docker, python...
-```
-### Gerenciar Plugins
-
-```bash
-# Instalar plugin
-susa self plugin install cdorneles/devops-tools
-
-# Listar plugins
-susa self plugin list
-
-# Atualizar plugin
-susa self plugin update devops-tools
-
-# Remover plugin
-susa self plugin remove devops-tools
-```
-
-### Comandos do Sistema
-
-```bash
-# Instalar ferramentas
-susa setup docker
-susa setup nodejs
-susa setup python
-
-# Atualizar sistema
-susa update system
-```
-
-### Desenvolvimento Local
-
-```bash
-# Instalar Susa CLI localmente
-make cli-install
-
-# Desinstalar
-make cli-uninstall
-
-# Testar
-make test
-
-# Servir documentação
-make serve
-```
+MIT License - veja [LICENSE](docs/about/license.md).
 
 ---
 

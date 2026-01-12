@@ -71,7 +71,6 @@ nav:
     - Arquitetura: plugins/architecture.md
   - Referência:
     - Bibliotecas: reference/libraries.md
-    - Changelog v2: reference/changelog-v2.md
   - Sobre:
     - Contribuindo: about/contributing.md
     - Licença: about/license.md

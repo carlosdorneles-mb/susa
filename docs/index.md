@@ -60,16 +60,16 @@ susa --help
 susa
 
 # Listar comandos de uma categoria
-susa install
+susa setup
 
 # Executar comando
-susa install docker
+susa setup docker
 
 # Navegar subcategorias (multi-nível)
-susa install python tools pip
+susa setup python tools pip
 
 # Help de comando específico
-susa install docker --help
+susa setup docker --help
 
 # Versão do CLI
 susa --version
@@ -138,8 +138,8 @@ cli/
 
 ```bash
 # Categoria → Subcategoria → Comando
-susa install python pip
-susa install python tools venv
+susa setup python pip
+susa setup python tools venv
 
 # Plugins também suportam subcategorias
 susa deploy aws ec2

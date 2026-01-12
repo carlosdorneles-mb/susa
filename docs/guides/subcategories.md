@@ -6,18 +6,18 @@ O CLI suporta uma estrutura hierárquica de categorias e subcategorias baseada e
 
 ## 🏗️ Estrutura de Diretórios
 
-## 🏗️ Estrutura de Diretórios
-
 ### Diferença entre Comandos e Subcategorias
 
 **🔑 Regra Fundamental:** A existência do **script executável** determina o comportamento!
 
 O sistema verifica:
+
 1. Se o diretório tem `config.yaml`
 2. Se o `config.yaml` tem o campo `script:` definido
 3. Se o arquivo do script existe
 
 **Resultado:**
+
 - **Tem `script:` E arquivo existe** → É um **comando executável**
   - Sistema executa o script
   - Aparece na seção "Commands"
@@ -31,18 +31,19 @@ O sistema verifica:
 Tanto comandos quanto subcategorias têm `config.yaml`, mas com campos diferentes:
 
 | Tipo | Campos no config.yaml |
-|------|----------------------|
+| ---- | --------------------- |
 | **Comando** | `name`, `description`, `script` (obrigatório), `sudo`, `os`, `group` |
 | **Subcategoria** | `name`, `description` (sem campo `script`) |
 
 **Vantagens dessa abordagem:**
+
 - ✅ Mais intuitivo: "tem script = é executável"
 - ✅ Mais consistente: todos usam o mesmo tipo de arquivo
 - ✅ Mais lógico: comandos PRECISAM de script, subcategorias não
 
 ### Estrutura Exemplo
 
-```
+```text
 commands/
   install/                          # Categoria principal
     config.yaml                     # name, description (sem script)
@@ -93,7 +94,7 @@ commands/
 ./susa setup python pip
 
 # Executar comando em sub-subcategoria
-./susa install python tools venv
+./susa setup python tools venv
 ```
 
 ## 📝 Arquivos de Configuração
@@ -134,13 +135,10 @@ group: "Package Managers"  # Opcional
 
 ## ✨ Campos de Configuração
 
-### Campos Obrigatórios
-
-| Campo | Tipo | Descrição |
-|---Para Comandos (Executáveis)
+### Para Comandos (Executáveis)
 
 | Campo | Tipo | Obrigatório | Descrição |
-|-------|------|-------------|-----------|
+| ----- | ---- | ----------- | --------- |
 | `name` | string | ✅ | Nome exibido do comando |
 | `description` | string | ✅ | Descrição curta |
 | `script` | string | ✅ | Nome do arquivo do script (ex: "main.sh") |
@@ -156,12 +154,13 @@ group: "Package Managers"  # Opcional
 | `description` | string | ✅ | Descrição curta |
 
 **Nota:** Subcategorias NÃO devem ter o campo `script`.
+
 ### Lista de Categoria com Subcategorias
 
-```
+```text
 Instalar software (Ubuntu)
 
-Usage: susa install <command> [options]
+Usage: susa setup <command> [options]
 
 Subcategories:
   nodejs          Ferramentas Node.js
@@ -173,10 +172,10 @@ Commands:
 
 ### Lista de Subcategoria
 
-```
+```text
 Ferramentas Python
 
-Usage: susa install/python <command> [options]
+Usage: susa setup/python <command> [options]
 
 Subcategories:
   tools           Ferramentas Python Avançadas
@@ -210,17 +209,18 @@ echo "Executando comando novo!"
 EOF
 
 # Tornar executável
-chmod +x commands/install/comando-novo/main.sh
+chmod +x commands/setup/comando-novo/main.sh
 ```
 
-**Uso:** `./susa install comando-novo`
+**Uso:** `./susa setup comando-novo`
 
 ### 2. Comando em Nova Subcategoria
 
 ```bash
 # Criar estrutura
 mkdir -p commands/install/nova-categoria/comando-xyz
-configuração da subcategoria (SEM campo 'script')
+
+# Criar configuração da subcategoria (SEM campo 'script')
 cat > commands/install/nova-categoria/config.yaml << EOF
 name: "Nova Categoria"
 description: "Descrição da nova categoria"
@@ -231,8 +231,7 @@ EOF
 cat > commands/install/nova-categoria/comando-xyz/config.yaml << EOF
 name: "Comando XYZ"
 description: "Descrição do comando XYZ"
-script: "main.sh"       # ← Indica que é executávelcrição do comando XYZ"
-script: "main.sh"
+script: "main.sh"       # ← Indica que é executável
 sudo: false
 EOF
 
@@ -243,13 +242,18 @@ echo "Executando XYZ!"
 EOF
 
 # Tornar executável
-chmod +x commands/install/nova-categoria/comando-xyz/main.sh
+chmod +x commands/setup/nova-categoria/comando-xyz/main.sh
 ```
 
-**Uso:** `./susa install nova-categoria comando-xyz`
+**Uso:** `./susa setup nova-categoria comando-xyz`
 
 ### 3. Comando em Sub-Subcategoria (3 níveis)
-config.yaml para cada nível navegável
+
+```bash
+# Criar estrutura completa
+mkdir -p commands/install/categoria/subcategoria/comando
+
+# Criar config.yaml para cada nível navegável
 cat > commands/install/categoria/config.yaml << EOF
 name: "Categoria"
 description: "Nível 1"
@@ -265,11 +269,6 @@ cat > commands/install/categoria/subcategoria/comando/config.yaml << EOF
 name: "Comando"
 description: "Comando no nível 3"
 script: "main.sh"       # ← Indica que é executável
-# Criar comando
-cat > commands/install/categoria/subcategoria/comando/config.yaml << EOF
-name: "Comando"
-description: "Comando no nível 3"
-script: "main.sh"
 sudo: false
 EOF
 
@@ -278,10 +277,10 @@ cat > commands/install/categoria/subcategoria/comando/main.sh << 'EOF'
 echo "Comando profundo!"
 EOF
 
-chmod +x commands/install/categoria/subcategoria/comando/main.sh
+chmod +x commands/setup/categoria/subcategoria/comando/main.sh
 ```
 
-**Uso:** `./susa install categoria subcategoria comando`
+**Uso:** `./susa setup categoria subcategoria comando`
 
 ## 🔍 Descoberta Automática
 
@@ -299,7 +298,7 @@ O sistema descobre automaticamente:
 
 Plugins também suportam a mesma estrutura hierárquica com subcategorias aninhadas:
 
-```
+```text
 plugins/
   dev-tools/                    # Plugin
     deploy/                     # Categoria
@@ -348,6 +347,7 @@ plugins/
 ### Importante sobre Plugins
 
 ✅ Plugins funcionam **exatamente** como `commands/`:
+
 - Mesma lógica de detecção (script = comando, sem script = subcategoria)
 - Mesma estrutura de config.yaml
 - Mesma navegação multinível
@@ -399,7 +399,7 @@ group: "Development Tools"
 
 **Exibição:**
 
-```
+```text
 Commands:
   standalone-cmd  Comando sem grupo
 
@@ -424,7 +424,7 @@ Commands:
 
 ### Hierarquia Recomendada
 
-```
+```text
 ✅ Boa hierarquia:
 commands/install/python/pip
 commands/install/python/poetry
@@ -438,9 +438,11 @@ commands/tools/dev/lang/python/pkg/pip
 ## 🐛 Troubleshooting
 
 ### Comando não aparece na listagem
+
  1:** Falta campo `script:` no `config.yaml`
 
 **Solução:** Adicionar o campo script
+
 ```yaml
 script: "main.sh"
 ```
@@ -448,6 +450,7 @@ script: "main.sh"
 **Causa 2:** Arquivo do script não existe ou não tem o nome correto
 
 **Solução:** Verificar se o arquivo existe e corresponde ao nome em `script:`
+
 ```bash
 ls -la commands/categoria/comando/main.sh
 ```
@@ -464,7 +467,8 @@ ls -la commands/categoria/comando/main.sh
 
 **Soluç 1:** Script não está executável
 
-**Solução:** 
+**Solução:**
+
 ```bash
 chmod +x commands/path/to/command/main.sh
 ```
@@ -482,13 +486,10 @@ chmod +x commands/path/to/command/main.sh
 **Causa:** Falta campo `description:` no config.yaml
 
 **Solução:** Adicionar descrição
+
 ```yaml
 name: "Nome"
 description: "Descrição aqui"
-``
-**Solução:** 
-```bash
-chmod +x commands/path/to/command/main.sh
 ```
 
 ### Descrição da subcategoria não aparece
@@ -496,6 +497,7 @@ chmod +x commands/path/to/command/main.sh
 **Causa:** Falta `config.yaml` ou está sem campos obrigatórios
 
 **Solução:** Criar `config.yaml` com `name` e `description` (SEM campo `script`)
+
 ```yaml
 name: "Nome da Subcategoria"
 description: "Descrição aqui"
@@ -530,8 +532,9 @@ chmod +x commands/install/docker/main.sh
 ```
 
 **Uso:**
-- `./susa install` → Lista docker entre as opções
-- `./susa install docker` → Instala o Docker
+
+- `./susa setup` → Lista docker entre as opções
+- `./susa setup docker` → Instala o Docker
 
 ### Exemplo 2: Categoria com Subcategorias
 
@@ -564,6 +567,7 @@ chmod +x commands/backup/local/full/main.sh
 ```
 
 **Uso:**
+
 - `./susa backup` → Lista `local` e `cloud` como subcategorias
 - `./susa backup local` → Lista `full` e `incremental` como comandos
 - `./susa backup local full` → Executa o backup
@@ -619,8 +623,8 @@ chmod +x plugins/dev-tools/deploy/aws/ec2/main.sh
 ```
 
 **Uso:**
+
 - `./susa deploy` → Lista `staging`, `production`, `aws` (subcategoria)
 - `./susa deploy staging` → Executa deploy staging
 - `./susa deploy aws` → Lista `ec2`, `lambda`
 - `./susa deploy aws ec2` → Executa deploy EC2
-

@@ -17,6 +17,7 @@ help:
 	@echo ""
 
 install: ## Instala dependências para documentação
+	@pip install --upgrade pip
 	@pip install mkdocs mkdocs-material pymdown-extensions
 
 serve doc: ## Inicia servidor de documentação local

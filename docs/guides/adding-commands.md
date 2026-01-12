@@ -6,7 +6,7 @@ Este guia mostra como adicionar novos comandos ao CLI de forma dinâmica.
 
 Cada comando deve seguir esta estrutura:
 
-```
+```text
 commands/
   <categoria>/
     <comando>/
@@ -24,6 +24,7 @@ mkdir -p commands/<categoria>/<nome-comando>
 ```
 
 **Exemplo:**
+
 ```bash
 mkdir -p commands/install/vscode
 ```
@@ -106,6 +107,7 @@ categories:
 Seus scripts têm acesso a todas as funções das bibliotecas em `lib/`:
 
 ### Logger
+
 ```bash
 log_info "Mensagem informativa"
 log_success "Operação bem-sucedida"
@@ -114,6 +116,7 @@ log_error "Erro encontrado"
 ```
 
 ### Colors
+
 ```bash
 echo -e "${GREEN}Texto verde${NC}"
 echo -e "${CYAN}Texto ciano${NC}"
@@ -121,11 +124,13 @@ echo -e "${RED}Texto vermelho${NC}"
 ```
 
 ### OS Detection
+
 ```bash
 detect_os  # Detecta o sistema operacional
 ```
 
 ### Utils
+
 ```bash
 ensure_curl_installed  # Garante que curl está instalado
 ```
@@ -141,12 +146,6 @@ ensure_curl_installed  # Garante que curl está instalado
 ## 🔄 Ordem de Execução
 
 O campo `order` no `cli.yml` define a ordem de exibição dos comandos:
+
 - Números menores aparecem primeiro
 - Use incrementos de 10 (10, 20, 30...) para facilitar inserções futuras
-
-## 📝 Exemplo Completo
-
-Veja os comandos existentes para referência:
-- [install/docker](../commands/install/docker/main.sh)
-- [daily/deploy](../commands/daily/deploy/main.sh)
-- [update/system](../commands/update/system/main.sh)

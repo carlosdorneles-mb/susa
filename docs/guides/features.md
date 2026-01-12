@@ -181,16 +181,16 @@ O CLI suporta **navegação hierárquica ilimitada** de categorias.
 
 ```bash
 cli                           # Lista categorias de nível 1
-susa install                   # Lista comandos e subcategorias de install
-susa install python            # Lista comandos e sub-subcategorias de python
-susa install python tools      # Lista comandos de tools
-susa install python tools pip  # Executa comando pip
+susa setup                   # Lista comandos e subcategorias de setup
+susa setup python            # Lista comandos e sub-subcategorias de python
+susa setup python tools      # Lista comandos de tools
+susa setup python tools pip  # Executa comando pip
 ```
 
 ### Exemplo de Hierarquia
 
 ```text
-install/                     # Nível 1
+setup/                     # Nível 1
 ├── docker                   # Comando
 ├── nodejs                   # Comando
 └── python/                  # Nível 2
@@ -203,9 +203,9 @@ install/                     # Nível 1
 
 **Comandos:**
 ```bash
-susa install docker               # ✅ Funciona
-susa install python basic         # ✅ Funciona
-susa install python tools pip     # ✅ Funciona
+susa setup docker               # ✅ Funciona
+susa setup python basic         # ✅ Funciona
+susa setup python tools pip     # ✅ Funciona
 ```
 
 ### Boas Práticas para Subcategorias
@@ -353,7 +353,7 @@ sudo: true     # Indica que requer sudo
 ### Exemplo de Saída
 
 ```bash
-$ susa install
+$ susa setup
 
 Commands:
   docker          Instala Docker Engine [sudo]
@@ -391,7 +391,7 @@ Cada comando pode ter sua própria documentação de ajuda personalizada.
 show_help() {
     echo "Instalação do Docker Engine"
     echo ""
-    echo -e "${LIGHT_GREEN}Usage:${NC} susa install docker [options]"
+    echo -e "${LIGHT_GREEN}Usage:${NC} susa setup docker [options]"
     echo ""
     echo -e "${LIGHT_GREEN}Description:${NC}"
     echo "  Instala o Docker Engine, CLI e Docker Compose no Ubuntu."
@@ -400,7 +400,7 @@ show_help() {
     echo "  -h, --help    Mostra esta mensagem"
     echo ""
     echo -e "${LIGHT_GREEN}Examples:${NC}"
-    echo "  susa install docker"
+    echo "  susa setup docker"
 }
 
 install_docker() {
@@ -787,7 +787,7 @@ source "$CLI_DIR/lib/color.sh"
 show_help() {
     echo "Instalação do PostgreSQL"
     echo ""
-    echo -e "${LIGHT_GREEN}Usage:${NC} susa install postgresql [version]"
+    echo -e "${LIGHT_GREEN}Usage:${NC} susa setup postgresql [version]"
     echo ""
     echo -e "${LIGHT_GREEN}Description:${NC}"
     echo "  Instala PostgreSQL no sistema"
@@ -825,9 +825,9 @@ chmod +x commands/install/postgresql/main.sh
 #### Passo 5: Testar
 
 ```bash
-susa install              # Lista comandos (postgresql deve aparecer)
-susa install postgresql   # Executa instalação
-susa install postgresql --help  # Mostra ajuda
+susa setup              # Lista comandos (postgresql deve aparecer)
+susa setup postgresql   # Executa instalação
+susa setup postgresql --help  # Mostra ajuda
 ```
 
 ### Pronto! Comando Disponível Automaticamente
@@ -861,13 +861,13 @@ os: ["linux", "mac"]
 Uso:
 
 ```bash
-susa install python tools pip
+susa setup python tools pip
 ```
 
 ```bash
-./susa install                    # Verifica se aparece na lista
-./susa install postgresql --help  # Testa o help
-./susa install postgresql         # Testa a execução
+./susa setup                    # Verifica se aparece na lista
+./susa setup postgresql --help  # Testa o help
+./susa setup postgresql         # Testa a execução
 ### Guia Detalhado
 
 Para instruções passo-a-passo completas, veja [Adicionar Comandos](adding-commands.md).
