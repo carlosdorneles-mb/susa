@@ -149,13 +149,20 @@ list_commands() {
             has_compatible_commands=true
             local cmd_desc=$(get_command_info "$GLOBAL_CONFIG_FILE" "$category" "$cmd" "description")
             
-            # Add sudo indicator if necessary
-            local sudo_indicator=""
-            if requires_sudo "$GLOBAL_CONFIG_FILE" "$category" "$cmd"; then
-                sudo_indicator=" ${YELLOW}[sudo]${NC}"
+            # Add indicators
+            local indicators=""
+            
+            # Add plugin indicator if necessary
+            if is_plugin_command "$category" "$cmd"; then
+                indicators="${indicators} ${GRAY}[plugin]${NC}"
             fi
             
-            printf "  ${LIGHT_CYAN}%-15s${NC} %s%b\n" "$cmd" "$cmd_desc" "$sudo_indicator"
+            # Add sudo indicator if necessary
+            if requires_sudo "$GLOBAL_CONFIG_FILE" "$category" "$cmd"; then
+                indicators="${indicators} ${YELLOW}[sudo]${NC}"
+            fi
+            
+            printf "  ${LIGHT_CYAN}%-15s${NC} %s%b\n" "$cmd" "$cmd_desc" "$indicators"
         done
         
         # Then, list grouped commands
@@ -181,13 +188,20 @@ list_commands() {
                         has_compatible_commands=true
                         local cmd_desc=$(get_command_info "$GLOBAL_CONFIG_FILE" "$category" "$cmd" "description")
                         
-                        # Add sudo indicator if necessary
-                        local sudo_indicator=""
-                        if requires_sudo "$GLOBAL_CONFIG_FILE" "$category" "$cmd"; then
-                            sudo_indicator=" ${YELLOW}[sudo]${NC}"
+                        # Add indicators
+                        local indicators=""
+                        
+                        # Add plugin indicator if necessary
+                        if is_plugin_command "$category" "$cmd"; then
+                            indicators="${indicators} ${GRAY}[plugin]${NC}"
                         fi
                         
-                        printf "  ${LIGHT_CYAN}%-15s${NC} %s%b\n" "$cmd" "$cmd_desc" "$sudo_indicator"
+                        # Add sudo indicator if necessary
+                        if requires_sudo "$GLOBAL_CONFIG_FILE" "$category" "$cmd"; then
+                            indicators="${indicators} ${YELLOW}[sudo]${NC}"
+                        fi
+                        
+                        printf "  ${LIGHT_CYAN}%-15s${NC} %s%b\n" "$cmd" "$cmd_desc" "$indicators"
                     fi
                 done
             done <<< "$groups"

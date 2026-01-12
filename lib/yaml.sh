@@ -326,6 +326,19 @@ find_command_config() {
     return 1
 }
 
+# Checks if a command is from a plugin
+is_plugin_command() {
+    local category="$1"
+    local command_id="$2"
+    local config_file=$(find_command_config "$category" "$command_id")
+    
+    if [ -n "$config_file" ] && [[ "$config_file" == */plugins/* ]]; then
+        return 0
+    fi
+    
+    return 1
+}
+
 # Gets information from a specific command
 get_command_info() {
     local yaml_file="$1"  # Kept for compatibility, but not used
