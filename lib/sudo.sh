@@ -4,7 +4,7 @@
 
 check_sudo() {
     if [ "$EUID" -ne 0 ]; then
-        log_warning "Este comando requer privilégios de superusuário (sudo)."
+        log_warning "Este comando requer privilégios de superusuário (sudo)." >&2
         return 1
     fi
     return 0

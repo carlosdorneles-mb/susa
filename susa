@@ -50,20 +50,20 @@ fi
 show_logo() {
     local version=$(show_number_version)
     cat << LOGO
-   _____                 
-  / ____|                
- | (___  _   _ ___  __ _ 
+   _____
+  / ____|
+ | (___  _   _ ___  __ _
   \___ \| | | / __|/ _' |
   ____) | |_| \__ \ (_| |
  |_____/ \__,_|___/\__,_| ${version}
-                         
+
 LOGO
 }
 
 # Displays help information
 show_help() {
     show_logo
-    
+
     local description=$(get_yaml_field "$GLOBAL_CONFIG_FILE" "description")
     local categories=$(get_all_categories "$GLOBAL_CONFIG_FILE")
 
@@ -72,12 +72,12 @@ show_help() {
     show_usage
     echo ""
     echo -e "${LIGHT_GREEN}Comandos:${NC}"
-    
+
     for cat in $categories; do
         local cat_desc=$(get_category_info "$GLOBAL_CONFIG_FILE" "$cat" "description")
         printf "  ${LIGHT_CYAN}%-12s${NC} %s\n" "$cat" "$cat_desc"
     done
-    
+
     echo ""
     echo -e "${LIGHT_GREEN}Opções globais:${NC}"
     printf "  ${LIGHT_CYAN}%-14s${NC} %s\n" "-h, --help" "Mostra esta mensagem de ajuda"
@@ -87,13 +87,13 @@ show_help() {
 list_commands() {
     local category="$1"
     local categories=$(get_all_categories "$GLOBAL_CONFIG_FILE")
-    
+
     # Check if it is a top-level category
     local is_top_level=false
     if echo "$categories" | grep -q "^${category}$"; then
         is_top_level=true
     fi
-    
+
     # If not top-level, validate if directory exists
     if [ "$is_top_level" = false ]; then
         local cli_dir="${CLI_DIR}"
@@ -102,17 +102,17 @@ list_commands() {
             return 1
         fi
     fi
-    
+
     local category_desc=$(get_category_info "$GLOBAL_CONFIG_FILE" "$category" "description")
     local commands=$(get_category_commands "$category")
     local subcategories=$(get_category_subcategories "$category")
     local current_os=$(get_simple_os)
-    
+
     echo "$category_desc"
     echo ""
     show_usage "$category"
     echo ""
-    
+
     # List subcategories first
     if [ -n "$subcategories" ]; then
         echo -e "${LIGHT_GREEN}Subcategories:${NC}"
@@ -120,93 +120,93 @@ list_commands() {
             local subcat_desc=$(get_category_info "$GLOBAL_CONFIG_FILE" "$category/$subcat" "description")
             printf "  ${LIGHT_MAGENTA}%-15s${NC} %s\n" "$subcat" "$subcat_desc"
         done
-        
+
         # Only add extra line if there are also commands
         if [ -n "$commands" ]; then
             echo ""
         fi
     fi
-    
+
     # List commands
     if [ -n "$commands" ]; then
         echo -e "${LIGHT_GREEN}Comandos:${NC}"
-        
+
         local has_compatible_commands=false
-        
+
         # First, list commands without a group
         for cmd in $commands; do
             # Check OS compatibility
             if ! is_command_compatible "$GLOBAL_CONFIG_FILE" "$category" "$cmd" "$current_os"; then
                 continue
             fi
-            
+
             # Skip commands that belong to a group
             local cmd_group=$(get_command_group "$GLOBAL_CONFIG_FILE" "$category" "$cmd")
             if [ -n "$cmd_group" ]; then
                 continue
             fi
-            
+
             has_compatible_commands=true
             local cmd_desc=$(get_command_info "$GLOBAL_CONFIG_FILE" "$category" "$cmd" "description")
-            
+
             # Add indicators
             local indicators=""
-            
+
             # Add plugin indicator if necessary
             if is_plugin_command "$category" "$cmd"; then
                 indicators="${indicators} ${GRAY}[plugin]${NC}"
             fi
-            
+
             # Add sudo indicator if necessary
             if requires_sudo "$GLOBAL_CONFIG_FILE" "$category" "$cmd"; then
                 indicators="${indicators} ${YELLOW}[sudo]${NC}"
             fi
-            
+
             printf "  ${LIGHT_CYAN}%-15s${NC} %s%b\n" "$cmd" "$cmd_desc" "$indicators"
         done
-        
+
         # Then, list grouped commands
         local groups=$(get_category_groups "$GLOBAL_CONFIG_FILE" "$category" "$current_os")
-        
+
         if [ -n "$groups" ]; then
             while IFS= read -r group; do
                 [ -z "$group" ] && continue
-                
+
                 echo ""
                 echo -e " ${LIGHT_GRAY}$group${NC}"
-                
+
                 for cmd in $commands; do
                     # Check OS compatibility
                     if ! is_command_compatible "$GLOBAL_CONFIG_FILE" "$category" "$cmd" "$current_os"; then
                         continue
                     fi
-                    
+
                     local cmd_group=$(get_command_group "$GLOBAL_CONFIG_FILE" "$category" "$cmd")
-                    
+
                     # List only commands from this group
                     if [ "$cmd_group" = "$group" ]; then
                         has_compatible_commands=true
                         local cmd_desc=$(get_command_info "$GLOBAL_CONFIG_FILE" "$category" "$cmd" "description")
-                        
+
                         # Add indicators
                         local indicators=""
-                        
+
                         # Add plugin indicator if necessary
                         if is_plugin_command "$category" "$cmd"; then
                             indicators="${indicators} ${GRAY}[plugin]${NC}"
                         fi
-                        
+
                         # Add sudo indicator if necessary
                         if requires_sudo "$GLOBAL_CONFIG_FILE" "$category" "$cmd"; then
                             indicators="${indicators} ${YELLOW}[sudo]${NC}"
                         fi
-                        
+
                         printf "  ${LIGHT_CYAN}%-15s${NC} %s%b\n" "$cmd" "$cmd_desc" "$indicators"
                     fi
                 done
             done <<< "$groups"
         fi
-        
+
         if [ "$has_compatible_commands" = false ] && [ -z "$subcategories" ]; then
             echo -e "  ${GRAY}Nenhum comando ou subcategoria disponível${NC}"
         fi
@@ -217,35 +217,35 @@ execute_command() {
     local category="$1"
     local command="$2"
     shift 2
-    
+
     local current_os=$(get_simple_os)
-    
+
     # Find command config
     local config_file=$(find_command_config "$category" "$command")
-    
+
     if [ -z "$config_file" ]; then
         log_error "Comando '$command' não encontrado na categoria '$category'"
         echo ""
         list_commands "$category"
         exit 1
     fi
-    
+
     # Check OS compatibility
     if ! is_command_compatible "$GLOBAL_CONFIG_FILE" "$category" "$command" "$current_os"; then
         log_error "Comando '$command' não é compatível com o sistema operacional atual ($current_os)"
         exit 1
     fi
-    
+
     # Get script name and build path
     local script_name=$(get_command_info "$GLOBAL_CONFIG_FILE" "$category" "$command" "script")
     local command_dir=$(dirname "$config_file")
     local script_path="$command_dir/$script_name"
-    
+
     if [ ! -f "$script_path" ]; then
         log_error "Script '$script_name' não encontrado em $command_dir/"
         exit 1
     fi
-    
+
     # Check if help was requested for the command
     local show_command_help=false
     for arg in "$@"; do
@@ -254,7 +254,7 @@ execute_command() {
             break
         fi
     done
-    
+
     # If help was requested, check if script has show_help function
     if [ "$show_command_help" = true ]; then
         # Check if show_help function exists without executing the script
@@ -266,12 +266,12 @@ execute_command() {
         fi
         exit 0
     fi
-    
+
     # Check if sudo is required and notify user
     if requires_sudo "$GLOBAL_CONFIG_FILE" "$category" "$command"; then
-        check_sudo
+        required_sudo
     fi
-    
+
     source "$script_path" "$@"
 }
 
@@ -294,21 +294,21 @@ main() {
             exit 0
             ;;
     esac
-    
+
     # Build category/subcategory path
     local category="$1"
     local remaining_args=("${@:2}")
-    
+
     # Check if there are more arguments that could be subcategories
     while [ ${#remaining_args[@]} -gt 0 ]; do
         local next_arg="${remaining_args[0]}"
-        
+
         # If it's help, show help for current category
         if [ "$next_arg" = "help" ]; then
             list_commands "$category"
             exit 0
         fi
-        
+
         # Try to see if it's a subcategory
         local subcategories=$(get_category_subcategories "$category")
         if echo "$subcategories" | grep -q "^${next_arg}$"; then
@@ -320,17 +320,17 @@ main() {
             break
         fi
     done
-    
+
     # If no arguments remain, list commands/subcategories for the category
     if [ ${#remaining_args[@]} -eq 0 ]; then
         list_commands "$category"
         exit 1
     fi
-    
+
     # The next argument is the command
     local command="${remaining_args[0]}"
     local command_args=("${remaining_args[@]:1}")
-    
+
     # Execute the command
     execute_command "$category" "$command" "${command_args[@]}"
 }
