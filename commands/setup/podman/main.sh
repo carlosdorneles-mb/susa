@@ -248,25 +248,10 @@ install_podman_linux() {
     if [ "$compose_installed" = false ]; then
         log_debug "podman-compose não disponível via gerenciador de pacotes, tentando via pip..."
 
-        if ! command -v pip3 &>/dev/null; then
-            log_info "Instalando python3-pip..."
+        # Ensure pip3 is installed
+        ensure_pip3_installed || return 1
 
-            if command -v apt-get &>/dev/null; then
-                wait_for_apt_lock || return 1
-                sudo apt-get update -qq >/dev/null 2>&1
-                sudo apt-get install -y python3-pip >/dev/null 2>&1
-            elif command -v dnf &>/dev/null; then
-                sudo dnf install -y python3-pip >/dev/null 2>&1
-            elif command -v yum &>/dev/null; then
-                sudo yum install -y python3-pip >/dev/null 2>&1
-            fi
-        fi
-
-        if command -v pip3 &>/dev/null; then
-            pip3 install --user podman-compose >/dev/null 2>&1 || log_debug "Não foi possível instalar podman-compose"
-        else
-            log_debug "pip3 não disponível, pulando instalação do podman-compose"
-        fi
+        pip3 install --user podman-compose >/dev/null 2>&1 || log_debug "Não foi possível instalar podman-compose"
     fi
 
     # Verify installation

@@ -1,5 +1,64 @@
 #!/bin/bash
 
+# --- Package Manager Lock Helper ---
+
+# Wait for apt lock to be released
+wait_for_apt_lock() {
+    local max_wait=60
+    local waited=0
+
+    while sudo fuser /var/lib/apt/lists/lock >/dev/null 2>&1 || \
+          sudo fuser /var/lib/dpkg/lock >/dev/null 2>&1 || \
+          sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
+
+        if [ $waited -eq 0 ]; then
+            log_info "Aguardando outros processos apt finalizarem..."
+        fi
+
+        if [ $waited -ge $max_wait ]; then
+            log_error "Timeout aguardando lock do apt"
+            return 1
+        fi
+
+        sleep 2
+        waited=$((waited + 2))
+    done
+
+    return 0
+}
+
+# --- Pip3 Helper Function ---
+
+# Ensure pip3 is installed. If not, try installing.
+ensure_pip3_installed() {
+  if command -v pip3 &>/dev/null; then
+    return 0
+  fi
+
+  log_warning "pip3 não encontrado. Tentando instalar python3-pip..."
+
+  if command -v apt-get &>/dev/null; then
+    wait_for_apt_lock || return 1
+    sudo apt-get update -qq >/dev/null 2>&1
+    sudo apt-get install -y python3-pip >/dev/null 2>&1
+  elif command -v dnf &>/dev/null; then
+    sudo dnf install -y python3-pip >/dev/null 2>&1
+  elif command -v yum &>/dev/null; then
+    sudo yum install -y python3-pip >/dev/null 2>&1
+  else
+    log_error "Gerenciador de pacotes não suportado para instalação do pip3"
+    return 1
+  fi
+
+  if ! command -v pip3 &>/dev/null; then
+    log_error "Falha ao instalar o pip3. Instale manualmente."
+    return 1
+  fi
+
+  log_success "pip3 instalado com sucesso."
+  return 0
+}
+
 # --- Curl Helper Function ---
 
 # Ensure curl is installed. If not, try installing.
@@ -189,7 +248,7 @@ ensure_fzf_installed() {
 
   if curl -L "$download_url" -o "${temp_dir}/${tarball}"; then
     tar -xzf "${temp_dir}/${tarball}" -C "${temp_dir}"
-    
+
     log_info "A instalar binário em /usr/local/bin (pode solicitar sudo)..."
     if sudo mv "${temp_dir}/fzf" /usr/local/bin/fzf; then
       sudo chmod +x /usr/local/bin/fzf
