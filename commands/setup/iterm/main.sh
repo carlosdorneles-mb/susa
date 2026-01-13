@@ -50,19 +50,8 @@ check_existing_installation() {
     local current_version=$(brew info --cask iterm2 2>/dev/null | grep -E "^iterm2:" | sed -E 's/^iterm2: ([^ ]+).*/\1/' || echo "desconhecida")
     log_debug "iTerm2 já está instalado (versão atual: $current_version)"
 
-    log_info "iTerm2 $current_version já está instalado"
-    
-    echo ""
-    echo -e "${YELLOW}Deseja reinstalar/atualizar o iTerm2? (s/N)${NC}"
-    read -r response
-
-    if [[ ! "$response" =~ ^[sS]$ ]]; then
-        log_info "Operação cancelada"
-        return 1
-    fi
-
-    log_debug "Usuário optou por atualizar/reinstalar"
-    return 0
+    log_info "iTerm2 $current_version já está instalado."
+    return 1
 }
 
 # Install iTerm2 using Homebrew
@@ -286,9 +275,10 @@ main() {
     case "$action" in
         install)
             log_debug "Ação selecionada: instalação"
-            if check_existing_installation; then
-                install_iterm
+            if ! check_existing_installation; then
+                exit 0
             fi
+            install_iterm
             ;;
         update)
             log_debug "Ação selecionada: atualização"

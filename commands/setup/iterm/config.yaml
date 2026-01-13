@@ -2,5 +2,5 @@ name: "iTerm"
 description: "Instala iTerm (terminal)"
 script: "main.sh"
 sudo: false
-group:
+group: terminal
 os: ["mac"]
