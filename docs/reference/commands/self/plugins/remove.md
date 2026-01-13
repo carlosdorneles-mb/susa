@@ -24,7 +24,7 @@ susa self plugin remove backup-tools
 
 ## Processo de remoção
 
-```
+```text
 ⚠ Atenção: Você está prestes a remover o plugin 'backup-tools'
 
 Comandos que serão removidos: 4
@@ -42,7 +42,7 @@ O comando **sempre** solicita confirmação antes de remover o plugin. Para canc
 
 ## Se o plugin não existir
 
-```
+```text
 ✗ Plugin 'nome-invalido' não encontrado
 
 Use susa self plugin list para ver plugins instalados

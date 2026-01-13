@@ -21,7 +21,7 @@ Para cada plugin instalado, exibe:
 
 ## Exemplo de saída
 
-```
+```text
 Plugins Instalados
 
 📦 backup-tools
@@ -43,7 +43,7 @@ Total: 2 plugins instalados
 
 ## Se não houver plugins
 
-```
+```text
 ℹ Nenhum plugin instalado
 
 Para instalar um plugin, use:

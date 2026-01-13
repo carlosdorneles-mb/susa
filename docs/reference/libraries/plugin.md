@@ -20,6 +20,50 @@ ensure_git_installed || {
 }
 ```
 
+### `has_github_ssh_access()`
+
+Verifica se usuário tem acesso SSH ao GitHub configurado.
+
+**Retorno:**
+
+- `0` - SSH configurado e funcional
+- `1` - SSH não disponível
+
+**Verificações:**
+
+1. Checa se existem chaves SSH (`~/.ssh/id_rsa` ou `~/.ssh/id_ed25519`)
+2. Testa conexão com `git@github.com` (timeout 3 segundos)
+
+```bash
+if has_github_ssh_access; then
+    echo "SSH configurado, usando git@github.com"
+else
+    echo "SSH não disponível, usando HTTPS"
+fi
+```
+
+### `validate_repo_access()`
+
+Valida se repositório está acessível antes de clonar.
+
+**Parâmetros:**
+
+- `$1` - URL do repositório
+
+**Retorno:**
+
+- `0` - Repositório acessível
+- `1` - Sem acesso ou repo não existe
+
+```bash
+if validate_repo_access "https://github.com/user/repo.git"; then
+    echo "Repositório acessível"
+else
+    echo "Sem acesso ao repositório"
+    exit 1
+fi
+```
+
 ### `detect_plugin_version()`
 
 Detecta a versão de um plugin no diretório.
@@ -63,10 +107,32 @@ fi
 
 Converte formato `user/repo` para URL completa do GitHub.
 
-```bash
-url=$(normalize_git_url "user/repo")
-echo "$url"  # https://github.com/user/repo.git
+**Parâmetros:**
 
+- `$1` - URL ou formato `user/repo`
+- `$2` - Force SSH (opcional, padrão: false)
+
+**Comportamento:**
+
+- Se `user/repo`: converte para SSH (se disponível ou forçado) ou HTTPS
+- Se URL completa HTTPS + force SSH: converte para SSH
+- Caso contrário: retorna URL inalterada
+
+```bash
+# Detecção automática (usa SSH se configurado)
+url=$(normalize_git_url "user/repo")
+echo "$url"  # git@github.com:user/repo.git (se SSH disponível)
+echo "$url"  # https://github.com/user/repo.git (caso contrário)
+
+# Forçar SSH
+url=$(normalize_git_url "user/repo" "true")
+echo "$url"  # git@github.com:user/repo.git
+
+# Converter HTTPS para SSH
+url=$(normalize_git_url "https://github.com/user/repo.git" "true")
+echo "$url"  # git@github.com:user/repo.git
+
+# URL não-GitHub (mantém original)
 url=$(normalize_git_url "https://gitlab.com/user/repo.git")
 echo "$url"  # https://gitlab.com/user/repo.git
 ```
@@ -87,21 +153,32 @@ echo "$name"  # awesome-plugin
 source "$CLI_DIR/lib/plugin.sh"
 source "$CLI_DIR/lib/logger.sh"
 
+# Parse argumentos
+use_ssh="false"
+if [ "$2" = "--ssh" ]; then
+    use_ssh="true"
+fi
+
 # Garante git instalado
 ensure_git_installed || exit 1
 
-# Normaliza URL
-url=$(normalize_git_url "$1")
+# Normaliza URL (com detecção/forçar SSH)
+url=$(normalize_git_url "$1" "$use_ssh")
 name=$(extract_plugin_name "$url")
 
 log_info "Instalando plugin: $name"
+log_debug "URL: $url"
 
-# Clone plugin
-plugin_dir="/opt/susa/plugins/$name"
-
-if clone_plugin "$url" "$plugin_dir"; then
-    version=$(detect_plugin_version "$plugin_dir")
-    count=$(count_plugin_commands "$plugin_dir")
+# Valida acesso ao repositório
+if ! validate_repo_access "$url"; then
+    log_error "Não foi possível acessar o repositório"
+    echo ""
+    echo "Possíveis causas:"
+    echo "  • Repositório não existe"
+    echo "  • Repositório privado sem acesso"
+    echo "  • Credenciais não configuradas"
+    exit 1
+fi
 
     log_success "Plugin $name v$version instalado!"
     log_info "Total de comandos: $count"
@@ -113,6 +190,41 @@ fi
 
 ## Boas Práticas
 
-1. Sempre normalize URLs antes de clonar
-2. Verifique se git está instalado antes de usar
-3. Valide estrutura do plugin após clonar
+1. **Sempre normalize URLs** antes de clonar usando `normalize_git_url()`
+2. **Verifique git instalado** antes de usar com `ensure_git_installed()`
+3. **Valide acesso ao repo** antes de clonar com `validate_repo_access()`
+4. **Detecte SSH automaticamente** usando `has_github_ssh_access()` para melhor UX
+5. **Ofereça opção `--ssh`** para usuários forçarem autenticação SSH
+6. **Valide estrutura do plugin** após clonar contando comandos
+7. **Remova `.git`** após clone para economizar espaço
+8. **Forneça feedback claro** em caso de falha de acesso (mensagens úteis)
+
+## Repositórios Privados
+
+### Detecção Automática
+
+A biblioteca detecta automaticamente se SSH está configurado:
+
+```bash
+# Usuário com SSH configurado
+url=$(normalize_git_url "org/private-plugin")
+# Retorna: git@github.com:org/private-plugin.git
+
+# Usuário sem SSH
+url=$(normalize_git_url "org/private-plugin")
+# Retorna: https://github.com/org/private-plugin.git
+```
+
+### Validação de Acesso
+
+Sempre valide antes de clonar para evitar falhas tardias:
+
+```bash
+if ! validate_repo_access "$url"; then
+    # Mensagens de erro específicas aqui
+    exit 1
+fi
+
+# Agora pode clonar com segurança
+clone_plugin "$url" "$dest"
+```
