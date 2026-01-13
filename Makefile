@@ -57,3 +57,9 @@ cli-install: ## Instala o CLI no sistema
 cli-uninstall: ## Remove o CLI do sistema
 	@echo "$(YELLOW)🗑️  Desinstalando CLI...$(NC)"
 	@./uninstall.sh
+
+# Development
+new-command: ## Cria um novo comando
+	@read -p "Categoria do comando (ex: setup, utils): " category; \
+	read -p "ID do comando (ex: tilix, cleanup): " id; \
+	./create_command.sh "$$category" "$$id"

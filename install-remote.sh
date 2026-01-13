@@ -8,7 +8,7 @@
 set -e
 
 # Settings
-REPO_URL="${CLI_REPO_URL:-https://github.com/carlosdorneles-mb/susa.git}"
+REPO_URL="${CLI_REPO_URL:-https://github.com/duducp/susa.git}"
 REPO_BRANCH="${CLI_REPO_BRANCH:-main}"
 INSTALL_DIR="${CLI_INSTALL_DIR:-$HOME/.local/susa}"
 TEMP_DIR=$(mktemp -d)
@@ -79,9 +79,9 @@ ensure_git() {
     fi
 
     log_warning "Git não encontrado. Tentando instalar..."
-    
+
     local os_type=$(detect_os)
-    
+
     case "$os_type" in
         debian)
             if command_exists sudo; then
@@ -111,12 +111,12 @@ ensure_git() {
             return 1
             ;;
     esac
-    
+
     if ! command_exists git; then
         log_error "Falha ao instalar git"
         return 1
     fi
-    
+
     log_success "Git instalado com sucesso"
     return 0
 }
@@ -135,39 +135,39 @@ show_banner() {
 # Main installation
 main() {
     show_banner
-    
+
     local os_type=$(detect_os)
     log_info "Sistema detectado: $os_type"
-    
+
     if [ "$os_type" = "unknown" ]; then
         log_error "Sistema operacional não suportado"
         exit 1
     fi
-    
+
     # Check/install git
     log_info "Verificando dependências..."
     if ! ensure_git; then
         exit 1
     fi
-    
+
     # Clones repository
     log_info "Baixando Susa CLI do repositório..."
     cd "$TEMP_DIR"
-    
+
     if ! git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" cli; then
         log_error "Falha ao clonar repositório: $REPO_URL"
         log_info "Verifique se o repositório existe e está acessível"
         exit 1
     fi
-    
+
     cd cli
-    
+
     # Check if install.sh exists
     if [ ! -f "install.sh" ]; then
         log_error "Script de instalação não encontrado no repositório"
         exit 1
     fi
-    
+
     # Check for existing installation
     if [ -d "$INSTALL_DIR" ] && [ -f "$INSTALL_DIR/susa" ]; then
         log_warning "Susa CLI já está instalado em: $INSTALL_DIR"
@@ -176,24 +176,24 @@ main() {
         # Remove old installation to avoid permission conflicts
         rm -rf "$INSTALL_DIR"
     fi
-    
+
     # Copy to permanent location (excluding .git)
     log_info "Instalando em $INSTALL_DIR..."
     mkdir -p "$INSTALL_DIR"
-    
+
     # Copy all files except .git directory
     find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec cp -r {} "$INSTALL_DIR/" \;
-    
+
     # Run installation from permanent location
     cd "$INSTALL_DIR"
     chmod +x install.sh
-    
+
     log_info "Executando instalação..."
-    
+
     if bash install.sh; then
         log_success "Susa CLI instalado com sucesso! 🎉"
         echo ""
-        log_info "Documentação: https://carlosdorneles-mb.github.io/susa"
+        log_info "Documentação: https://duducp.github.io/susa"
     else
         log_error "Falha durante a instalação"
         exit 1

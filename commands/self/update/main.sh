@@ -4,7 +4,7 @@ set -euo pipefail
 setup_command_env
 
 # Settings
-REPO_URL="${CLI_REPO_URL:-https://github.com/carlosdorneles-mb/susa.git}"
+REPO_URL="${CLI_REPO_URL:-https://github.com/duducp/susa.git}"
 REPO_BRANCH="${CLI_REPO_BRANCH:-main}"
 TEMP_DIR=$(mktemp -d)
 
@@ -37,7 +37,7 @@ show_help() {
     echo "  • Remove arquivos temporários automaticamente"
     echo ""
     echo -e "${LIGHT_GREEN}Variáveis de ambiente:${NC}"
-    echo "  CLI_REPO_URL      URL do repositório (padrão: github.com/carlosdorneles-mb/susa)"
+    echo "  CLI_REPO_URL      URL do repositório (padrão: github.com/duducp/susa)"
     echo "  CLI_REPO_BRANCH   Branch a usar (padrão: main)"
     echo "  DEBUG             Ativa logs de debug (true, 1, on)"
     echo ""
@@ -58,27 +58,27 @@ get_current_version() {
 get_latest_version() {
     local latest_version
     local method=""
-    
+
     # Try to obtain via GitHub API
     latest_version=$(curl -s --max-time 10 --connect-timeout 5 \
-        https://api.github.com/repos/carlosdorneles-mb/susa/releases/latest 2>/dev/null \
+        https://api.github.com/repos/duducp/susa/releases/latest 2>/dev/null \
         | grep '"tag_name":' | sed -E 's/.*"v?([^"]+)".*/\1/')
-    
+
     if [[ -n "$latest_version" ]]; then
         echo "$latest_version|api"
         return 0
     fi
-    
+
     # If it fails, try to get the version of cli.yaml from the remote repository
     latest_version=$(curl -s --max-time 10 --connect-timeout 5 \
-        "https://raw.githubusercontent.com/carlosdorneles-mb/susa/${REPO_BRANCH}/cli.yaml" 2>/dev/null \
+        "https://raw.githubusercontent.com/duducp/susa/${REPO_BRANCH}/cli.yaml" 2>/dev/null \
         | grep 'version:' | head -1 | sed -E 's/.*version: *"?([^"]+)"?/\1/')
-    
+
     if [[ -n "$latest_version" ]]; then
         echo "$latest_version|raw"
         return 0
     fi
-    
+
     return 1
 }
 
@@ -86,14 +86,14 @@ get_latest_version() {
 version_greater_than() {
     local version1=$1
     local version2=$2
-    
+
     # Remove prefix 'v' if exists
     version1=${version1#v}
     version2=${version2#v}
-    
+
     # Uses sort -V for version comparison
     local higher=$(echo -e "$version1\n$version2" | sort -V | tail -n1)
-    
+
     [[ "$version2" == "$higher" && "$version1" != "$version2" ]]
 }
 
@@ -101,29 +101,29 @@ version_greater_than() {
 perform_update() {
     log_info "Iniciando atualização do Susa CLI..."
     log_debug "Diretório temporário: $TEMP_DIR"
-    
+
     # Clones the repository
     cd "$TEMP_DIR"
     log_info "Baixando versão mais recente do repositório..."
     log_debug "Clonando de: $REPO_URL (branch: $REPO_BRANCH)"
-    
+
     if ! git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" susa-update 2>/dev/null; then
         log_error "Falha ao baixar atualização do repositório"
         log_info "Verifique sua conexão com a internet e tente novamente"
         return 1
     fi
-    
+
     log_debug "Clone concluído, entrando no diretório susa-update"
     cd susa-update
-    
+
     # Check if cli.yaml exists
     if [ ! -f "cli.yaml" ]; then
         log_error "Arquivo de configuração não encontrado na versão baixada"
         return 1
     fi
-    
+
     log_debug "Arquivo cli.yaml encontrado"
-    
+
     # Preserve critical files before updating
     log_info "Preservando configurações de plugins..."
     local backup_registry=""
@@ -134,27 +134,27 @@ perform_update() {
     else
         log_debug "Nenhum registry de plugins para preservar"
     fi
-    
+
     # Copy new files (except .git)
     log_info "Instalando arquivos atualizados..."
     log_debug "Destino: $CLI_DIR"
-    
+
     # Remove .git directory before copying
     rm -rf .git
     log_debug "Diretório .git removido"
-    
+
     # Copy all files to the CLI directory
     cp -rf ./* "$CLI_DIR/"
     log_debug "Arquivos copiados com sucesso"
-    
+
     # Restores plugin registry if there was a backup
     if [ -n "$backup_registry" ] && [ -f "$backup_registry" ]; then
         cp "$backup_registry" "$CLI_DIR/plugins/registry.yaml"
         log_debug "Registry de plugins restaurado"
     fi
-    
+
     log_success "Arquivos atualizados com sucesso!"
-    
+
     return 0
 }
 
@@ -163,54 +163,54 @@ main() {
     log_info "Verificando atualizações..."
     log_debug "CLI_DIR: $CLI_DIR"
     log_debug "GLOBAL_CONFIG_FILE: $GLOBAL_CONFIG_FILE"
-    
+
     # Get current version
     CURRENT_VERSION=$(get_current_version)
     log_debug "Versão atual obtida do arquivo: $CURRENT_VERSION"
     log_info "Versão atual: $CURRENT_VERSION"
-    
+
     # Get latest version
     log_debug "Tentando obter versão mais recente via GitHub..."
     LATEST_VERSION_RESULT=$(get_latest_version)
-    
+
     if [[ -z "$LATEST_VERSION_RESULT" ]]; then
         log_debug "Falha ao obter versão mais recente por todos os métodos"
         log_error "Não foi possível obter informações sobre a versão mais recente"
         log_info "Verifique sua conexão com a internet e tente novamente"
         exit 1
     fi
-    
+
     # Parse result (version|method)
     IFS='|' read -r LATEST_VERSION METHOD <<< "$LATEST_VERSION_RESULT"
-    
+
     if [[ "$METHOD" == "api" ]]; then
         log_debug "Versão obtida via GitHub API: $LATEST_VERSION"
     elif [[ "$METHOD" == "raw" ]]; then
         log_debug "API do GitHub falhou, versão obtida via raw content: $LATEST_VERSION"
     fi
-    
+
     log_info "Última versão disponível: $LATEST_VERSION"
-    
+
     # Compare versions
     log_debug "Comparando versões: $CURRENT_VERSION vs $LATEST_VERSION"
     if version_greater_than "$CURRENT_VERSION" "$LATEST_VERSION"; then
         echo ""
         log_success "Nova atualização disponível! ($CURRENT_VERSION → $LATEST_VERSION)"
         echo ""
-        
+
         # Ask if you want to update
         if [ -t 0 ]; then
             read -p "Deseja atualizar agora? (s/N): " -n 1 -r
             echo ""
-            
+
             if [[ ! $REPLY =~ ^[SsYy]$ ]]; then
                 log_info "Atualização cancelada pelo usuário"
                 exit 0
             fi
         fi
-        
+
         echo ""
-        
+
         # Run update
         if perform_update; then
             echo ""

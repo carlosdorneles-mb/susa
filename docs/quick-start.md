@@ -9,19 +9,19 @@ A forma mais rápida de instalar o Susa CLI é usando o instalador remoto.
 Use este comando com `curl` para baixar o script e executá-lo:
 
 ```bash
-curl -LsSf https://raw.githubusercontent.com/carlosdorneles-mb/susa/main/install-remote.sh | bash
+curl -LsSf https://raw.githubusercontent.com/duducp/susa/main/install-remote.sh | bash
 ```
 
 Se o seu sistema não tiver curl, você pode usar `wget`:
 
 ```bash
-wget -qO- https://raw.githubusercontent.com/carlosdorneles-mb/susa/main/install-remote.sh | bash
+wget -qO- https://raw.githubusercontent.com/duducp/susa/main/install-remote.sh | bash
 ```
 
 Solicite uma versão específica incluindo-a no URL:
 
 ```bash
-curl -LsSf https://raw.githubusercontent.com/carlosdorneles-mb/susa/1.0.0/install-remote.sh | bash
+curl -LsSf https://raw.githubusercontent.com/duducp/susa/1.0.0/install-remote.sh | bash
 ```
 
 Este comando irá:
@@ -46,13 +46,13 @@ susa --help
 Para remover o Susa CLI utilizando o `curl`:
 
 ```bash
-curl -LsSf https://raw.githubusercontent.com/carlosdorneles-mb/susa/main/uninstall-remote.sh | bash
+curl -LsSf https://raw.githubusercontent.com/duducp/susa/main/uninstall-remote.sh | bash
 ```
 
 Se o seu sistema não tiver curl, você pode usar `wget`:
 
 ```bash
-wget -qO- https://raw.githubusercontent.com/carlosdorneles-mb/susa/main/uninstall-remote.sh | bash
+wget -qO- https://raw.githubusercontent.com/duducp/susa/main/uninstall-remote.sh | bash
 ```
 
 ---

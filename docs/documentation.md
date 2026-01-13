@@ -181,7 +181,7 @@ O deploy é **totalmente automático** via GitHub Actions:
 2. 💾 Faça commit e push para `main`
 3. 🤖 GitHub Actions executa automaticamente
 4. ✅ Documentação atualizada em ~2-3 minutos
-5. 🌐 Disponível em: https://carlosdorneles-mb.github.io/susa
+5. 🌐 Disponível em: https://duducp.github.io/susa
 
 **Não é necessário executar `make deploy` manualmente!**
 
@@ -252,7 +252,7 @@ theme:
       toggle:
         icon: material/brightness-7
         name: Mudar para modo escuro
-    
+
     # Modo escuro
     - scheme: slate
       primary: teal
@@ -347,7 +347,7 @@ Para melhorar os resultados:
 ```yaml
 plugins:
   - search:
-      lang: 
+      lang:
         - pt
         - en
       separator: '[\s\-\.]+'

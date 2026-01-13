@@ -36,7 +36,7 @@ Veja nas [referências](../reference/commands/self/plugins/index.md) todos os co
 
 ## 🏗️ Criando um Plugin
 
-> **💡 Exemplo completo:** Veja o [susa-plugin-hello-world](https://github.com/carlosdorneles-mb/susa-plugin-hello-world) como referência de implementação.
+> **💡 Exemplo completo:** Veja o [susa-plugin-hello-world](https://github.com/duducp/susa-plugin-hello-world) como referência de implementação.
 
 ### 1. Estrutura Básica
 
@@ -153,4 +153,4 @@ Commands:
 ## 🔗 Próximos Passos
 
 - [Arquitetura de Plugins](architecture.md) - Detalhes técnicos
-- [Plugin Hello World](https://github.com/carlosdorneles-mb/susa-plugin-hello-world) - Exemplo completo de plugin
+- [Plugin Hello World](https://github.com/duducp/susa-plugin-hello-world) - Exemplo completo de plugin

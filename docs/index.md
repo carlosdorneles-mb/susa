@@ -29,7 +29,7 @@ Sistema modular de CLI em Shell Script para automação de tarefas e gerenciamen
 Use este comando com `curl` para baixar o script e executá-lo:
 
 ```bash
-curl -LsSf https://raw.githubusercontent.com/carlosdorneles-mb/susa/main/install-remote.sh | bash
+curl -LsSf https://raw.githubusercontent.com/duducp/susa/main/install-remote.sh | bash
 ```
 
 Para instruções completas de instalação, desinstalação e verificação, veja o [Guia de Início Rápido](quick-start.md).

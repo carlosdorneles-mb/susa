@@ -42,7 +42,7 @@ Durante a atualização, **não são perdidos**:
 
 | Variável | Descrição | Padrão |
 |----------|-----------|--------|
-| `CLI_REPO_URL` | URL do repositório | `github.com/carlosdorneles-mb/susa` |
+| `CLI_REPO_URL` | URL do repositório | `github.com/duducp/susa` |
 | `CLI_REPO_BRANCH` | Branch a usar | `main` |
 | `DEBUG` | Ativa logs de debug | `false` |
 

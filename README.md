@@ -18,13 +18,13 @@ Framework modular em Shell Script para criar CLIs extensíveis com descoberta au
 ### Instalação Rápida (Recomendado)
 
 ```bash
-curl -LsSf https://raw.githubusercontent.com/carlosdorneles-mb/susa/main/install-remote.sh | bash
+curl -LsSf https://raw.githubusercontent.com/duducp/susa/main/install-remote.sh | bash
 ```
 
 ### Instalação Manual
 
 ```bash
-git clone https://github.com/carlosdorneles-mb/susa.git
+git clone https://github.com/duducp/susa.git
 cd susa
 ./install.sh
 ```
@@ -32,7 +32,7 @@ cd susa
 ### Desinstalação
 
 ```bash
-curl -LsSf https://raw.githubusercontent.com/carlosdorneles-mb/susa/main/uninstall-remote.sh | bash
+curl -LsSf https://raw.githubusercontent.com/duducp/susa/main/uninstall-remote.sh | bash
 ```
 
 ## 📖 Uso Básico
@@ -125,7 +125,7 @@ susa self completion --install
 
 ## 📚 Documentação Completa
 
-- **[Documentação Completa](https://carlosdorneles-mb.github.io/susa/)** - Guias e referências
+- **[Documentação Completa](https://duducp.github.io/susa/)** - Guias e referências
 - **[Quick Start](docs/quick-start.md)** - Primeiros passos
 - **[Guia de Funcionalidades](docs/guides/features.md)** - Recursos detalhados
 - **[Adicionar Comandos](docs/guides/adding-commands.md)** - Tutorial passo-a-passo
@@ -142,4 +142,4 @@ MIT License - veja [LICENSE](docs/about/license.md).
 
 ---
 
-**Feito com ❤️ por [Carlos Dorneles](https://github.com/carlosdorneles-mb)**
+**Feito com ❤️ por [Carlos Dorneles](https://github.com/duducp)**

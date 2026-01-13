@@ -6,7 +6,7 @@ Obrigado pelo interesse em contribuir para o projeto CLI! 🎉
 
 ### Reportar Bugs
 
-Encontrou um bug? Abra uma [issue](https://github.com/carlosdorneles-mb/susa/issues) com:
+Encontrou um bug? Abra uma [issue](https://github.com/duducp/susa/issues) com:
 
 - Descrição clara do problema
 - Passos para reproduzir
@@ -106,7 +106,7 @@ Para contribuir com plugins:
 
 ## 💬 Dúvidas?
 
-- Abra uma [Discussion](https://github.com/carlosdorneles-mb/susa/discussions)
+- Abra uma [Discussion](https://github.com/duducp/susa/discussions)
 - Pergunte nas issues existentes
 - Consulte a documentação completa
 
