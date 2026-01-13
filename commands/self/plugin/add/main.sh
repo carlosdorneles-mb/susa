@@ -194,6 +194,12 @@ main() {
 
     # Show success message
     show_installation_success "$plugin_name" "$plugin_url" "$plugin_version" "$cmd_count"
+
+    # Update lock file if it exists
+    if [ -f "$CLI_DIR/susa.lock" ]; then
+        log_info "Atualizando arquivo susa.lock..."
+        "$CLI_DIR/susa" self lock > /dev/null 2>&1 || log_warning "Não foi possível atualizar o susa.lock. Execute 'susa self lock' manualmente."
+    fi
 }
 
 # Parse arguments first, before running main

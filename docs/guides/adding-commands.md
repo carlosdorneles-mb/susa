@@ -213,7 +213,7 @@ O Susa CLI descobre comandos **automaticamente**:
 - Cada `config.yaml` é lido dinamicamente
 - Plugins funcionam da mesma forma em `plugins/`
 
-> **💡 Para entender como o sistema diferencia comandos e subcategorias**, veja [Diferença entre Comandos e Subcategorias](subcategories.md#diferença-entre-comandos-e-subcategorias).
+> **💡 Para entender como o sistema diferencia comandos e subcategorias**, veja [Diferença entre Comandos e Subcategorias](subcategories.md#diferenca-entre-comandos-e-subcategorias).
 
 ## 🧪 Testando Localmente
 

@@ -107,7 +107,7 @@ BACKUP_DIR="/var/backups"
 - Comandos de plugins exibem **`[plugin]`** na listagem
 - Ambos podem aparecer juntos: `comando [plugin] [sudo]`
 
-> Veja mais sobre indicadores em [Filtros de Sistema Operacional e Sudo](subcategories.md#⚙️-filtros-de-sistema-operacional-e-sudo) e [Plugins](../plugins/overview.md#indicador-visual).
+> Veja mais sobre indicadores em [Filtros de Sistema Operacional e Sudo](subcategories.md#filtros-de-sistema-operacional-e-sudo) e [Plugins](../plugins/overview.md#indicador-visual).
 
 ---
 

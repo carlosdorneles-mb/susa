@@ -33,7 +33,6 @@ source "$LIB_DIR/yaml.sh"
 source "$LIB_DIR/cli.sh"
 source "$LIB_DIR/shell.sh"
 source "$LIB_DIR/dependencies.sh"
-source "$LIB_DIR/kubernetes.sh"
 
 [ -f "$CLI_DIR/config/settings.conf" ] && source "$CLI_DIR/config/settings.conf"
 
@@ -41,6 +40,26 @@ source "$LIB_DIR/kubernetes.sh"
 if [ ! -f "$GLOBAL_CONFIG_FILE" ]; then
     echo "Erro: Arquivo de configuração '$GLOBAL_CONFIG_FILE' não encontrado" >&2
     exit 1
+fi
+
+# ============================================================
+# Lock File Validation
+# ============================================================
+
+# Check if susa.lock exists, if not, generate it
+LOCK_FILE="$CLI_DIR/susa.lock"
+if [ ! -f "$LOCK_FILE" ] && [ "${SUSA_SKIP_LOCK_CHECK:-}" != "1" ]; then
+    log_info "Primeira execução detectada. Configurando o Susa CLI..."
+    log_info "Gerando arquivo de cache para otimizar o desempenho..."
+
+    # Call the lock command bypassing the check to prevent infinite loop
+    SUSA_SKIP_LOCK_CHECK=1 "$CLI_DIR/susa" self lock > /dev/null 2>&1 || {
+        log_error "Erro ao gerar arquivo de cache"
+        exit 1
+    }
+
+    log_success "Configuração concluída! O CLI está pronto para uso."
+    echo ""
 fi
 
 # ============================================================

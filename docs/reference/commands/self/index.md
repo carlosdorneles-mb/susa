@@ -30,6 +30,14 @@ Exibe informações detalhadas sobre a instalação da CLI.
 susa self info
 ```
 
+### [Lock](lock.md)
+
+Atualiza o arquivo `susa.lock` para acelerar a inicialização do CLI (~38% mais rápido).
+
+```bash
+susa self lock
+```
+
 ### [Version](version.md)
 
 Mostra a versão atual do Susa CLI.
@@ -64,6 +72,7 @@ susa self plugin remove nome-plugin
 |---------|-----------|
 | `completion` | Configura autocompletar no shell |
 | `info` | Informações da instalação |
+| `lock` | Atualiza cache de comandos (susa.lock) |
 | `version` | Versão atual do CLI |
 | `update` | Atualiza o Susa CLI |
 | `plugin add` | Instala novo plugin |

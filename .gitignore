@@ -6,7 +6,8 @@
 config/.env
 .env
 
-# Plugins
+# Susa CLI
+susa.lock
 plugins/*
 !plugins/.gitkeep
 

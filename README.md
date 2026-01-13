@@ -105,6 +105,18 @@ susa self plugin add user/repo
 susa self plugin list
 ```
 
+### Otimizar Performance
+
+O CLI utiliza um arquivo de cache (`susa.lock`) para acelerar a inicialização:
+
+```bash
+susa self lock
+```
+
+Este arquivo é **gerado automaticamente** na primeira execução e atualizado ao instalar/remover plugins. Ele proporciona uma inicialização ~38% mais rápida.
+
+Execute manualmente apenas se adicionar comandos diretamente no diretório `commands/`.
+
 ### Ativar Autocompletar
 
 ```bash

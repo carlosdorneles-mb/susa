@@ -4,5 +4,6 @@ nav:
   - Completion: completion.md
   - Info: info.md
   - Update: update.md
+  - Lock: lock.md
   - Version: version.md
   - plugins
