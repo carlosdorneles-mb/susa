@@ -16,6 +16,10 @@ Instala e configura o Docker CLI e Engine para gerenciamento de containers. Esta
 
 Instala e configura o iTerm2, um substituto avançado para o Terminal padrão do macOS, com recursos como split panes, busca avançada, autocompletar e muito mais. **Disponível apenas para macOS.**
 
+### [JetBrains Toolbox](jetbrains-toolbox.md)
+
+Instala e configura o JetBrains Toolbox, gerenciador oficial para todas as IDEs da JetBrains (IntelliJ IDEA, PyCharm, WebStorm, GoLand, etc.). Permite instalar, atualizar e gerenciar múltiplas versões das IDEs a partir de uma interface única. **Disponível para Linux e macOS.**
+
 ### [Mise](mise.md)
 
 Instala e configura o Mise (anteriormente rtx), um gerenciador de versões polyglot escrito em Rust. Compatível com plugins do ASDF, mas com melhor performance, além de funcionalidades extras como task runner e gerenciamento de variáveis de ambiente. **Disponível para Linux e macOS.**

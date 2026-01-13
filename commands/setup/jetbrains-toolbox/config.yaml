@@ -1,0 +1,5 @@
+name: "JetBrains Toolbox"
+description: "Instala JetBrains Toolbox (gerenciador de IDEs JetBrains)"
+script: "main.sh"
+sudo: false
+os: ["linux", "mac"]
