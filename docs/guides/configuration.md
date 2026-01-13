@@ -1,12 +1,14 @@
 # 🛠️ Configuração do CLI
 
-Este guia explica como configurar e personalizar o comportamento do CLI.
+Este guia explica como configurar e personalizar o comportamento global do CLI.
+
+> **📖 Para configuração de comandos individuais** (config.yaml de comandos), veja [Como Adicionar Novos Comandos](adding-commands.md#3-configurar-o-comando).
 
 ---
 
 ## 📁 Arquivos de Configuração
 
-O CLI usa dois tipos de configuração:
+O CLI usa diversos níveis de configuração:
 
 ### 1. `cli.yaml` - Configuração Global
 
@@ -85,68 +87,27 @@ BACKUP_DIR="/var/backups"
 
 ---
 
-### 3. `<categoria>/config.yaml` - Configuração de Categoria
+### 3. Configuração de Categorias e Comandos
 
-Cada categoria pode ter metadados descritivos.
+> **📖 Documentação completa:** Para detalhes sobre `config.yaml` de categorias, subcategorias e comandos, consulte:
+> - **[Como Adicionar Novos Comandos](adding-commands.md)** - Estrutura básica e campos do config.yaml
+> - **[Sistema de Subcategorias](subcategories.md)** - Hierarquias e organização multinível
 
-**Localização:** `commands/<categoria>/config.yaml`
+**Resumo:**
 
-**Exemplo:**
+| Tipo | Arquivo | Campos Principais | Referência |
+|------|---------|-------------------|------------|
+| Categoria | `commands/<categoria>/config.yaml` | `name`, `description` | [Ver guia](adding-commands.md#2-configurar-a-categoria) |
+| Comando | `commands/<categoria>/<comando>/config.yaml` | `name`, `description`, `script`, `sudo`, `os`, `group` (opcional) | [Ver guia](adding-commands.md#3-configurar-o-comando) |
+| Subcategoria | `commands/<categoria>/<sub>/config.yaml` | `name`, `description` (sem `script`) | [Ver guia](subcategories.md#todos-usam-configyaml) |
 
-```yaml
-name: "Setup"
-description: "Instalar e configurar ferramentas"
-```
+**Indicadores Visuais:**
 
-**Campos:**
+- Comandos com `sudo: true` exibem **`[sudo]`** na listagem
+- Comandos de plugins exibem **`[plugin]`** na listagem
+- Ambos podem aparecer juntos: `comando [plugin] [sudo]`
 
-| Campo | Tipo | Descrição |
-|-------|------|-----------|
-| `name` | string | Nome amigável da categoria |
-| `description` | string | Descrição exibida na listagem |
-
-**Quando Criar:**
-
-- Ao criar uma nova categoria
-- Para melhorar mensagens de help
-- Opcional: se omitido, usa nome do diretório
-
----
-
-### 4. `<comando>/config.yaml` - Configuração de Comando
-
-Cada comando **obrigatoriamente** tem seu próprio config.yaml.
-
-**Localização:** `commands/<categoria>/<comando>/config.yaml`
-
-**Exemplo:**
-
-```yaml
-category: setup
-id: asdf
-name: "ASDF"
-description: "Instala ASDF Version Manager"
-script: "main.sh"
-sudo: false
-os: ["linux", "mac"]
-```
-
-**Campos:**
-
-| Campo | Tipo | Obrigatório | Descrição |
-| ----- | ---- | ----------- | --------- |
-| `category` | string | ✅ | Nome da categoria (deve corresponder ao diretório pai) |
-| `id` | string | ✅ | Identificador único do comando |
-| `name` | string | ✅ | Nome amigável do comando |
-| `description` | string | ✅ | Descrição exibida na listagem |
-| `script` | string | ✅ | Nome do arquivo script (geralmente `main.sh`) |
-| `sudo` | boolean | ❌ | Se `true`, comando requer privilégios sudo |
-| `os` | array | ❌ | SOs compatíveis: `["linux"]`, `["mac"]` ou ambos |
-
-**Quando Criar:**
-
-- Sempre ao criar um novo comando (obrigatório)
-- O CLI não reconhece comandos sem `config.yaml`
+> Veja mais sobre indicadores em [Filtros de Sistema Operacional e Sudo](subcategories.md#⚙️-filtros-de-sistema-operacional-e-sudo) e [Plugins](../plugins/overview.md#indicador-visual).
 
 ---
 
@@ -347,10 +308,10 @@ susa/
 │               └── main.sh     # ✅ Obrigatório
 └── plugins/
     ├── registry.yaml            # 🔧 Gerado automaticamente
-    └── myplugin/
-        └── deploy/
+    └── hello-world/             # Exemplo de plugin
+        └── text/
             ├── config.yaml
-            └── dev/
+            └── hello-world/
                 ├── config.yaml  # ✅ Obrigatório (plugin)
                 └── main.sh      # ✅ Obrigatório (plugin)
 ```
@@ -374,10 +335,10 @@ susa/
 categories:
   install:
     commands:
-      - id: docker
-        name: "Docker"
+      - name: "Docker"
+        description: "Docker description"
         # ... 50 linhas ...
-      - id: nodejs
+      - name: "NodeJS"
         # ... 50 linhas ...
       # ... 500 comandos ...
 ```
@@ -492,38 +453,24 @@ log_info "Conectando a API..."
 
 ## 🔍 Troubleshooting de Configuração
 
-### Problema: Comando não aparece na listagem
+> **📖 Para troubleshooting de comandos específicos**, veja a seção [Troubleshooting](subcategories.md#troubleshooting) no guia de subcategorias.
 
-**Possíveis causas:**
+### Problema: CLI não encontra cli.yaml
 
-1. **Falta `config.yaml`** no diretório do comando
+**Verificar:**
 
-   ```bash
-   # Solução: criar config.yaml
-   cat > commands/categoria/comando/config.yaml << EOF
-   name: "Comando"
-   description: "Descrição"
-   script: "main.sh"
-   EOF
-   ```
+```bash
+# Verificar se arquivo existe no local correto
+ls -la ./cli.yaml
+ls -la /opt/susa/cli.yaml
 
-2. **Campo `script` não aponta para arquivo existente**
-
-   ```bash
-   # Verificar se arquivo existe
-   ls -la commands/categoria/comando/main.sh
-   ```
-
-3. **Comando incompatível com SO atual**
-
-   ```yaml
-   # config.yaml define:
-   os: ["mac"]  # Mas você está em Linux
-   ```
+# Testar com caminho absoluto
+GLOBAL_CONFIG_FILE=/caminho/completo/cli.yaml susa --version
+```
 
 ---
 
-### Problema: Configuração não está sendo carregada
+### Problema: Configuração não está sendo carregada (settings.conf)
 
 **Debug:**
 
@@ -564,10 +511,11 @@ DEBUG=true susa setup docker
 
 ## 📚 Recursos Adicionais
 
-- [Funcionalidades](features.md) - Visão geral do sistema
-- [Adicionar Comandos](adding-commands.md) - Como criar comandos
-- [Referência de Bibliotecas](../reference/libraries/index.md) - API das libs
-- [Sistema de Plugins](../plugins/overview.md) - Extensão via Git
+- **[Como Adicionar Novos Comandos](adding-commands.md)** - Configuração de comandos e categorias
+- **[Sistema de Subcategorias](subcategories.md)** - Organização hierárquica
+- **[Funcionalidades](features.md)** - Visão geral do sistema
+- **[Referência de Bibliotecas](../reference/libraries/index.md)** - API das libs
+- **[Sistema de Plugins](../plugins/overview.md)** - Extensão via Git
 
 ---
 

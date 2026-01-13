@@ -4,6 +4,8 @@
 
 O CLI suporta uma estrutura hierárquica de categorias e subcategorias baseada em diretórios, permitindo organizar comandos em múltiplos níveis de profundidade.
 
+> **📖 Pré-requisito:** Este guia assume que você já conhece os conceitos básicos de estrutura de comandos, `config.yaml` e criação de scripts. Se não, veja primeiro [Como Adicionar Novos Comandos](adding-commands.md).
+
 ## 🏗️ Estrutura de Diretórios
 
 ### Diferença entre Comandos e Subcategorias
@@ -32,8 +34,10 @@ Tanto comandos quanto subcategorias têm `config.yaml`, mas com campos diferente
 
 | Tipo | Campos no config.yaml |
 | ---- | --------------------- |
-| **Comando** | `category`, `id`, `name`, `description`, `script` (obrigatório), `sudo`, `os` |
+| **Comando** | `name`, `description`, `script` (obrigatório), `sudo`, `os` |
 | **Subcategoria** | `name`, `description` (sem campo `script`) |
+
+> **ℹ️ Para detalhes completos sobre campos do config.yaml, veja [Configuração de Comandos](adding-commands.md#3-configurar-o-comando).**
 
 **Vantagens dessa abordagem:**
 
@@ -121,12 +125,10 @@ description: "Ferramentas Python"
 Configuração completa de um comando executável.
 
 ```yaml
-category: setup
-id: pip
 name: "Pip"
 description: "Instala gerenciador de pacotes Python (pip)"
 script: "main.sh"        # ← Este campo indica que é executável
-sudo: false
+sudo: false              # true = exibe indicador [sudo] na listagem
 os: ["linux", "mac"]
 ```
 
@@ -136,26 +138,19 @@ os: ["linux", "mac"]
 
 ## ✨ Campos de Configuração
 
-### Para Comandos (Executáveis)
+> **📖 Referência completa:** Veja [Configuração de Comandos](adding-commands.md#3-configurar-o-comando) para detalhes sobre todos os campos disponíveis.
 
-| Campo | Tipo | Obrigatório | Descrição |
-| ----- | ---- | ----------- | --------- |
-| `category` | string | ✅ | Nome da categoria (deve corresponder ao diretório pai) |
-| `id` | string | ✅ | Identificador único do comando |
-| `name` | string | ✅ | Nome exibido do comando |
-| `description` | string | ✅ | Descrição curta |
-| `script` | string | ✅ | Nome do arquivo do script (ex: "main.sh") |
-| `sudo` | boolean | ❌ | Requer permissões de superusuário (padrão: false) |
-| `os` | array | ❌ | Sistemas compatíveis: `["linux", "mac"]` |
+### Resumo Rápido
 
-### Para Subcategorias (Navegáveis)
+**Para Comandos (Executáveis):**
 
-| Campo | Tipo | Obrigatório | Descrição |
-|-------|------|-------------|-----------|
-| `name` | string | ✅ | Nome exibido da subcategoria |
-| `description` | string | ✅ | Descrição curta |
+- Devem ter o campo `script:` apontando para um arquivo executável
+- Exemplo: `script: "main.sh"`
 
-**Nota:** Subcategorias NÃO devem ter o campo `script`.
+**Para Subcategorias (Navegáveis):**
+
+- NÃO devem ter o campo `script`
+- Apenas `name` e `description`
 
 ### Lista de Categoria com Subcategorias
 
@@ -187,36 +182,24 @@ Commands:
   poetry          Instala Poetry (gerenciador de dependências Python)
 ```
 
-## 🚀 Como Adicionar Novos Comandos
+## 🚀 Como Adicionar Comandos em Hierarquias
+
+> **📖 Para criar comandos simples**, veja [Como Adicionar Novos Comandos](adding-commands.md). Esta seção foca em **estruturas hierárquicas** com subcategorias.
 
 ### 1. Comando em Categoria Existente
 
+> Veja [guia básico](adding-commands.md#passos-para-adicionar-um-comando) para detalhes.
+
+**Resumo:**
+
 ```bash
-# Criar diretório do comando
-mkdir -p commands/install/comando-novo
-
-# Criar configuração
-cat > commands/install/comando-novo/config.yaml << EOF
-name: "Comando Novo"
-description: "Descrição do comando"
-script: "main.sh"
-sudo: false
-os: ["linux"]
-EOF
-
-# Criar script
-cat > commands/install/comando-novo/main.sh << 'EOF'
-#!/bin/bash
-echo "Executando comando novo!"
-EOF
-
-# Tornar executável
-chmod +x commands/setup/comando-novo/main.sh
+mkdir -p commands/setup/comando-novo
+# Criar config.yaml e main.sh conforme guia básico
 ```
 
-**Uso:** `./susa setup comando-novo`
-
 ### 2. Comando em Nova Subcategoria
+
+A diferença principal: criar um `config.yaml` **sem** campo `script` para a subcategoria.
 
 ```bash
 # Criar estrutura
@@ -355,37 +338,38 @@ plugins/
 - Mesma navegação multinível
 - Mesma descoberta automática
 
-A única diferença é o diretório: `plugins/{nome-plugin}/` ao invés de `commands/`.
+**Diferenças:**
 
-## ⚙️ Filtros de Sistema Operacional
+- Diretório: `plugins/{nome-plugin}/` ao invés de `commands/`
+- Comandos de plugins exibem o indicador **`[plugin]`** na listagem
 
-Comandos podem ser restritos a sistemas operacionais específicos:
+**Exemplo de listagem com plugins:**
 
-```yaml
-# Apenas Linux
-os: ["linux"]
-
-# Apenas macOS
-os: ["mac"]
-
-# Ambos
-os: ["linux", "mac"]
-
-# Todos (omitir campo ou deixar vazio)
-os: []
+```text
+Commands:
+  asdf           Instala ASDF Version Manager
+  staging        Deploy para staging [plugin]
+  production     Deploy produção (requer sudo) [plugin] [sudo]
 ```
 
-Comandos incompatíveis são automaticamente ocultados na listagem.
+## ⚙️ Filtros de Sistema Operacional e Sudo
 
-## 🔐 Comandos com Sudo
+> **📖 Referência completa:** Veja [Configuração de Comandos](adding-commands.md#3-configurar-o-comando) para detalhes sobre os campos `os` e `sudo`.
 
-Comandos que requerem privilégios de superusuário:
+**Resumo:**
 
-```yaml
-sudo: true
+- Use o campo `os: ["linux", "mac"]` para restringir sistemas
+- Use `sudo: true` para comandos que requerem privilégios elevados
+  - Comandos com `sudo: true` exibem o indicador **`[sudo]`** na listagem
+
+**Exemplo de exibição:**
+
+```text
+Commands:
+  docker          Instala Docker CE [sudo]
+  asdf            Instala ASDF Version Manager
+  podman          Instala Podman
 ```
-
-Exibem um indicador `[sudo]` na listagem e validam permissões antes da execução.
 
 ## 📊 Agrupamento de Comandos
 
@@ -507,38 +491,9 @@ description: "Descrição aqui"
 
 ## 📚 Exemplos Completos
 
-### Exemplo 1: Ferramenta de Instalação Simples
+> **📖 Para exemplos de comandos simples**, veja [Exemplo Completo](adding-commands.md#exemplo-completo) no guia básico.
 
-```bash
-mkdir -p commands/install/docker
-
-cat > commands/install/docker/config.yaml << EOF
-name: "Docker"
-description: "Instala Docker CE"
-script: "main.sh"
-sudo: true
-os: ["linux"]
-EOF
-
-cat > commands/install/docker/main.sh << 'EOF'
-#!/bin/bash
-echo "📦 Instalando Docker CE..."
-apt-get update
-apt-get install -y docker.io
-systemctl start docker
-systemctl enable docker
-echo "✅ Docker instalado!"
-EOF
-
-chmod +x commands/install/docker/main.sh
-```
-
-**Uso:**
-
-- `./susa setup` → Lista docker entre as opções
-- `./susa setup docker` → Instala o Docker
-
-### Exemplo 2: Categoria com Subcategorias
+### Exemplo: Hierarquia com Subcategorias (Foco deste guia)
 
 ```bash
 # Estrutura
@@ -630,3 +585,9 @@ chmod +x plugins/dev-tools/deploy/aws/ec2/main.sh
 - `./susa deploy staging` → Executa deploy staging
 - `./susa deploy aws` → Lista `ec2`, `lambda`
 - `./susa deploy aws ec2` → Executa deploy EC2
+
+## 🔗 Guias Relacionados
+
+- **[Como Adicionar Novos Comandos](adding-commands.md)** - Guia fundamental para criar comandos simples
+- **[Referência de Bibliotecas](../reference/libraries/index.md)** - Bibliotecas disponíveis para usar em seus scripts
+- **[Plugins](../plugins/overview.md)** - Sistema de plugins que suporta a mesma estrutura hierárquica

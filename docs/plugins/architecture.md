@@ -35,8 +35,6 @@ cli/
 Cada comando deve ter um arquivo `config.yaml` no seu diretório:
 
 ```yaml
-category: daily              # Categoria do comando
-id: backup-s3               # ID único do comando
 name: "Backup S3"           # Nome para exibição
 description: "Descrição"    # Descrição curta
 script: "main.sh"           # Script principal
@@ -58,8 +56,6 @@ mkdir -p plugins/meu-plugin/categoria/comando
 ### 2. Crie o config.yaml
 
 ```yaml
-category: daily
-id: meu-comando
 name: "Meu Comando"
 description: "Descrição do comando"
 script: "main.sh"

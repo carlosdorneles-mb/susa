@@ -36,6 +36,8 @@ Veja nas [referências](../reference/commands/self/plugins/index.md) todos os co
 
 ## 🏗️ Criando um Plugin
 
+> **💡 Exemplo completo:** Veja o [susa-plugin-hello-world](https://github.com/carlosdorneles-mb/susa-plugin-hello-world) como referência de implementação.
+
 ### 1. Estrutura Básica
 
 ```bash
@@ -121,6 +123,25 @@ susa deploy aws          # Lista comandos AWS
 susa deploy aws ec2      # Executa deploy EC2
 ```
 
+### Indicador Visual
+
+Comandos de plugins são identificados com o indicador **`[plugin]`** na listagem:
+
+```text
+Commands:
+  asdf            Instala ASDF Version Manager
+  staging         Deploy para staging [plugin]
+  production      Deploy para produção [plugin]
+```
+
+Se o comando também requer `sudo`, ambos os indicadores aparecem:
+
+```text
+Commands:
+  docker        Instala Docker CE [sudo]
+  deploy-prod   Deploy produção com privilégios elevados [plugin] [sudo]
+```
+
 ## 📝 Boas Práticas
 
 1. **Versionamento** - Sempre mantenha `version.txt` atualizado
@@ -132,4 +153,4 @@ susa deploy aws ec2      # Executa deploy EC2
 ## 🔗 Próximos Passos
 
 - [Arquitetura de Plugins](architecture.md) - Detalhes técnicos
-- [Exemplos de Plugins](https://github.com/carlosdorneles-mb/cli-plugins) - Repositório de exemplos
+- [Plugin Hello World](https://github.com/carlosdorneles-mb/susa-plugin-hello-world) - Exemplo completo de plugin

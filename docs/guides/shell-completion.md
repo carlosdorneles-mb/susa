@@ -15,7 +15,7 @@ Shell completion é um recurso que permite autocompletar comandos ao pressionar 
 
 ---
 
-## 🚀 Instalação Rápida
+## 🚀 Instalação
 
 ### Instalação Automática
 

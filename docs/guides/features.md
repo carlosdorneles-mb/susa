@@ -50,8 +50,6 @@ O CLI **descobre comandos automaticamente** da estrutura de diretórios:
 # Criar nova pasta = novo comando disponível
 mkdir -p commands/setup/docker
 cat > commands/setup/docker/config.yaml << EOF
-category: setup
-id: docker
 name: "Docker"
 description: "Instala Docker Engine"
 script: "main.sh"
@@ -66,8 +64,6 @@ susa setup docker
 Cada comando tem seu próprio `config.yaml`:
 
 ```yaml
-category: setup         # Categoria pai
-id: docker              # Identificador único
 name: "Docker"          # Nome amigável
 description: "Instala Docker Engine"
 script: "main.sh"       # Script a executar
@@ -120,8 +116,6 @@ Comandos ficam disponíveis automaticamente:
 ```bash
 mkdir -p commands/deploy/production
 cat > commands/deploy/production/config.yaml << EOF
-category: deploy
-id: production
 name: "Production"
 description: "Deploy para produção"
 script: "main.sh"
@@ -227,8 +221,6 @@ os: ["linux", "mac"]
 
 ```yaml
 # commands/setup/apt/config.yaml
-category: setup
-id: apt
 name: "APT Tools"
 description: "Ferramentas APT (Ubuntu/Debian)"
 script: "main.sh"
@@ -237,8 +229,6 @@ os: ["linux"]  # Só aparece no Linux
 
 ```yaml
 # commands/setup/brew/config.yaml
-category: setup
-id: brew
 name: "Homebrew"
 description: "Gerenciador de pacotes"
 script: "main.sh"
@@ -381,8 +371,6 @@ description: "Instalar e configurar ferramentas"
 
 ```yaml
 # commands/categoria/comando/config.yaml
-category: setup
-id: asdf
 name: "ASDF"
 description: "Instala ASDF Version Manager"
 script: "main.sh"

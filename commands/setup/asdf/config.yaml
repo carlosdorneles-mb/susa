@@ -1,5 +1,3 @@
-category: setup
-id: asdf
 name: "ASDF"
 description: "Instala ASDF Version Manager"
 script: "main.sh"

@@ -1,7 +1,6 @@
-category: setup
-id: podman
 name: "Podman"
 description: "Instala Podman (gerenciador de containers)"
 script: "main.sh"
 sudo: false
+group:
 os: ["linux", "mac"]

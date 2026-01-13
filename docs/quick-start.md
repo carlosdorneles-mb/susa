@@ -1,13 +1,27 @@
 # Início Rápido
 
-## 🚀 Instalação Rápida
+## 🚀 Instalação
 
-### Instalação com um comando (Recomendado)
+A forma mais rápida de instalar o Susa CLI é usando o instalador remoto.
 
-A forma mais rápida de instalar o Susa CLI é usando o instalador remoto:
+### Linux and macOS
+
+Use este comando com `curl` para baixar o script e executá-lo:
 
 ```bash
 curl -LsSf https://raw.githubusercontent.com/carlosdorneles-mb/susa/main/install-remote.sh | bash
+```
+
+Se o seu sistema não tiver curl, você pode usar `wget`:
+
+```bash
+wget -qO- https://raw.githubusercontent.com/carlosdorneles-mb/susa/main/install-remote.sh | bash
+```
+
+Solicite uma versão específica incluindo-a no URL:
+
+```bash
+curl -LsSf https://raw.githubusercontent.com/carlosdorneles-mb/susa/1.0.0/install-remote.sh | bash
 ```
 
 Este comando irá:
@@ -29,11 +43,23 @@ susa --help
 
 ### Desinstalação
 
-Para remover o Susa CLI:
+Para remover o Susa CLI utilizando o `curl`:
 
 ```bash
 curl -LsSf https://raw.githubusercontent.com/carlosdorneles-mb/susa/main/uninstall-remote.sh | bash
 ```
+
+Se o seu sistema não tiver curl, você pode usar `wget`:
+
+```bash
+wget -qO- https://raw.githubusercontent.com/carlosdorneles-mb/susa/main/uninstall-remote.sh | bash
+```
+
+---
+
+## Autocompletar do Shell
+
+Consulte o [Guia de Shell Completion](./guides/shell-completion.md) para detalhes de como instalar.
 
 ---
 
@@ -123,8 +149,6 @@ EOF
 
 # Configuração do comando
 cat > commands/demo/hello/config.yaml << EOF
-category: demo
-id: hello
 name: "Hello World"
 description: "Comando de exemplo"
 script: "main.sh"

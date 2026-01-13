@@ -1,7 +1,6 @@
-category: plugin
-id: remove
 name: "Remove"
 description: "Remove um plugin instalado"
 script: "main.sh"
 sudo: false
+group:
 os: ["linux", "mac"]

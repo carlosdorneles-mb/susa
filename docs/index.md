@@ -22,7 +22,11 @@ Sistema modular de CLI em Shell Script para automação de tarefas e gerenciamen
 - 🔐 **Gestão de Permissões** - Indicadores e verificação de sudo
 - 🌐 **Instalação Remota** - Instale com um único comando curl
 
-## 🚀 Instalação Rápida
+## 🚀 Instalação
+
+### Linux and macOS
+
+Use este comando com `curl` para baixar o script e executá-lo:
 
 ```bash
 curl -LsSf https://raw.githubusercontent.com/carlosdorneles-mb/susa/main/install-remote.sh | bash
