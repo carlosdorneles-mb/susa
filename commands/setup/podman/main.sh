@@ -464,6 +464,41 @@ uninstall_podman() {
 main() {
     local action="${1:-install}"
 
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -h|--help)
+                show_help
+                exit 0
+                ;;
+            -v|--verbose)
+                export DEBUG=1
+                log_debug "Modo verbose ativado"
+                shift
+                ;;
+            -q|--quiet)
+                export SILENT=1
+                shift
+                ;;
+            -u|--uninstall)
+                action="uninstall"
+                shift
+                ;;
+            --update)
+                action="update"
+                shift
+                ;;
+            *)
+                log_error "Opção desconhecida: $1"
+                show_usage
+                exit 1
+                ;;
+        esac
+    done
+
+    # Execute action 
+    log_debug "Ação selecionada: $action"
+
     case "$action" in
         install)
             install_podman
@@ -481,35 +516,5 @@ main() {
     esac
 }
 
-# Parse arguments first, before running main
-ACTION="install"
-
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        -h|--help)
-            show_help
-            exit 0
-            ;;
-        -u|--uninstall)
-            ACTION="uninstall"
-            ;;
-        --update)
-            ACTION="update"
-            ;;
-        -v|--verbose)
-            export DEBUG=true
-            ;;
-        -q|--quiet)
-            export SILENT=true
-            ;;
-        *)
-            log_error "Opção desconhecida: $1"
-            show_usage
-            exit 1
-            ;;
-    esac
-    shift
-done
-
 # Execute main function
-main "$ACTION"
+main "$@"

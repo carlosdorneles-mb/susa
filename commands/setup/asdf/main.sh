@@ -104,7 +104,7 @@ check_existing_installation() {
     local target_version="$2"
 
     if [ ! -d "$asdf_dir" ] || [ ! -f "$asdf_dir/bin/asdf" ]; then
-        return 0  # Não instalado, pode continuar
+        return 0
     fi
 
     local current_version=$("$asdf_dir/bin/asdf" --version 2>/dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' || echo "desconhecida")
@@ -112,7 +112,7 @@ check_existing_installation() {
 
     if [ "$current_version" = "$target_version" ]; then
         log_info "Você já possui a versão mais recente instalada ($current_version)"
-        return 2  # Já atualizado
+        return 2
     fi
 
     echo ""
@@ -121,11 +121,11 @@ check_existing_installation() {
 
     if [[ ! "$response" =~ ^[sS]$ ]]; then
         log_info "Instalação cancelada"
-        return 1  # Cancelado
+        return 1
     fi
 
     log_info "Atualizando de $current_version para $target_version..."
-    return 0  # Pode continuar
+    return 0
 }
 
 # Check if ASDF is already configured in shell
@@ -456,6 +456,41 @@ uninstall_asdf() {
 main() {
     local action="${1:-install}" # Default action is install
 
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -h|--help)
+                show_help
+                exit 0
+                ;;
+            -v|--verbose)
+                export DEBUG=1
+                log_debug "Modo verbose ativado"
+                shift
+                ;;
+            -q|--quiet)
+                export SILENT=1
+                shift
+                ;;
+            -u|--uninstall)
+                action="uninstall"
+                shift
+                ;;
+            --update)
+                action="update"
+                shift
+                ;;
+            *)
+                log_error "Opção desconhecida: $1"
+                show_usage
+                exit 1
+                ;;
+        esac
+    done
+
+    # Execute action
+    log_debug "Ação selecionada: $action"
+
     case "$action" in
         install)
             install_asdf
@@ -473,35 +508,5 @@ main() {
     esac
 }
 
-# Parse arguments
-ACTION="install"
-
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        -h|--help)
-            show_help
-            exit 0
-            ;;
-        -v|--verbose)
-            export DEBUG=true
-            ;;
-        -q|--quiet)
-            export SILENT=true
-            ;;
-        -u|--uninstall)
-            ACTION="uninstall"
-            ;;
-        --update)
-            ACTION="update"
-            ;;
-        *)
-            log_error "Opção desconhecida: $1"
-            show_usage
-            exit 1
-            ;;
-    esac
-    shift
-done
-
 # Execute main function
-main "$ACTION"
+main "$@"

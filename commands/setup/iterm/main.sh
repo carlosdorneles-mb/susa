@@ -272,20 +272,19 @@ main() {
     log_debug "Sistema operacional: macOS $(sw_vers -productVersion)"
 
     # Execute action
+    log_debug "Ação selecionada: $action"
+  
     case "$action" in
         install)
-            log_debug "Ação selecionada: instalação"
             if ! check_existing_installation; then
                 exit 0
             fi
             install_iterm
             ;;
         update)
-            log_debug "Ação selecionada: atualização"
             update_iterm
             ;;
         uninstall)
-            log_debug "Ação selecionada: desinstalação"
             uninstall_iterm
             ;;
     esac

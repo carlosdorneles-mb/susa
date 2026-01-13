@@ -1,6 +1,6 @@
 name: "Tilix Terminal"
 description: "Instala Tilix (terminal)"
 script: "main.sh"
-sudo: false
+sudo: true
 group: terminal
 os: ["linux"]
