@@ -462,7 +462,7 @@ uninstall_podman() {
 
 # Main function
 main() {
-    local action="${1:-install}"
+    local action="install"
 
     # Parse arguments
     while [[ $# -gt 0 ]]; do

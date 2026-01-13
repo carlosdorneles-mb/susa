@@ -454,8 +454,8 @@ uninstall_asdf() {
 
 # Main function
 main() {
-    local action="${1:-install}" # Default action is install
-
+    local action="install"
+    
     # Parse arguments
     while [[ $# -gt 0 ]]; do
         case "$1" in
