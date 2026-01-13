@@ -42,6 +42,46 @@ else
 fi
 ```
 
+### `has_gitlab_ssh_access()`
+
+Verifica se usuário tem acesso SSH ao GitLab configurado.
+
+```bash
+if has_gitlab_ssh_access; then
+    echo "SSH GitLab disponível"
+fi
+```
+
+### `has_bitbucket_ssh_access()`
+
+Verifica se usuário tem acesso SSH ao Bitbucket configurado.
+
+```bash
+if has_bitbucket_ssh_access; then
+    echo "SSH Bitbucket disponível"
+fi
+```
+
+### `detect_git_provider()`
+
+Detecta provedor Git de uma URL.
+
+**Parâmetros:**
+
+- `$1` - URL do repositório
+
+**Retorno:**
+
+- `github` - GitHub
+- `gitlab` - GitLab
+- `bitbucket` - Bitbucket
+- `unknown` - Provedor desconhecido
+
+```bash
+provider=$(detect_git_provider "https://gitlab.com/user/repo.git")
+echo "$provider"  # gitlab
+```
+
 ### `validate_repo_access()`
 
 Valida se repositório está acessível antes de clonar.
@@ -105,36 +145,37 @@ fi
 
 ### `normalize_git_url()`
 
-Converte formato `user/repo` para URL completa do GitHub.
+Converte formato `user/repo` para URL completa. Suporta GitHub, GitLab e Bitbucket.
 
 **Parâmetros:**
 
 - `$1` - URL ou formato `user/repo`
 - `$2` - Force SSH (opcional, padrão: false)
+- `$3` - Provider (opcional, padrão: github). Valores: `github`, `gitlab`, `bitbucket`
 
 **Comportamento:**
 
 - Se `user/repo`: converte para SSH (se disponível ou forçado) ou HTTPS
+- Detecta automaticamente SSH para cada provedor
 - Se URL completa HTTPS + force SSH: converte para SSH
 - Caso contrário: retorna URL inalterada
 
 ```bash
-# Detecção automática (usa SSH se configurado)
+# GitHub (padrão)
 url=$(normalize_git_url "user/repo")
 echo "$url"  # git@github.com:user/repo.git (se SSH disponível)
-echo "$url"  # https://github.com/user/repo.git (caso contrário)
 
-# Forçar SSH
-url=$(normalize_git_url "user/repo" "true")
-echo "$url"  # git@github.com:user/repo.git
+# GitLab
+url=$(normalize_git_url "user/repo" "false" "gitlab")
+echo "$url"  # https://gitlab.com/user/repo.git
+
+# Bitbucket com SSH forçado
+url=$(normalize_git_url "user/repo" "true" "bitbucket")
+echo "$url"  # git@bitbucket.org:user/repo.git
 
 # Converter HTTPS para SSH
-url=$(normalize_git_url "https://github.com/user/repo.git" "true")
-echo "$url"  # git@github.com:user/repo.git
-
-# URL não-GitHub (mantém original)
-url=$(normalize_git_url "https://gitlab.com/user/repo.git")
-echo "$url"  # https://gitlab.com/user/repo.git
+url=$(normalize_git_url "https://gitlab.com/user/repo.git" "true")
+echo "$url"  # git@gitlab.com:user/repo.git
 ```
 
 ### `extract_plugin_name()`

@@ -15,15 +15,30 @@ show_help() {
     echo ""
     echo -e "${LIGHT_GREEN}Formato:${NC}"
     echo -e "  susa self plugin add ${GRAY}<git-url>${NC}"
-    echo -e "  susa self plugin add ${GRAY}<github-user>/<repo>${NC}"
+    echo -e "  susa self plugin add ${GRAY}<user>/<repo>${NC}  ${GRAY}# GitHub (padrão)${NC}"
+    echo -e "  susa self plugin add ${GRAY}<user>/<repo>${NC} --gitlab"
+    echo -e "  susa self plugin add ${GRAY}<user>/<repo>${NC} --bitbucket"
     echo ""
     echo -e "${LIGHT_GREEN}Exemplos:${NC}"
-    echo -e "  susa self plugin add https://github.com/user/susa-plugin-name"
+    echo -e "  # GitHub"
     echo -e "  susa self plugin add user/susa-plugin-name"
+    echo -e "  susa self plugin add https://github.com/user/plugin.git"
+    echo ""
+    echo -e "  # GitLab"
+    echo -e "  susa self plugin add user/susa-plugin-name --gitlab"
+    echo -e "  susa self plugin add https://gitlab.com/user/plugin.git"
+    echo ""
+    echo -e "  # Bitbucket"
+    echo -e "  susa self plugin add user/susa-plugin-name --bitbucket"
+    echo -e "  susa self plugin add https://bitbucket.org/user/plugin.git"
+    echo ""
+    echo -e "  # Privados com SSH"
     echo -e "  susa self plugin add organization/private-plugin --ssh"
-    echo -e "  susa self plugin add git@github.com:org/private-plugin.git"
+    echo -e "  susa self plugin add user/private-plugin --gitlab --ssh"
     echo ""
     echo -e "${LIGHT_GREEN}Opções:${NC}"
+    echo -e "  --gitlab      Usa GitLab (para formato user/repo)"
+    echo -e "  --bitbucket   Usa Bitbucket (para formato user/repo)"
     echo -e "  --ssh         Força uso de SSH (recomendado para repos privados)"
     echo -e "  -h, --help    Mostra esta mensagem de ajuda"
     echo ""
@@ -119,15 +134,17 @@ show_installation_success() {
 main() {
     local plugin_url="$1"
     local use_ssh="${2:-false}"
+    local provider="${3:-github}"
 
     # Normalize URL (convert user/repo to full URL)
-    plugin_url=$(normalize_git_url "$plugin_url" "$use_ssh")
+    plugin_url=$(normalize_git_url "$plugin_url" "$use_ssh" "$provider")
 
     # Extract plugin name from URL
     local plugin_name=$(extract_plugin_name "$plugin_url")
 
     log_info "Instalando plugin: $plugin_name"
     log_debug "URL: $plugin_url"
+    log_debug "Provider: $provider"
     echo ""
 
     # Check if plugin is already installed
@@ -181,6 +198,7 @@ main() {
 
 # Parse arguments first, before running main
 USE_SSH="false"
+PROVIDER="github"
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -h|--help)
@@ -189,6 +207,14 @@ while [[ $# -gt 0 ]]; do
             ;;
         --ssh)
             USE_SSH="true"
+            shift
+            ;;
+        --gitlab)
+            PROVIDER="gitlab"
+            shift
+            ;;
+        --bitbucket)
+            PROVIDER="bitbucket"
             shift
             ;;
         *)
@@ -207,4 +233,4 @@ if [ -z "${PLUGIN_ARG:-}" ]; then
 fi
 
 # Execute main function
-main "$PLUGIN_ARG" "$USE_SSH"
+main "$PLUGIN_ARG" "$USE_SSH" "$PROVIDER"

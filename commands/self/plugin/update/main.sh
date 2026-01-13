@@ -16,6 +16,7 @@ show_help() {
     echo -e "${LIGHT_GREEN}Descrição:${NC}"
     echo "  Baixa novamente o plugin da origem registrada e"
     echo "  substitui a instalação atual pela versão mais recente."
+    echo "  Suporta GitHub, GitLab e Bitbucket."
     echo ""
     echo -e "${LIGHT_GREEN}Opções:${NC}"
     echo "  --ssh         Força uso de SSH (recomendado para repos privados)"
@@ -25,6 +26,8 @@ show_help() {
     echo "  susa self plugin update backup-tools           # Atualiza o plugin"
     echo "  susa self plugin update private-plugin --ssh   # Força SSH"
     echo "  susa self plugin update --help                 # Exibe esta ajuda"
+    echo ""
+    echo -e "${GRAY}Nota: O provedor Git é detectado automaticamente da URL registrada.${NC}"
     echo ""
 }
 
@@ -63,11 +66,12 @@ main() {
     # Check if git is installed
     ensure_git_installed || exit 1
 
-    # Normalize URL (apply SSH if forced or auto-detected)
-    SOURCE_URL=$(normalize_git_url "$SOURCE_URL" "$USE_SSH")
+    # Detect provider from source URL
+    local provider=$(detect_git_provider "$SOURCE_URL")
+    log_debug "Provider detectado: $provider"
 
-    # Validate repository access
-    log_debug "Validando acesso ao repositório..."
+    # Normalize URL (apply SSH if forced or auto-detected)
+    SOURCE_URL=$(normalize_git_url "$SOURCE_URL" "$USE_SSH" "$provider")
     if ! validate_repo_access "$SOURCE_URL"; then
         log_error "Não foi possível acessar o repositório"
         echo ""

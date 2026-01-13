@@ -28,7 +28,7 @@ show_help() {
 # Main function
 main() {
     local PLUGIN_NAME="$1"
-    
+
     # Check if the plugin exists
     if [ ! -d "$PLUGINS_DIR/$PLUGIN_NAME" ]; then
         log_error "Plugin '$PLUGIN_NAME' não encontrado"
@@ -36,37 +36,36 @@ main() {
         echo -e "Use ${LIGHT_CYAN}susa self plugin list${NC} para ver plugins instalados"
         exit 1
     fi
-    
+
     # Confirm removal
     echo -e "${YELLOW}Atenção:${NC} Você está prestes a remover o plugin '$PLUGIN_NAME'"
     echo ""
-    
+
     # List commands that will be removed
     local cmd_count=$(find "$PLUGINS_DIR/$PLUGIN_NAME" -name "config.yaml" -type f | wc -l)
     echo -e "Comandos que serão removidos: ${GRAY}$cmd_count${NC}"
     echo ""
-    
+
     read -p "Deseja continuar? (s/N): " -n 1 -r
     echo ""
-    
+
     if [[ ! $REPLY =~ ^[Ss]$ ]]; then
         log_info "Operação cancelada"
         exit 0
     fi
-    
+
     # Remove o plugin
     log_info "Removendo plugin '$PLUGIN_NAME'..."
-    
+
     local REGISTRY_FILE="$PLUGINS_DIR/registry.yaml"
-    
+
     if rm -rf "$PLUGINS_DIR/$PLUGIN_NAME"; then
         # Remove from registry too
         if [ -f "$REGISTRY_FILE" ]; then
             registry_remove_plugin "$REGISTRY_FILE" "$PLUGIN_NAME"
             log_debug "Plugin removido do registry.yaml"
         fi
-        
-        echo ""
+
         log_success "Plugin '$PLUGIN_NAME' removido com sucesso!"
     else
         log_error "Falha ao remover o plugin"

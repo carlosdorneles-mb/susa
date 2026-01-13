@@ -30,6 +30,51 @@ has_github_ssh_access() {
     return 1
 }
 
+# Checks if user has SSH access to GitLab configured
+has_gitlab_ssh_access() {
+    # Check if SSH key exists
+    if [ ! -f "$HOME/.ssh/id_rsa" ] && [ ! -f "$HOME/.ssh/id_ed25519" ]; then
+        return 1
+    fi
+
+    # Test SSH connection to GitLab (timeout after 3 seconds)
+    if timeout 3 ssh -T git@gitlab.com 2>&1 | grep -q "Welcome to GitLab"; then
+        return 0
+    fi
+
+    return 1
+}
+
+# Checks if user has SSH access to Bitbucket configured
+has_bitbucket_ssh_access() {
+    # Check if SSH key exists
+    if [ ! -f "$HOME/.ssh/id_rsa" ] && [ ! -f "$HOME/.ssh/id_ed25519" ]; then
+        return 1
+    fi
+
+    # Test SSH connection to Bitbucket (timeout after 3 seconds)
+    if timeout 3 ssh -T git@bitbucket.org 2>&1 | grep -q "authenticated"; then
+        return 0
+    fi
+
+    return 1
+}
+
+# Detects Git provider from URL
+detect_git_provider() {
+    local url="$1"
+
+    if [[ "$url" =~ github\.com ]]; then
+        echo "github"
+    elif [[ "$url" =~ gitlab\.com ]]; then
+        echo "gitlab"
+    elif [[ "$url" =~ bitbucket\.org ]]; then
+        echo "bitbucket"
+    else
+        echo "unknown"
+    fi
+}
+
 # Detects the version of a plugin in the directory
 detect_plugin_version() {
     local plugin_dir="$1"
@@ -80,25 +125,97 @@ clone_plugin() {
     fi
 }
 
-# Converts user/repo to full GitHub URL
+# Converts user/repo to full Git URL
+# Supports GitHub, GitLab and Bitbucket
 # Supports --ssh flag to force SSH URLs
 normalize_git_url() {
     local url="$1"
     local force_ssh="${2:-false}"
+    local provider="${3:-github}"  # Default to GitHub for backwards compatibility
 
     # If it's user/repo format, convert to full URL
     if [[ "$url" =~ ^[a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+$ ]]; then
-        # Use SSH if forced or if user has SSH access
-        if [ "$force_ssh" = "true" ] || has_github_ssh_access; then
-            echo "git@github.com:${url}.git"
+        local should_use_ssh="$force_ssh"
+
+        # Auto-detect SSH if not forced
+        if [ "$force_ssh" != "true" ]; then
+            case "$provider" in
+                github)
+                    if has_github_ssh_access; then
+                        should_use_ssh="true"
+                    fi
+                    ;;
+                gitlab)
+                    if has_gitlab_ssh_access; then
+                        should_use_ssh="true"
+                    fi
+                    ;;
+                bitbucket)
+                    if has_bitbucket_ssh_access; then
+                        should_use_ssh="true"
+                    fi
+                    ;;
+            esac
+        fi
+
+        # Generate URL based on provider
+        if [ "$should_use_ssh" = "true" ]; then
+            case "$provider" in
+                github)
+                    echo "git@github.com:${url}.git"
+                    ;;
+                gitlab)
+                    echo "git@gitlab.com:${url}.git"
+                    ;;
+                bitbucket)
+                    echo "git@bitbucket.org:${url}.git"
+                    ;;
+            esac
         else
-            echo "https://github.com/${url}.git"
+            case "$provider" in
+                github)
+                    echo "https://github.com/${url}.git"
+                    ;;
+                gitlab)
+                    echo "https://gitlab.com/${url}.git"
+                    ;;
+                bitbucket)
+                    echo "https://bitbucket.org/${url}.git"
+                    ;;
+            esac
         fi
     else
-        # If force_ssh and it's an HTTPS GitHub URL, convert to SSH
-        if [ "$force_ssh" = "true" ] && [[ "$url" =~ ^https://github.com/ ]]; then
-            # Convert https://github.com/user/repo.git to git@github.com:user/repo.git
-            echo "$url" | sed 's|https://github.com/|git@github.com:|'
+        # Full URL provided
+        local detected_provider=$(detect_git_provider "$url")
+
+        # If force_ssh and it's an HTTPS URL, convert to SSH
+        if [ "$force_ssh" = "true" ]; then
+            case "$detected_provider" in
+                github)
+                    if [[ "$url" =~ ^https://github.com/ ]]; then
+                        echo "$url" | sed 's|https://github.com/|git@github.com:|'
+                    else
+                        echo "$url"
+                    fi
+                    ;;
+                gitlab)
+                    if [[ "$url" =~ ^https://gitlab.com/ ]]; then
+                        echo "$url" | sed 's|https://gitlab.com/|git@gitlab.com:|'
+                    else
+                        echo "$url"
+                    fi
+                    ;;
+                bitbucket)
+                    if [[ "$url" =~ ^https://bitbucket.org/ ]]; then
+                        echo "$url" | sed 's|https://bitbucket.org/|git@bitbucket.org:|'
+                    else
+                        echo "$url"
+                    fi
+                    ;;
+                *)
+                    echo "$url"
+                    ;;
+            esac
         else
             echo "$url"
         fi

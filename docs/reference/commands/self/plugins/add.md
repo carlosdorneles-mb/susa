@@ -2,26 +2,40 @@
 
 Instala um plugin a partir de um repositório Git, adicionando novos comandos ao Susa CLI.
 
+Suporta **GitHub**, **GitLab** e **Bitbucket**.
+
 ## Como usar
 
 ### Usando URL completa
 
 ```bash
+# GitHub
 susa self plugin add https://github.com/usuario/susa-plugin-name
 susa self plugin add git@github.com:organizacao/plugin-privado.git
+
+# GitLab
+susa self plugin add https://gitlab.com/usuario/susa-plugin-name
+susa self plugin add git@gitlab.com:organizacao/plugin-privado.git
+
+# Bitbucket
+susa self plugin add https://bitbucket.org/usuario/susa-plugin-name
+susa self plugin add git@bitbucket.org:organizacao/plugin-privado.git
 ```
 
 ### Usando formato user/repo
 
 ```bash
-# Público
+# GitHub (padrão)
 susa self plugin add usuario/susa-plugin-name
 
-# Privado (detecta SSH automaticamente)
-susa self plugin add organizacao/plugin-privado
+# GitLab
+susa self plugin add usuario/susa-plugin-name --gitlab
 
-# Privado (força SSH)
-susa self plugin add organizacao/plugin-privado --ssh
+# Bitbucket
+susa self plugin add usuario/susa-plugin-name --bitbucket
+
+# Privado com SSH
+susa self plugin add organizacao/plugin-privado --gitlab --ssh
 ```
 
 ## O que acontece?
@@ -36,8 +50,12 @@ susa self plugin add organizacao/plugin-privado --ssh
 
 | Opção | O que faz |
 |-------|-----------|
+| `--gitlab` | Usa GitLab (para formato user/repo) |
+| `--bitbucket` | Usa Bitbucket (para formato user/repo) |
 | `--ssh` | Força uso de SSH (recomendado para repos privados) |
 | `-h, --help` | Mostra ajuda |
+
+**Nota:** Por padrão, o formato `user/repo` usa GitHub. Use `--gitlab` ou `--bitbucket` para outros provedores.
 
 ## Requisitos
 
@@ -84,6 +102,16 @@ Opções disponíveis:
 
 ## Repositórios Privados
 
+### Provedores Suportados
+
+O sistema detecta automaticamente SSH para:
+
+- **GitHub** (github.com)
+- **GitLab** (gitlab.com)
+- **Bitbucket** (bitbucket.org)
+
+Para cada provedor, o sistema verifica se você tem SSH configurado e usa automaticamente quando disponível.
+
 ### Autenticação SSH (Recomendada)
 
 O sistema detecta automaticamente se você tem SSH configurado e usa quando disponível:
@@ -93,10 +121,15 @@ O sistema detecta automaticamente se você tem SSH configurado e usa quando disp
 ssh-keygen -t ed25519 -C "seu-email@example.com"
 cat ~/.ssh/id_ed25519.pub
 
-# 2. Adicione no GitHub: Settings → SSH and GPG keys
+# 2. Adicione a chave no provedor:
+#    • GitHub: Settings → SSH and GPG keys → New SSH key
+#    • GitLab: Preferences → SSH Keys
+#    • Bitbucket: Personal settings → SSH keys
 
 # 3. Instale o plugin (detecta SSH automaticamente)
-susa self plugin add organizacao/plugin-privado
+susa self plugin add organizacao/plugin-privado          # GitHub
+susa self plugin add organizacao/plugin-privado --gitlab # GitLab
+susa self plugin add organizacao/plugin-privado --bitbucket # Bitbucket
 ```
 
 ### Forçar SSH

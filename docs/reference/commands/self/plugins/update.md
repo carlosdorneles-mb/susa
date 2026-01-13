@@ -2,6 +2,8 @@
 
 Atualiza um plugin instalado para a versão mais recente disponível no repositório de origem.
 
+Suporta **GitHub**, **GitLab** e **Bitbucket**. O provedor é detectado automaticamente da URL registrada.
+
 ## Como usar
 
 ```bash
