@@ -10,10 +10,17 @@ Referência rápida sobre o sistema de variáveis de ambiente do Susa CLI.
 
 Definidas no `config.yaml` do comando, disponíveis apenas durante sua execução.
 
+**Funciona em:**
+
+- ✅ Comandos built-in (em `commands/`)
+- ✅ Comandos de plugins (em `plugins/`)
+
 **Definição:**
 
 ```yaml
-# commands/setup/docker/config.yaml
+# commands/setup/docker/config.yaml (built-in)
+# ou
+# plugins/meu-plugin/deploy/staging/config.yaml (plugin)
 name: "Docker"
 description: "Instala Docker"
 entrypoint: "main.sh"
@@ -43,6 +50,7 @@ install_dir="${DOCKER_INSTALL_DIR:-$HOME/.docker}"
 - ✅ Expansão de variáveis (`$HOME`, `$USER`)
 - ✅ Isolamento total (não vazam entre comandos)
 - ✅ Sobrescrita por variáveis de sistema
+- ✅ Funciona em comandos built-in e plugins
 
 ### 2. Variáveis Globais (Compartilhadas)
 
@@ -375,7 +383,57 @@ $ DEBUG=true susa setup myapp
 
 - **[Guia de Configuração](configuration.md)** - Documentação completa
 - **[Como Adicionar Comandos](adding-commands.md)** - Criar comandos com envs
+- **[Arquitetura de Plugins](../plugins/architecture.md)** - Usar envs em plugins
 - **[Exemplos Práticos](adding-commands.md#exemplo-com-variaveis-de-ambiente)** - Código completo
+
+## 🔌 Envs em Plugins
+
+Plugins suportam variáveis de ambiente da **mesma forma** que comandos built-in.
+
+**Exemplo de plugin com envs:**
+
+```yaml
+# plugins/deploy-tools/deploy/staging/config.yaml
+name: "Deploy Staging"
+description: "Deploy para ambiente de staging"
+entrypoint: "main.sh"
+envs:
+  STAGING_API_URL: "https://api.staging.example.com"
+  STAGING_TIMEOUT: "60"
+  STAGING_SSH_KEY: "$HOME/.ssh/staging_key"
+```
+
+```bash
+# plugins/deploy-tools/deploy/staging/main.sh
+#!/bin/bash
+setup_command_env
+
+api_url="${STAGING_API_URL:-https://default-staging.com}"
+timeout="${STAGING_TIMEOUT:-30}"
+ssh_key="${STAGING_SSH_KEY:-$HOME/.ssh/id_rsa}"
+
+echo "Deploying to $api_url"
+ssh -i "$ssh_key" deploy@staging.example.com "./deploy.sh"
+```
+
+**Execução:**
+
+```bash
+# Usar valores do config.yaml
+$ susa deploy staging
+
+# Override temporário
+$ STAGING_TIMEOUT=120 susa deploy staging
+```
+
+**Características:**
+
+- ✅ Isolamento entre plugins
+- ✅ Mesma precedência (Sistema > Config > Padrão)
+- ✅ Carregamento automático pelo framework
+- ✅ Não requer código adicional
+
+Veja [Arquitetura de Plugins](../plugins/architecture.md#variaveis-de-ambiente-envs) para mais detalhes.
 
 ## 🎯 Exemplo Mínimo
 

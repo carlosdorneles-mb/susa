@@ -50,22 +50,25 @@ Arquivo de configuração adicional para settings customizados.
 
 **Localização:** `/caminho/para/cli/config/settings.conf`
 
-**Uso Atual:** Este arquivo existe mas não é usado pelos scripts principais do CLI. Pode ser usado por comandos personalizados.
+**Uso:** Variáveis globais compartilhadas entre todos os comandos. Carregado automaticamente pelo framework.
+
+**Carregamento Automático:**
+
+O arquivo é carregado na linha 46 do `core/susa`:
+
+```bash
+[ -f "$CLI_DIR/config/settings.conf" ] && source "$CLI_DIR/config/settings.conf"
+```
 
 **Como Usar em Comandos:**
 
 ```bash
 #!/bin/bash
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CLI_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+setup_command_env
 
-# Carregar configurações customizadas
-if [ -f "$CLI_DIR/config/settings.conf" ]; then
-    source "$CLI_DIR/config/settings.conf"
-fi
-
-# Usar variáveis definidas no settings.conf
+# Variáveis do settings.conf já estão disponíveis automaticamente
 echo "API_ENDPOINT: ${API_ENDPOINT:-https://api.default.com}"
+echo "DEBUG_MODE: ${DEBUG_MODE:-false}"
 ```
 
 **Exemplo de Conteúdo:**
@@ -83,6 +86,147 @@ DEBUG_MODE="false"
 
 # Paths
 BACKUP_DIR="/var/backups"
+LOG_DIR="/var/log/susa"
+```
+
+---
+
+## ⚡ Ordem de Carregamento
+
+Quando você executa `susa categoria comando`, o framework carrega as configurações nesta ordem:
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│ 1. Variáveis de Ambiente do Sistema                         │
+│    └─ Já existentes na sessão (export VAR=value)           │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│ 2. Definição de Caminhos                                    │
+│    ├─ CORE_DIR, CLI_DIR, LIB_DIR                           │
+│    ├─ PLUGINS_DIR, GLOBAL_CONFIG_FILE                      │
+│    └─ Exportados para child processes                       │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│ 3. Bibliotecas do Core                                      │
+│    ├─ color.sh, logger.sh, string.sh                       │
+│    ├─ os.sh, sudo.sh                                        │
+│    ├─ yaml.sh, cli.sh, shell.sh                            │
+│    └─ dependencies.sh                                        │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│ 4. Configurações Globais (se existir)                       │
+│    └─ config/settings.conf                                  │
+│       • Variáveis compartilhadas entre comandos             │
+│       • Sobrescreve defaults, mas não sobrescreve sistema   │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│ 5. Validação do CLI                                         │
+│    └─ core/cli.yaml                                         │
+│       • Verifica se arquivo existe                          │
+│       • Obtém metadados (nome, versão, descrição)          │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│ 6. Cache/Lock File (se existir)                             │
+│    └─ susa.lock                                             │
+│       • Usado para descoberta rápida de comandos            │
+│       • Inclui comandos de plugins                          │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│ 7. Configuração do Comando                                  │
+│    └─ categoria/comando/config.yaml                         │
+│       • Valida comando existe e é compatível com OS         │
+│       • Lê metadados (nome, entrypoint, sudo, os)          │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│ 8. Variáveis de Ambiente do Comando                         │
+│    └─ load_command_envs() lê config.yaml → envs:           │
+│       • Exporta variáveis específicas do comando            │
+│       • NÃO sobrescreve variáveis já definidas no sistema   │
+│       • Expande $HOME, $USER, etc.                          │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│ 9. Script do Comando                                        │
+│    └─ categoria/comando/main.sh                             │
+│       • Executa com todas as configurações carregadas       │
+│       • Tem acesso a todas as variáveis                     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Referência no código (core/susa):**
+
+```bash
+# Linhas 15-28: Definição de caminhos
+CORE_DIR="$(cd -P "$(dirname "$CURRENT_SCRIPT")" && pwd)"
+CLI_DIR="$(cd -P "$CORE_DIR/.." && pwd)"
+# ... exports
+
+# Linhas 33-44: Carrega bibliotecas
+source "$LIB_DIR/color.sh"
+source "$LIB_DIR/logger.sh"
+# ... outras bibliotecas
+
+# Linha 46: Carrega settings.conf (se existir)
+[ -f "$CLI_DIR/config/settings.conf" ] && source "$CLI_DIR/config/settings.conf"
+
+# Linhas 48-51: Valida cli.yaml
+if [ ! -f "$GLOBAL_CONFIG_FILE" ]; then
+    echo "Erro: Arquivo de configuração '$GLOBAL_CONFIG_FILE' não encontrado"
+    exit 1
+fi
+
+# Linha 396: Carrega envs do comando (antes de executar)
+load_command_envs "$config_file"
+
+# Linha 398: Executa o script
+source "$script_path" "$@"
+```
+
+### Precedência de Variáveis
+
+Quando uma mesma variável é definida em múltiplos lugares:
+
+```text
+1. Variáveis de Sistema (maior precedência)
+   └─ export VAR=value
+   └─ VAR=value susa comando
+
+2. Envs do Comando
+   └─ config.yaml → envs:
+
+3. Variáveis Globais
+   └─ config/settings.conf
+
+4. Valores Padrão no Script (menor precedência)
+   └─ ${VAR:-default}
+```
+
+**Exemplo prático:**
+
+```yaml
+# config/settings.conf
+TIMEOUT="20"
+
+# commands/setup/docker/config.yaml
+envs:
+  TIMEOUT: "60"
+
+# commands/setup/docker/main.sh
+timeout="${TIMEOUT:-10}"
+```
+
+**Resultados:**
+
+```bash
+./susa setup docker                    # → 60 (do comando)
+TIMEOUT=90 ./susa setup docker        # → 90 (do sistema, override)
 ```
 
 ---

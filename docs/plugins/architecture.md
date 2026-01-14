@@ -41,11 +41,62 @@ Cada comando deve ter um arquivo `config.yaml` no seu diretório:
 ```yaml
 name: "Backup S3"           # Nome para exibição
 description: "Descrição"    # Descrição curta
-entrypoint: "main.sh"           # Entrypoint principal
+entrypoint: "main.sh"       # Entrypoint principal
 sudo: false                 # Requer sudo?
 os: ["linux", "mac"]        # Sistemas compatíveis
 group: "Backups"            # (Opcional) Grupo para organização
+envs:                       # (Opcional) Variáveis de ambiente
+  BACKUP_BUCKET: "my-bucket-name"
+  BACKUP_TIMEOUT: "300"
+  BACKUP_DIR: "$HOME/.backups"
 ```
+
+### Variáveis de Ambiente (envs)
+
+Plugins suportam **variáveis de ambiente isoladas** da mesma forma que comandos built-in.
+
+**Definição no config.yaml:**
+
+```yaml
+envs:
+  # URLs e endpoints
+  DEPLOY_API_URL: "https://api.example.com"
+
+  # Timeouts (sempre como string)
+  DEPLOY_TIMEOUT: "60"
+  DEPLOY_RETRY: "3"
+
+  # Paths com expansão de variáveis
+  DEPLOY_CONFIG_DIR: "$HOME/.config/deploy"
+  DEPLOY_LOG_FILE: "$PWD/logs/deploy.log"
+
+  # Tokens e credenciais
+  DEPLOY_API_TOKEN: "secret-token"
+```
+
+**Uso no main.sh:**
+
+```bash
+#!/bin/bash
+setup_command_env
+
+# Sempre use fallback
+api_url="${DEPLOY_API_URL:-https://default.com}"
+timeout="${DEPLOY_TIMEOUT:-30}"
+config_dir="${DEPLOY_CONFIG_DIR:-$HOME/.config/deploy}"
+
+curl --max-time "$timeout" "$api_url"
+```
+
+**Características:**
+
+- ✅ Carregamento automático pelo framework
+- ✅ Expansão de variáveis (`$HOME`, `$USER`, `$PWD`)
+- ✅ Isolamento total entre comandos
+- ✅ Override via variáveis de sistema: `DEPLOY_TIMEOUT=120 susa deploy staging`
+- ✅ Mesma precedência: Sistema > Config > Padrão no script
+
+**Documentação completa:** [Guia de Variáveis de Ambiente](../guides/envs.md)
 
 ## 🔌 Como Criar um Plugin
 
@@ -65,14 +116,23 @@ description: "Descrição do comando"
 entrypoint: "main.sh"
 sudo: false
 os: ["linux"]
+envs:
+  MY_API_URL: "https://api.example.com"
+  MY_TIMEOUT: "30"
 ```
 
 ### 3. Crie o Script
 
 ```bash
 #!/bin/bash
+setup_command_env
 
-echo "Meu comando funcionando!"
+# Variáveis disponíveis automaticamente
+api_url="${MY_API_URL:-https://default.com}"
+timeout="${MY_TIMEOUT:-30}"
+
+echo "Conectando em $api_url (timeout: ${timeout}s)"
+curl --max-time "$timeout" "$api_url"
 ```
 
 ### 4. Torne Executável

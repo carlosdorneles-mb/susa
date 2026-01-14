@@ -273,14 +273,32 @@ install_app "$@"
 
 - ✅ Expansão automática de variáveis (`$HOME` → `/home/user`)
 - ✅ Isolamento entre comandos (não vazam)
-- ✅ Sobrescrita por variáveis de sistema (`VAR=value comando`)
+- ✅ Respeita variáveis de sistema (precedência: Sistema > Config)
 - ✅ Suporta qualquer variável de ambiente válida
+- ✅ Funciona em comandos built-in e plugins
+
+**Precedência:**
+
+1. **Variáveis de Sistema** (mais alta) - `export VAR=value` ou `VAR=value comando`
+2. **Variáveis do Config** - `config.yaml` → `envs:`
+3. **Valores Padrão** (mais baixa) - `${VAR:-default}` no script
+
+**Exemplo de precedência:**
+
+```bash
+# config.yaml tem TIMEOUT: "30"
+# Script usa: timeout="${TIMEOUT:-10}"
+
+./core/susa comando                  # → 30 (do config)
+TIMEOUT=60 ./core/susa comando       # → 60 (do sistema, override)
+```
 
 **Notas:**
 
 - Não é necessário chamar manualmente; o framework faz isso automaticamente
 - Use sempre valores de fallback no script: `${VAR:-default}`
 - Variáveis são isoladas; cada comando tem seu próprio ambiente
+- Override via sistema sempre tem prioridade
 
 > **📖 Para mais detalhes**, veja [Guia de Variáveis de Ambiente](../../guides/envs.md).
 

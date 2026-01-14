@@ -71,11 +71,20 @@ cat > meu-plugin/deploy/staging/config.yaml << EOF
 name: "Staging"
 description: "Deploy para staging"
 entrypoint: "main.sh"
+envs:
+  STAGING_URL: "https://staging.example.com"
+  STAGING_TIMEOUT: "60"
 EOF
 
 cat > meu-plugin/deploy/staging/main.sh << 'EOF'
 #!/bin/bash
-echo "🚀 Deploying to staging..."
+setup_command_env
+
+# Variáveis automaticamente disponíveis
+url="${STAGING_URL:-https://default-staging.com}"
+timeout="${STAGING_TIMEOUT:-30}"
+
+echo "🚀 Deploying to staging ($url)..."
 # Seu código aqui
 EOF
 
@@ -166,6 +175,10 @@ Commands:
 3. **Naming** - Use nomes descritivos e sem espaços
 4. **Testes** - Teste localmente antes de publicar
 5. **Compatibilidade** - Use campo `os:` se específico de plataforma
+6. **Variáveis de Ambiente** - Use `envs:` no config.yaml para configurações
+   - Sempre forneça fallback no script: `${VAR:-default}`
+   - Use prefixos únicos: `MYPLUGIN_*`
+   - Documente no README quais envs estão disponíveis
 
 ## 🔗 Próximos Passos
 

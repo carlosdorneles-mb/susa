@@ -494,9 +494,12 @@ load_command_envs() {
     # Get all env keys and values, export them
     while IFS='=' read -r key value; do
         if [ -n "$key" ] && [ -n "$value" ]; then
-            # Expand variables like $HOME in the value
-            value=$(eval echo "$value")
-            export "$key=$value"
+            # Only set if not already defined (respects system env vars)
+            if [ -z "${!key:-}" ]; then
+                # Expand variables like $HOME in the value
+                value=$(eval echo "$value")
+                export "$key=$value"
+            fi
         fi
     done < <(yq eval '.envs | to_entries | .[] | .key + "=" + .value' "$config_file" 2>/dev/null)
 }
