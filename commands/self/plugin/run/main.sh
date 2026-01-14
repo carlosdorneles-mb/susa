@@ -5,6 +5,7 @@ setup_command_env
 
 # Source required libraries
 source "$LIB_DIR/registry.sh"
+source "$LIB_DIR/plugin.sh"
 
 # Check if command exists in lock file
 # Returns: "found:is_dev" or "not_found"
@@ -123,16 +124,14 @@ add_dev_plugin_to_registry() {
     local registry_file="$PLUGINS_DIR/registry.yaml"
 
     # Get version from plugin
-    local version="dev"
-    if [ -f "$plugin_dir/.version" ]; then
-        version=$(cat "$plugin_dir/.version")
-    elif [ -f "$plugin_dir/version.txt" ]; then
-        version=$(cat "$plugin_dir/version.txt")
+    local version=$(detect_plugin_version "$plugin_dir")
+    if [ -z "$version" ] || [ "$version" = "0.0.0" ]; then
+        version="dev"
     fi
 
     # Count commands and get categories
-    local cmd_count=$(find "$plugin_dir" -name "config.yaml" -type f | wc -l)
-    local categories=$(find "$plugin_dir" -mindepth 1 -maxdepth 1 -type d ! -name ".git" -exec basename {} \; | tr '\n' ',' | sed 's/,$//')
+    local cmd_count=$(count_plugin_commands "$plugin_dir")
+    local categories=$(get_plugin_categories "$plugin_dir")
 
     log_debug "[add_dev_plugin_to_registry] Adicionando: $plugin_name (v$version)" >&2
 

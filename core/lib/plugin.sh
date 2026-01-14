@@ -94,7 +94,21 @@ detect_plugin_version() {
 # Counts commands from a plugin
 count_plugin_commands() {
     local plugin_dir="$1"
-    find "$plugin_dir" -name "config.yaml" -type f | wc -l
+    find "$plugin_dir" -type f -name "main.sh" 2>/dev/null | wc -l | xargs
+}
+
+# Gets plugin categories (first-level directories excluding .git)
+get_plugin_categories() {
+    local plugin_dir="$1"
+    find "$plugin_dir" -mindepth 1 -maxdepth 1 -type d ! -name ".git" -exec basename {} \; 2>/dev/null | sort | paste -sd "," -
+}
+
+# Updates the lock file if it exists
+update_lock_file() {
+    if [ -f "$CLI_DIR/susa.lock" ]; then
+        log_info "Atualizando arquivo susa.lock..."
+        "$CORE_DIR/susa" self lock > /dev/null 2>&1 || log_warning "Não foi possível atualizar o susa.lock. Execute 'susa self lock' manualmente."
+    fi
 }
 
 # Validates if repository is accessible

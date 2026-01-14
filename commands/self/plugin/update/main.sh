@@ -112,9 +112,9 @@ main() {
         # Detect new version
         local NEW_VERSION=$(detect_plugin_version "$PLUGINS_DIR/$PLUGIN_NAME")
 
-        # Count commands and get categories (search in the entire plugin directory)
-        local cmd_count=$(find "$PLUGINS_DIR/$PLUGIN_NAME" -type f -name "main.sh" 2>/dev/null | wc -l | xargs)
-        local categories=$(find "$PLUGINS_DIR/$PLUGIN_NAME" -mindepth 1 -maxdepth 1 -type d ! -name ".git" -exec basename {} \; 2>/dev/null | sort | paste -sd "," -)
+        # Count commands and get categories
+        local cmd_count=$(count_plugin_commands "$PLUGINS_DIR/$PLUGIN_NAME")
+        local categories=$(get_plugin_categories "$PLUGINS_DIR/$PLUGIN_NAME")
 
         # Update registry (remove and add again with metadata)
         registry_remove_plugin "$REGISTRY_FILE" "$PLUGIN_NAME"
@@ -132,10 +132,7 @@ main() {
         fi
 
         # Update lock file if it exists
-        if [ -f "$CLI_DIR/susa.lock" ]; then
-            log_info "Atualizando arquivo susa.lock..."
-            "$CORE_DIR/susa" self lock > /dev/null 2>&1 || log_warning "Não foi possível atualizar o susa.lock. Execute 'susa self lock' manualmente."
-        fi
+        update_lock_file
     else
         log_error "Falha ao baixar atualização"
 

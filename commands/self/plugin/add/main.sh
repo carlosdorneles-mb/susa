@@ -188,7 +188,7 @@ main() {
 
     # Count installed commands and get categories
     local cmd_count=$(count_plugin_commands "$PLUGINS_DIR/$plugin_name")
-    local categories=$(find "$PLUGINS_DIR/$plugin_name" -mindepth 1 -maxdepth 1 -type d ! -name ".git" -exec basename {} \; | tr '\n' ',' | sed 's/,$//')
+    local categories=$(get_plugin_categories "$PLUGINS_DIR/$plugin_name")
 
     # Register in registry.yaml
     local registry_file="$PLUGINS_DIR/registry.yaml"
@@ -199,10 +199,7 @@ main() {
     show_installation_success "$plugin_name" "$plugin_url" "$plugin_version" "$cmd_count"
 
     # Update lock file if it exists
-    if [ -f "$CLI_DIR/susa.lock" ]; then
-        log_info "Atualizando arquivo susa.lock..."
-        "$CORE_DIR/susa" self lock > /dev/null 2>&1 || log_warning "Não foi possível atualizar o susa.lock. Execute 'susa self lock' manualmente."
-    fi
+    update_lock_file
 }
 
 # Parse arguments first, before running main

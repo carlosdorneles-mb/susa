@@ -7,6 +7,7 @@ setup_command_env
 source "$LIB_DIR/color.sh"
 source "$LIB_DIR/logger.sh"
 source "$LIB_DIR/registry.sh"
+source "$LIB_DIR/plugin.sh"
 
 # Help function
 show_help() {
@@ -76,7 +77,7 @@ main() {
         # If categories not in registry, get from directory (fallback)
         if [ "$categories" = "null" ] || [ -z "$categories" ]; then
             if [ -d "$PLUGINS_DIR/$plugin_name" ]; then
-                categories=$(find "$PLUGINS_DIR/$plugin_name" -mindepth 1 -maxdepth 1 -type d ! -name ".git" -exec basename {} \; | tr '\n' ', ' | sed 's/,$//')
+                categories=$(get_plugin_categories "$PLUGINS_DIR/$plugin_name")
             else
                 categories="${GRAY}(não disponível)${NC}"
             fi

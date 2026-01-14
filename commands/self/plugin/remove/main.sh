@@ -5,6 +5,7 @@ setup_command_env
 
 # Source necessary libraries
 source "$LIB_DIR/registry.sh"
+source "$LIB_DIR/plugin.sh"
 
 # Help function
 show_help() {
@@ -69,10 +70,7 @@ main() {
         log_success "Plugin '$PLUGIN_NAME' removido com sucesso!"
 
         # Update lock file if it exists
-        if [ -f "$CLI_DIR/susa.lock" ]; then
-            log_info "Atualizando arquivo susa.lock..."
-            "$CORE_DIR/susa" self lock > /dev/null 2>&1 || log_warning "Não foi possível atualizar o susa.lock. Execute 'susa self lock' manualmente."
-        fi
+        update_lock_file
     else
         log_error "Falha ao remover o plugin"
         exit 1
