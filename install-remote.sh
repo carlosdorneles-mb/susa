@@ -1,11 +1,10 @@
 #!/bin/bash
+set -euo pipefail
+IFS=$'\n\t'
 
 # =========================
 # Remote Installer for CLI
 # =========================
-
-# Exit on error
-set -e
 
 # Settings
 REPO_URL="${CLI_REPO_URL:-https://github.com/duducp/susa.git}"

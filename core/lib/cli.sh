@@ -1,4 +1,6 @@
 #!/bin/bash
+set -euo pipefail
+IFS=$'\n\t'
 
 # Get the lib directory
 source "$LIB_DIR/color.sh"

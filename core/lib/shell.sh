@@ -1,11 +1,13 @@
 #!/bin/bash
+set -euo pipefail
+IFS=$'\n\t'
 
 # --- Shell Helper Functions ---
 
 # Detect user shell type
 detect_shell_type() {
     local user_shell=$(basename "${SHELL:-}")
-    
+
     case "$user_shell" in
         zsh)
             echo "zsh"
@@ -35,7 +37,7 @@ detect_shell_config() {
     # Detect which shell configuration file to use
     # Checks the user's shell via $SHELL
     local user_shell=$(basename "$SHELL")
-    
+
     if [[ "$user_shell" == "zsh" ]] && [ -f "$HOME/.zshrc" ]; then
         echo "$HOME/.zshrc"
     elif [[ "$user_shell" == "bash" ]] && [ -f "$HOME/.bashrc" ]; then

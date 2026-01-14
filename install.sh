@@ -1,10 +1,10 @@
 #!/bin/bash
+set -euo pipefail
+IFS=$'\n\t'
 
 # ===============
 # CLI Installer
 # ===============
-
-set -e
 
 CLI_SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="$CLI_SOURCE_DIR/core/cli.yaml"

@@ -1,11 +1,10 @@
 #!/bin/bash
+set -euo pipefail
+IFS=$'\n\t'
 
 # ============================================================
 # Remote Uninstaller for Susa CLI
 # ============================================================
-
-# Exit on error
-set -e
 
 # Settings
 CLI_NAME="${CLI_NAME:-susa}"
