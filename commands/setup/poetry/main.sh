@@ -3,6 +3,9 @@ set -euo pipefail
 
 setup_command_env
 
+# Source installations library
+source "$LIB_DIR/internal/installations.sh"
+
 # Help function
 show_help() {
     show_description
@@ -37,6 +40,44 @@ show_help() {
     echo "  poetry install                      # Instalar dependências"
     echo "  poetry run python script.py         # Executar script"
 }
+# Get latest Poetry version
+get_latest_poetry_version() {
+    # Try to get the latest version via GitHub API
+    local latest_version=$(curl -s --max-time 10 --connect-timeout 5 https://api.github.com/repos/python-poetry/poetry/releases/latest 2>/dev/null | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+
+    if [ -n "$latest_version" ]; then
+        log_debug "Versão obtida via API do GitHub: $latest_version" >&2
+        echo "$latest_version"
+        return 0
+    fi
+
+    # If it fails, try via git ls-remote with semantic version sorting
+    log_debug "API do GitHub falhou, tentando via git ls-remote..." >&2
+    latest_version=$(timeout 5 git ls-remote --tags --refs https://github.com/python-poetry/poetry.git 2>/dev/null |
+        grep -oE '[0-9]+\.[0-9]+\.[0-9]+$' |
+        sort -V |
+        tail -1)
+
+    if [ -n "$latest_version" ]; then
+        log_debug "Versão obtida via git ls-remote: $latest_version" >&2
+        echo "$latest_version"
+        return 0
+    fi
+
+    # If both methods fail, notify user
+    log_error "Não foi possível obter a versão mais recente do Poetry" >&2
+    log_error "Verifique sua conexão com a internet e tente novamente" >&2
+    return 1
+}
+
+# Get installed Poetry version
+get_poetry_version() {
+    if command -v poetry &>/dev/null; then
+        poetry --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida"
+    else
+        echo "desconhecida"
+    fi
+}
 
 # Get Poetry installation path
 get_poetry_home() {
@@ -52,10 +93,25 @@ check_existing_installation() {
         return 0
     fi
 
-    local current_version=$(poetry --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida")
-    log_debug "Poetry já está instalado (versão atual: $current_version)"
-
+    local current_version=$(get_poetry_version)
     log_info "Poetry $current_version já está instalado."
+
+    # Mark as installed in lock file
+    mark_installed "poetry" "$current_version"
+
+    # Check for updates
+    log_debug "Obtendo última versão..."
+    local latest_version=$(get_latest_poetry_version)
+    if [ $? -eq 0 ] && [ -n "$latest_version" ]; then
+        if [ "$current_version" != "$latest_version" ]; then
+            echo ""
+            echo -e "${YELLOW}Nova versão disponível ($latest_version).${NC}"
+            echo -e "Para atualizar, execute: ${LIGHT_CYAN}susa setup poetry --update${NC}"
+        fi
+    else
+        log_warning "Não foi possível verificar atualizações"
+    fi
+
     return 1
 }
 
@@ -96,13 +152,6 @@ setup_poetry_environment() {
 
 # Install Poetry
 install_poetry() {
-    # Check if Poetry is already installed
-    if command -v poetry &>/dev/null; then
-        local current_version=$(poetry --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida")
-        log_info "Poetry $current_version já está instalado."
-        return 0
-    fi
-
     log_info "Iniciando instalação do Poetry..."
 
     local poetry_home=$(get_poetry_home)
@@ -149,7 +198,11 @@ install_poetry() {
     log_debug "Verificando instalação..."
 
     if command -v poetry &>/dev/null; then
-        local version=$(poetry --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida")
+        local version=$(get_poetry_version)
+
+        # Mark as installed in lock file
+        mark_installed "poetry" "$version"
+
         log_success "Poetry $version instalado com sucesso!"
         log_debug "Executável: $(which poetry)"
 
@@ -183,7 +236,7 @@ update_poetry() {
         return 1
     fi
 
-    local current_version=$(poetry --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida")
+    local current_version=$(get_poetry_version)
     log_info "Versão atual: $current_version"
     log_debug "Executável: $(which poetry)"
 
@@ -202,11 +255,14 @@ update_poetry() {
     log_debug "Verificando nova versão..."
 
     if command -v poetry &>/dev/null; then
-        local new_version=$(poetry --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida")
+        local new_version=$(get_poetry_version)
 
         if [ "$current_version" = "$new_version" ]; then
             log_info "Poetry já está na versão mais recente ($current_version)"
         else
+            # Update version in lock file
+            update_version "poetry" "$new_version"
+
             log_success "Poetry atualizado de $current_version para $new_version!"
             log_debug "Atualização concluída com sucesso"
         fi
@@ -231,7 +287,7 @@ uninstall_poetry() {
         return 0
     fi
 
-    local version=$(poetry --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida")
+    local version=$(get_poetry_version)
     log_debug "Versão a ser removida: $version"
     log_debug "Executável: $(which poetry)"
 
@@ -306,6 +362,9 @@ uninstall_poetry() {
     log_debug "Verificando remoção..."
 
     if ! command -v poetry &>/dev/null; then
+        # Mark as uninstalled in lock file
+        mark_uninstalled "poetry"
+
         log_success "Poetry desinstalado com sucesso!"
         log_debug "Executável removido"
 
@@ -377,6 +436,9 @@ main() {
 
     case "$action" in
     	install)
+            if ! check_existing_installation; then
+                exit 0
+            fi
             install_poetry
             ;;
         update)

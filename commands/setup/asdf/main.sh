@@ -3,6 +3,9 @@ set -euo pipefail
 
 setup_command_env
 
+# Source installations library
+source "$LIB_DIR/internal/installations.sh"
+
 # Help function
 show_help() {
     show_description
@@ -38,8 +41,6 @@ show_help() {
 }
 
 get_latest_asdf_version() {
-    local fallback_version="v0.18.0"
-
     # Try to get the latest version via GitHub API
     local latest_version=$(curl -s --max-time 10 --connect-timeout 5 https://api.github.com/repos/asdf-vm/asdf/releases/latest 2>/dev/null | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
 
@@ -49,9 +50,12 @@ get_latest_asdf_version() {
         return 0
     fi
 
-    # If it fails, try via git ls-remote
+    # If it fails, try via git ls-remote with semantic version sorting
     log_debug "API do GitHub falhou, tentando via git ls-remote..." >&2
-    latest_version=$(timeout 5 git ls-remote --tags --refs https://github.com/asdf-vm/asdf.git 2>/dev/null | tail -1 | sed 's/.*\///')
+    latest_version=$(timeout 5 git ls-remote --tags --refs https://github.com/asdf-vm/asdf.git 2>/dev/null |
+        grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+$' |
+        sort -V |
+        tail -1)
 
     if [ -n "$latest_version" ]; then
         log_debug "Versão obtida via git ls-remote: $latest_version" >&2
@@ -59,9 +63,28 @@ get_latest_asdf_version() {
         return 0
     fi
 
-    # If it still fails, use fallback version
-    log_debug "Usando versão fallback: $fallback_version" >&2
-    echo "$fallback_version"
+    # If both methods fail, notify user
+    log_error "Não foi possível obter a versão mais recente do ASDF" >&2
+    log_error "Verifique sua conexão com a internet e tente novamente" >&2
+    return 1
+}
+
+# Get installed ASDF version
+get_asdf_version() {
+    local asdf_dir="${1:-$HOME/.asdf}"
+
+    if [ -f "$asdf_dir/bin/asdf" ]; then
+        "$asdf_dir/bin/asdf" --version 2>/dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' || echo "desconhecida"
+    elif command -v asdf &>/dev/null; then
+        asdf --version 2>/dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' || echo "desconhecida"
+    else
+        echo "desconhecida"
+    fi
+}
+
+# Get local bin directory path
+get_local_bin_dir() {
+    echo "$HOME/.local/bin"
 }
 
 # Detect operating system and architecture
@@ -100,32 +123,35 @@ detect_os_and_arch() {
 
 # Check if ASDF is already installed and ask about update
 check_existing_installation() {
-    local asdf_dir="$1"
-    local target_version="$2"
+    local asdf_dir="$HOME/.asdf"
+
+    log_debug "Verificando instalação existente do ASDF..."
 
     if [ ! -d "$asdf_dir" ] || [ ! -f "$asdf_dir/bin/asdf" ]; then
+        log_debug "ASDF não está instalado"
         return 0
     fi
 
-    local current_version=$("$asdf_dir/bin/asdf" --version 2>/dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' || echo "desconhecida")
-    log_debug "ASDF já está instalado (versão atual: $current_version)"
+    local current_version=$(get_asdf_version "$asdf_dir")
+    log_info "ASDF $current_version já está instalado."
 
-    if [ "$current_version" = "$target_version" ]; then
-        log_info "Você já possui a versão mais recente instalada ($current_version)"
-        return 2
+    # Mark as installed in lock file
+    mark_installed "asdf" "$current_version"
+
+    # Check for updates
+    log_debug "Obtendo última versão..."
+    local latest_version=$(get_latest_asdf_version)
+    if [ $? -eq 0 ] && [ -n "$latest_version" ]; then
+        if [ "$current_version" != "$latest_version" ]; then
+            echo ""
+            echo -e "${YELLOW}Nova versão disponível ($latest_version).${NC}"
+            echo -e "Para atualizar, execute: ${LIGHT_CYAN}susa setup asdf --update${NC}"
+        fi
+    else
+        log_warning "Não foi possível verificar atualizações"
     fi
 
-    echo ""
-    echo -e "${YELLOW}ASDF $current_version está instalado. Atualizar para $target_version? (s/N)${NC}"
-    read -r response
-
-    if [[ ! "$response" =~ ^[sS]$ ]]; then
-        log_info "Instalação cancelada"
-        return 1
-    fi
-
-    log_info "Atualizando de $current_version para $target_version..."
-    return 0
+    return 1
 }
 
 # Check if ASDF is already configured in shell
@@ -141,7 +167,7 @@ add_asdf_to_shell() {
 
     echo "" >> "$shell_config"
     echo "# ASDF Version Manager" >> "$shell_config"
-    echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> "$shell_config"
+    echo "export PATH=\"$(get_local_bin_dir):\$PATH\"" >> "$shell_config"
     echo "export ASDF_DATA_DIR=\"$asdf_dir\"" >> "$shell_config"
     echo "export PATH=\"\$ASDF_DATA_DIR/bin:\$ASDF_DATA_DIR/shims:\$PATH\"" >> "$shell_config"
 }
@@ -229,7 +255,7 @@ extract_and_setup_binary() {
 setup_asdf_environment() {
     local asdf_dir="$1"
 
-    export PATH="$HOME/.local/bin:$PATH"
+    export PATH="$(get_local_bin_dir):$PATH"
     export ASDF_DATA_DIR="$asdf_dir"
     export PATH="$ASDF_DATA_DIR/bin:$ASDF_DATA_DIR/shims:$PATH"
 
@@ -242,6 +268,9 @@ install_asdf_release() {
 
     log_debug "Obtendo última versão..."
     local asdf_version=$(get_latest_asdf_version)
+    if [ $? -ne 0 ] || [ -z "$asdf_version" ]; then
+        return 1
+    fi
 
     # Detect OS and architecture
     local os_arch=$(detect_os_and_arch)
@@ -273,22 +302,9 @@ install_asdf_release() {
 install_asdf() {
     local asdf_dir="$HOME/.asdf"
 
-    # Check if ASDF is already installed
-    if [ -d "$asdf_dir" ] && [ -f "$asdf_dir/bin/asdf" ]; then
-        local current_version=$("$asdf_dir/bin/asdf" --version 2>/dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' || echo "desconhecida")
-        log_info "ASDF $current_version já está instalado."
-
-        log_debug "Obtendo última versão..."
-        local asdf_version=$(get_latest_asdf_version)
-
-        if [ "$current_version" != "$asdf_version" ]; then
-            echo ""
-            echo -e "${YELLOW}Uma versão mais recente está disponível ($asdf_version).${NC}"
-            echo -e "Para atualizar, execute: ${LIGHT_CYAN}susa setup asdf --update${NC}"
-        fi
-
-        return 0
-    fi
+	if ! check_existing_installation; then
+		exit 0
+	fi
 
     log_info "Iniciando instalação do ASDF..."
 
@@ -298,7 +314,9 @@ install_asdf() {
     local shell_config=$(detect_shell_config)
 
     if command -v asdf &>/dev/null; then
+        local version=$(get_asdf_version)
         log_success "ASDF instalado com sucesso!"
+        mark_installed "asdf" "$version"
         echo ""
         echo "Próximos passos:"
         echo -e "  1. Reinicie o terminal ou execute: ${LIGHT_CYAN}source $shell_config${NC}"
@@ -322,12 +340,15 @@ update_asdf() {
         return 1
     fi
 
-    local current_version=$("$asdf_dir/bin/asdf" --version 2>/dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' || echo "desconhecida")
+    local current_version=$(get_asdf_version "$asdf_dir")
     log_info "Versão atual: $current_version"
 
     # Get latest version
     log_debug "Obtendo última versão..."
     local asdf_version=$(get_latest_asdf_version)
+    if [ $? -ne 0 ] || [ -z "$asdf_version" ]; then
+        return 1
+    fi
 
     if [ "$current_version" = "$asdf_version" ]; then
         log_info "Você já possui a versão mais recente instalada ($current_version)"
@@ -402,8 +423,9 @@ update_asdf() {
 
     # Verify update
     if command -v asdf &>/dev/null; then
-        local new_version=$(asdf --version 2>/dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' || echo "desconhecida")
+        local new_version=$(get_asdf_version)
         log_success "ASDF atualizado com sucesso para versão $new_version!"
+        update_version "asdf" "$new_version"
         echo ""
         echo "Plugins e versões de ferramentas foram preservados."
     else
@@ -448,6 +470,7 @@ uninstall_asdf() {
     fi
 
     log_success "ASDF desinstalado com sucesso!"
+    mark_uninstalled "asdf"
     echo ""
     log_info "Reinicie o terminal ou execute: source $shell_config"
 }

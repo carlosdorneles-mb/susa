@@ -3,6 +3,9 @@ set -euo pipefail
 
 setup_command_env
 
+# Source installations library
+source "$LIB_DIR/internal/installations.sh"
+
 # Help function
 show_help() {
     show_description
@@ -37,8 +40,6 @@ show_help() {
 }
 
 get_latest_toolbox_version() {
-    local fallback_version="3.2.0"
-
     # Try to get the latest version from JetBrains data service
     local latest_version=$(curl -s --max-time 10 --connect-timeout 5 'https://data.services.jetbrains.com/products/releases?code=TBA&latest=true&type=release' 2>/dev/null | grep -oP '"build"\s*:\s*"\K[^"]+' | head -1)
 
@@ -48,9 +49,10 @@ get_latest_toolbox_version() {
         return 0
     fi
 
-    # If it fails, use fallback version
-    log_debug "API falhou, usando versão fallback: $fallback_version" >&2
-    echo "$fallback_version"
+    # If it fails, notify user
+    log_error "Não foi possível obter a versão mais recente do JetBrains Toolbox" >&2
+    log_error "Verifique sua conexão com a internet e tente novamente" >&2
+    return 1
 }
 
 # Detect OS and architecture
@@ -99,12 +101,17 @@ get_binary_location() {
 
     case "$os_name" in
         linux)
-            echo "$HOME/.local/bin/jetbrains-toolbox"
+            echo "$(get_local_bin_dir)/jetbrains-toolbox"
             ;;
         darwin)
             echo "/Applications/JetBrains Toolbox.app"
             ;;
     esac
+}
+
+# Get local bin directory
+get_local_bin_dir() {
+    echo "$HOME/.local/bin"
 }
 
 # Check if Toolbox is installed
@@ -133,10 +140,45 @@ get_installed_version() {
     fi
 }
 
+# Check if JetBrains Toolbox is already installed
+check_existing_installation() {
+    log_debug "Verificando instalação existente do JetBrains Toolbox..."
+
+    if ! check_toolbox_installed; then
+        log_debug "JetBrains Toolbox não está instalado"
+        return 0
+    fi
+
+    local current_version=$(get_installed_version)
+    log_info "JetBrains Toolbox $current_version já está instalado."
+
+    # Mark as installed in lock file
+    mark_installed "toolbox" "$current_version"
+
+    # Check for updates
+    log_debug "Obtendo última versão..."
+    local latest_version=$(get_latest_toolbox_version)
+    if [ $? -eq 0 ] && [ -n "$latest_version" ]; then
+        if [ "$current_version" != "$latest_version" ] && [ "$current_version" != "desconhecida" ]; then
+            echo ""
+            echo -e "${YELLOW}Nova versão disponível ($latest_version).${NC}"
+            echo -e "Para atualizar, execute: ${LIGHT_CYAN}susa setup jetbrains-toolbox --update${NC}"
+        fi
+    else
+        log_warning "Não foi possível verificar atualizações"
+    fi
+
+    return 1
+}
+
 # Install Toolbox on Linux
 install_toolbox_linux() {
     local version="$1"
     local os_arch="$2"
+
+	if ! check_existing_installation; then
+		exit 0
+	fi
 
     log_info "Instalando JetBrains Toolbox $version no Linux..."
 
@@ -144,7 +186,7 @@ install_toolbox_linux() {
     local download_url="https://download.jetbrains.com/toolbox/jetbrains-toolbox-${version}.tar.gz"
     local temp_dir="/tmp/jetbrains-toolbox-$$"
     local install_dir=$(get_install_dir)
-    local bin_dir="$HOME/.local/bin"
+    local bin_dir=$(get_local_bin_dir)
 
     log_debug "URL: $download_url"
 
@@ -215,15 +257,16 @@ install_toolbox_linux() {
 
     # Configure PATH if needed
     local shell_config=$(detect_shell_config)
+    local local_bin=$(get_local_bin_dir)
     if ! grep -q ".local/bin" "$shell_config" 2>/dev/null; then
         echo "" >> "$shell_config"
         echo "# Local binaries PATH" >> "$shell_config"
-        echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> "$shell_config"
+        echo "export PATH=\"$local_bin:\$PATH\"" >> "$shell_config"
         log_debug "PATH configurado em $shell_config"
     fi
 
     # Update current session PATH
-    export PATH="$HOME/.local/bin:$PATH"
+    export PATH="$local_bin:$PATH"
 
     # Create desktop entry
     create_desktop_entry
@@ -314,13 +357,14 @@ create_desktop_entry() {
         curl -s -o "$icon_path" "https://resources.jetbrains.com/storage/products/toolbox/img/meta/toolbox_logo_300x300.png" 2>/dev/null || log_debug "Falha ao baixar ícone"
     fi
 
+    local toolbox_bin=$(get_local_bin_dir)/jetbrains-toolbox
     cat > "$desktop_file" << EOF
 [Desktop Entry]
 Version=1.0
 Type=Application
 Name=JetBrains Toolbox
 Icon=$icon_path
-Exec=$HOME/.local/bin/jetbrains-toolbox
+Exec=$toolbox_bin
 Comment=JetBrains IDEs Manager
 Categories=Development;IDE;
 Terminal=false
@@ -334,28 +378,14 @@ EOF
 
 # Main installation function
 install_toolbox() {
-    # Check if already installed
-    if check_toolbox_installed; then
-        local current_version=$(get_installed_version)
-        log_info "JetBrains Toolbox $current_version já está instalado."
-
-        log_debug "Obtendo última versão..."
-        local latest_version=$(get_latest_toolbox_version)
-
-        if [ "$current_version" != "$latest_version" ] && [ "$current_version" != "desconhecida" ]; then
-            echo ""
-            echo -e "${YELLOW}Uma versão mais recente está disponível ($latest_version).${NC}"
-            echo -e "Para atualizar, execute: ${LIGHT_CYAN}susa setup jetbrains-toolbox --update${NC}"
-        fi
-
-        return 0
-    fi
-
     log_info "Iniciando instalação do JetBrains Toolbox..."
 
     # Get latest version
     log_debug "Obtendo última versão..."
     local toolbox_version=$(get_latest_toolbox_version)
+    if [ $? -ne 0 ] || [ -z "$toolbox_version" ]; then
+        return 1
+    fi
 
     # Detect OS and architecture
     log_debug "Detectando SO e arquitetura..."
@@ -387,6 +417,7 @@ install_toolbox() {
 
     if [ $install_result -eq 0 ]; then
         log_success "JetBrains Toolbox $toolbox_version instalado com sucesso!"
+        mark_installed "toolbox" "$toolbox_version"
         log_debug "Instalação concluída"
 
         echo ""
@@ -418,6 +449,9 @@ update_toolbox() {
     # Get latest version
     log_debug "Obtendo última versão..."
     local latest_version=$(get_latest_toolbox_version)
+    if [ $? -ne 0 ] || [ -z "$latest_version" ]; then
+        return 1
+    fi
 
     if [ "$current_version" = "$latest_version" ]; then
         log_info "Você já possui a versão mais recente instalada ($current_version)"
@@ -463,6 +497,7 @@ update_toolbox() {
 
     if [ $install_result -eq 0 ]; then
         log_success "JetBrains Toolbox atualizado com sucesso para versão $latest_version!"
+        update_version "toolbox" "$latest_version"
         log_debug "Atualização concluída"
     else
         log_error "Falha na atualização do JetBrains Toolbox"
@@ -534,6 +569,7 @@ uninstall_toolbox() {
     # Verify removal
     if ! check_toolbox_installed; then
         log_success "JetBrains Toolbox desinstalado com sucesso!"
+        mark_uninstalled "toolbox"
         log_debug "Remoção verificada"
     else
         log_error "Falha ao desinstalar JetBrains Toolbox completamente"

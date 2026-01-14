@@ -3,6 +3,9 @@ set -euo pipefail
 
 setup_command_env
 
+# Source installations library
+source "$LIB_DIR/internal/installations.sh"
+
 # Help function
 show_help() {
     show_description
@@ -37,9 +40,47 @@ show_help() {
     echo "  uv sync                             # Instalar dependências"
     echo "  uv run python script.py             # Executar script"
 }
+# Get latest UV version
+get_latest_uv_version() {
+    # Try to get the latest version via GitHub API
+    local latest_version=$(curl -s --max-time 10 --connect-timeout 5 https://api.github.com/repos/astral-sh/uv/releases/latest 2>/dev/null | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+
+    if [ -n "$latest_version" ]; then
+        log_debug "Versão obtida via API do GitHub: $latest_version" >&2
+        echo "$latest_version"
+        return 0
+    fi
+
+    # If it fails, try via git ls-remote with semantic version sorting
+    log_debug "API do GitHub falhou, tentando via git ls-remote..." >&2
+    latest_version=$(timeout 5 git ls-remote --tags --refs https://github.com/astral-sh/uv.git 2>/dev/null |
+        grep -oE '[0-9]+\.[0-9]+\.[0-9]+$' |
+        sort -V |
+        tail -1)
+
+    if [ -n "$latest_version" ]; then
+        log_debug "Versão obtida via git ls-remote: $latest_version" >&2
+        echo "$latest_version"
+        return 0
+    fi
+
+    # If both methods fail, notify user
+    log_error "Não foi possível obter a versão mais recente do UV" >&2
+    log_error "Verifique sua conexão com a internet e tente novamente" >&2
+    return 1
+}
+
+# Get installed UV version
+get_uv_version() {
+    if command -v uv &>/dev/null; then
+        uv --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida"
+    else
+        echo "desconhecida"
+    fi
+}
 
 # Get UV installation path
-get_uv_bin_dir() {
+get_local_bin_dir() {
     echo "$HOME/.local/bin"
 }
 
@@ -49,14 +90,29 @@ check_existing_installation() {
 
     if ! command -v uv &>/dev/null; then
         log_debug "UV não está instalado"
-        return 0  # Não instalado, pode continuar
+        return 0
     fi
 
-    local current_version=$(uv --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida")
-    log_debug "UV já está instalado (versão atual: $current_version)"
-
+    local current_version=$(get_uv_version)
     log_info "UV $current_version já está instalado."
-    return 1  # Já instalado
+
+    # Mark as installed in lock file
+    mark_installed "uv" "$current_version"
+
+    # Check for updates
+    log_debug "Obtendo última versão..."
+    local latest_version=$(get_latest_uv_version)
+    if [ $? -eq 0 ] && [ -n "$latest_version" ]; then
+        if [ "$current_version" != "$latest_version" ]; then
+            echo ""
+            echo -e "${YELLOW}Nova versão disponível ($latest_version).${NC}"
+            echo -e "Para atualizar, execute: ${LIGHT_CYAN}susa setup uv --update${NC}"
+        fi
+    else
+        log_warning "Não foi possível verificar atualizações"
+    fi
+
+    return 1
 }
 
 # Configure shell to use UV
@@ -76,7 +132,7 @@ configure_shell() {
 
     echo "" >> "$shell_config"
     echo "# Local binaries PATH" >> "$shell_config"
-    echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> "$shell_config"
+	echo "export PATH=\"$(get_local_bin_dir):\$PATH\"" >> "$shell_config"
 
     log_debug "Configuração adicionada ao shell"
 }
@@ -93,16 +149,13 @@ setup_uv_environment() {
 
 # Install UV
 install_uv() {
-    # Check if UV is already installed
-    if command -v uv &>/dev/null; then
-        local current_version=$(uv --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida")
-        log_info "UV $current_version já está instalado."
-        return 0
-    fi
+	if ! check_existing_installation; then
+		exit 0
+	fi
 
 	log_info "Iniciando instalação do UV..."
 
-    local bin_dir=$(get_uv_bin_dir)
+    local bin_dir=$(get_local_bin_dir)
     log_debug "Diretório de instalação: $bin_dir"
 
     # Create bin directory if it doesn't exist
@@ -148,8 +201,9 @@ install_uv() {
     log_debug "Verificando instalação..."
 
     if command -v uv &>/dev/null; then
-        local version=$(uv --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida")
+        local version=$(get_uv_version)
         log_success "UV $version instalado com sucesso!"
+        mark_installed "uv" "$version"
         log_debug "Executável: $(which uv)"
 
         echo ""
@@ -188,7 +242,7 @@ update_uv() {
         return 1
     fi
 
-    local current_version=$(uv --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida")
+    local current_version=$(get_uv_version)
     log_info "Versão atual: $current_version"
     log_debug "Executável: $(which uv)"
 
@@ -207,12 +261,13 @@ update_uv() {
     log_debug "Verificando nova versão..."
 
     if command -v uv &>/dev/null; then
-        local new_version=$(uv --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida")
+        local new_version=$(get_uv_version)
 
         if [ "$current_version" = "$new_version" ]; then
             log_info "UV já está na versão mais recente ($current_version)"
         else
             log_success "UV atualizado de $current_version para $new_version!"
+            update_version "uv" "$new_version"
             log_debug "Atualização concluída com sucesso"
         fi
 
@@ -236,7 +291,7 @@ uninstall_uv() {
         return 0
     fi
 
-    local version=$(uv --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida")
+    local version=$(get_uv_version)
     log_debug "Versão a ser removida: $version"
     log_debug "Executável: $(which uv)"
 
@@ -250,7 +305,7 @@ uninstall_uv() {
         return 1
     fi
 
-    local bin_dir=$(get_uv_bin_dir)
+    local bin_dir=$(get_local_bin_dir)
     log_debug "Diretório de instalação: $bin_dir"
 
     # Remove UV binary and related tools
@@ -287,6 +342,7 @@ uninstall_uv() {
 
     if ! command -v uv &>/dev/null; then
         log_success "UV desinstalado com sucesso!"
+        mark_uninstalled "uv"
         log_debug "Executável removido"
 
         echo ""

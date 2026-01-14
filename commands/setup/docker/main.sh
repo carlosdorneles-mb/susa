@@ -3,6 +3,9 @@ set -euo pipefail
 
 setup_command_env
 
+# Source installations library
+source "$LIB_DIR/internal/installations.sh"
+
 # Help function
 show_help() {
     show_description
@@ -39,8 +42,6 @@ show_help() {
 }
 
 get_latest_docker_version() {
-    local fallback_version="27.4.1"
-
     # Try to get the latest version via GitHub API (format: docker-v29.1.4)
     local latest_version=$(curl -s --max-time 10 --connect-timeout 5 https://api.github.com/repos/moby/moby/releases/latest 2>/dev/null | grep '"tag_name":' | sed -E 's/.*"docker-v([0-9]+\.[0-9]+\.[0-9]+)".*/\1/')
 
@@ -50,9 +51,15 @@ get_latest_docker_version() {
         return 0
     fi
 
-    # If it fails, try via git ls-remote
+    # If it fails, try via git ls-remote with semantic version sorting
     log_debug "API do GitHub falhou, tentando via git ls-remote..." >&2
-    latest_version=$(timeout 5 git ls-remote --tags --refs https://github.com/moby/moby.git 2>/dev/null | grep 'docker-v' | grep -v '\-rc' | tail -1 | sed 's/.*docker-v\([0-9.]*\).*/\1/')
+    latest_version=$(timeout 5 git ls-remote --tags --refs https://github.com/moby/moby.git 2>/dev/null |
+        grep 'docker-v' |
+        grep -v '\-rc' |
+        grep -oE 'docker-v[0-9]+\.[0-9]+\.[0-9]+$' |
+        sed 's/docker-v//' |
+        sort -V |
+        tail -1)
 
     if [ -n "$latest_version" ]; then
         log_debug "Versão obtida via git ls-remote: $latest_version" >&2
@@ -60,9 +67,50 @@ get_latest_docker_version() {
         return 0
     fi
 
-    # If it still fails, use fallback version
-    log_debug "Usando versão fallback: $fallback_version" >&2
-    echo "$fallback_version"
+    # If both methods fail, notify user
+    log_error "Não foi possível obter a versão mais recente do Docker" >&2
+    log_error "Verifique sua conexão com a internet e tente novamente" >&2
+    return 1
+}
+
+# Get installed Docker version
+get_docker_version() {
+    if command -v docker &>/dev/null; then
+        docker --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida"
+    else
+        echo "desconhecida"
+    fi
+}
+
+# Check if Docker is already installed
+check_existing_installation() {
+    log_debug "Verificando instalação existente do Docker..."
+
+    if ! command -v docker &>/dev/null; then
+        log_debug "Docker não está instalado"
+        return 0
+    fi
+
+    local current_version=$(get_docker_version)
+    log_info "Docker $current_version já está instalado."
+
+    # Mark as installed in lock file
+    mark_installed "docker" "$current_version"
+
+    # Check for updates
+    log_debug "Obtendo última versão..."
+    local latest_version=$(get_latest_docker_version)
+    if [ $? -eq 0 ] && [ -n "$latest_version" ]; then
+        if [ "$current_version" != "$latest_version" ]; then
+            echo ""
+            echo -e "${YELLOW}Nova versão disponível ($latest_version).${NC}"
+            echo -e "Para atualizar, execute: ${LIGHT_CYAN}susa setup docker --update${NC}"
+        fi
+    else
+        log_warning "Não foi possível verificar atualizações"
+    fi
+
+    return 1
 }
 
 # Detect OS and architecture
@@ -297,22 +345,9 @@ install_docker_arch() {
 
 # Main installation function
 install_docker() {
-    # Check if Docker is already installed
-    if command -v docker &>/dev/null; then
-        local current_version=$(docker --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida")
-        log_info "Docker $current_version já está instalado."
-
-        log_debug "Obtendo última versão..."
-        local docker_version=$(get_latest_docker_version)
-
-        if [ "$current_version" != "$docker_version" ]; then
-            echo ""
-            echo -e "${YELLOW}Uma versão mais recente está disponível ($docker_version).${NC}"
-            echo -e "Para atualizar, execute: ${LIGHT_CYAN}susa setup docker --update${NC}"
-        fi
-
-        return 0
-    fi
+	if ! check_existing_installation; then
+		exit 0
+	fi
 
     log_info "Iniciando instalação do Docker..."
 
@@ -338,7 +373,11 @@ install_docker() {
     if [ $install_result -eq 0 ]; then
         # Verify installation
         if command -v docker &>/dev/null; then
-            local installed_version=$(docker --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+            local installed_version=$(get_docker_version)
+
+            # Mark as installed in lock file
+            mark_installed "docker" "$installed_version"
+
             log_success "Docker $installed_version instalado com sucesso!"
             log_debug "Executável: $(which docker)"
             echo ""
@@ -372,13 +411,16 @@ update_docker() {
         return 1
     fi
 
-    local current_version=$(docker --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida")
+    local current_version=$(get_docker_version)
     log_info "Versão atual: $current_version"
     log_debug "Executável: $(which docker)"
 
     # Get latest version
     log_debug "Obtendo última versão..."
     local docker_version=$(get_latest_docker_version)
+    if [ $? -ne 0 ] || [ -z "$docker_version" ]; then
+        return 1
+    fi
 
     if [ "$current_version" = "$docker_version" ]; then
         log_info "Você já possui a versão mais recente instalada ($current_version)"
@@ -458,7 +500,11 @@ update_docker() {
 
     # Verify update
     if command -v docker &>/dev/null; then
-        local new_version=$(docker --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+        local new_version=$(get_docker_version)
+
+        # Update version in lock file
+        update_version "docker" "$new_version"
+
         log_success "Docker atualizado com sucesso para versão $new_version!"
         log_debug "Executável: $(which docker)"
     else
@@ -477,7 +523,7 @@ uninstall_docker() {
         return 0
     fi
 
-    local current_version=$(docker --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida")
+    local current_version=$(get_docker_version)
     log_debug "Versão a ser removida: $current_version"
     log_debug "Executável: $(which docker)"
 
@@ -554,6 +600,9 @@ uninstall_docker() {
 
     # Verify uninstallation
     if ! command -v docker &>/dev/null; then
+        # Mark as uninstalled in lock file
+        mark_uninstalled "docker"
+
         log_success "Docker desinstalado com sucesso!"
         log_debug "Executável removido"
     else

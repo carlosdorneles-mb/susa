@@ -3,6 +3,9 @@ set -euo pipefail
 
 setup_command_env
 
+# Source installations library
+source "$LIB_DIR/internal/installations.sh"
+
 # Help function
 show_help() {
     show_description
@@ -39,6 +42,45 @@ show_help() {
     echo "  • Temas e esquemas de cores"
 }
 
+# Get latest Tilix version
+get_latest_tilix_version() {
+    # Try to get the latest version via GitHub API
+    local latest_version=$(curl -s --max-time 10 --connect-timeout 5 https://api.github.com/repos/gnunn1/tilix/releases/latest 2>/dev/null | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+
+    if [ -n "$latest_version" ]; then
+        log_debug "Versão obtida via API do GitHub: $latest_version" >&2
+        echo "$latest_version"
+        return 0
+    fi
+
+    # If it fails, try via git ls-remote with semantic version sorting
+    log_debug "API do GitHub falhou, tentando via git ls-remote..." >&2
+    latest_version=$(timeout 5 git ls-remote --tags --refs https://github.com/gnunn1/tilix.git 2>/dev/null |
+        grep -oE '[0-9]+\.[0-9]+\.[0-9]+$' |
+        sort -V |
+        tail -1)
+
+    if [ -n "$latest_version" ]; then
+        log_debug "Versão obtida via git ls-remote: $latest_version" >&2
+        echo "$latest_version"
+        return 0
+    fi
+
+    # If both methods fail, notify user
+    log_error "Não foi possível obter a versão mais recente do Tilix" >&2
+    log_error "Verifique sua conexão com a internet e tente novamente" >&2
+    return 1
+}
+
+# Get installed Tilix version
+get_tilix_version() {
+    if command -v tilix &>/dev/null; then
+        tilix --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida"
+    else
+        echo "desconhecida"
+    fi
+}
+
 # Detect package manager
 detect_package_manager() {
     log_debug "Detectando gerenciador de pacotes..."
@@ -73,15 +115,58 @@ check_existing_installation() {
         return 0
     fi
 
-    local current_version=$(tilix --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida")
-    log_debug "Tilix já está instalado (versão atual: $current_version)"
-
+    local current_version=$(get_tilix_version)
     log_info "Tilix $current_version já está instalado."
+
+    # Mark as installed in lock file
+    mark_installed "tilix" "$current_version"
+
+    # Check for updates
+    log_debug "Obtendo última versão..."
+    local latest_version=$(get_latest_tilix_version)
+    if [ $? -eq 0 ] && [ -n "$latest_version" ]; then
+        if [ "$current_version" != "$latest_version" ]; then
+            echo ""
+            echo -e "${YELLOW}Nova versão disponível ($latest_version).${NC}"
+            echo -e "Para atualizar, execute: ${LIGHT_CYAN}susa setup tilix --update${NC}"
+        fi
+    else
+        log_warning "Não foi possível verificar atualizações"
+    fi
+
     return 1
 }
 
 # Install Tilix using system package manager
 install_tilix() {
+	if ! check_existing_installation; then
+		exit 0
+	fi
+
+    # Check if Tilix is already installed
+    if command -v tilix &>/dev/null; then
+        local current_version=$(get_tilix_version)
+        log_info "Tilix $current_version já está instalado."
+
+        # Mark as installed in lock file
+        mark_installed "tilix" "$current_version"
+
+        log_debug "Obtendo última versão..."
+        local latest_version=$(get_latest_tilix_version)
+        if [ $? -ne 0 ] || [ -z "$latest_version" ]; then
+            log_warning "Não foi possível verificar se há atualizações disponíveis"
+            return 0
+        fi
+
+        if [ "$current_version" != "$latest_version" ]; then
+            echo ""
+            echo -e "${YELLOW}Uma versão mais recente está disponível ($latest_version).${NC}"
+            echo -e "Para atualizar, execute: ${LIGHT_CYAN}susa setup tilix --update${NC}"
+        fi
+
+        return 0
+    fi
+
     log_info "Iniciando instalação do Tilix..."
 
     local pkg_manager=$(detect_package_manager)
@@ -160,8 +245,9 @@ install_tilix() {
     # Verify installation
     log_debug "Verificando instalação..."
     if command -v tilix &>/dev/null; then
-        local version=$(tilix --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida")
+        local version=$(get_tilix_version)
         log_success "Tilix $version instalado com sucesso!"
+        mark_installed "tilix" "$version"
         log_debug "Executável: $(which tilix)"
 
         # Check for VTE configuration
@@ -197,7 +283,7 @@ update_tilix() {
         return 1
     fi
 
-    local current_version=$(tilix --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida")
+    local current_version=$(get_tilix_version)
     log_debug "Versão atual: $current_version"
 
     # Update package lists
@@ -250,12 +336,13 @@ update_tilix() {
             ;;
     esac
 
-    local new_version=$(tilix --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida")
+    local new_version=$(get_tilix_version)
 
     if [ "$current_version" = "$new_version" ]; then
         log_info "Tilix já está na versão mais recente ($current_version)"
     else
         log_success "Tilix atualizado de $current_version para $new_version"
+        update_version "tilix" "$new_version"
     fi
 
     log_debug "Atualização concluída"
@@ -276,7 +363,7 @@ uninstall_tilix() {
         return 0
     fi
 
-    local version=$(tilix --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida")
+    local version=$(get_tilix_version)
     log_debug "Versão a ser removida: $version"
 
     # Confirm uninstallation
@@ -330,6 +417,7 @@ uninstall_tilix() {
     log_debug "Verificando remoção..."
     if ! command -v tilix &>/dev/null; then
         log_success "Tilix desinstalado com sucesso"
+        mark_uninstalled "tilix"
         log_debug "Executável removido"
     else
         log_warning "Tilix removido do gerenciador de pacotes, mas executável ainda encontrado"
@@ -396,20 +484,16 @@ main() {
     log_debug "Sistema operacional: Linux $(uname -r)"
 
     # Execute action
+	log_debug "Ação selecionada: $action"
+
     case "$action" in
         install)
-            log_debug "Ação selecionada: instalação"
-            if ! check_existing_installation; then
-                exit 0
-            fi
             install_tilix
             ;;
         update)
-            log_debug "Ação selecionada: atualização"
             update_tilix
             ;;
         uninstall)
-            log_debug "Ação selecionada: desinstalação"
             uninstall_tilix
             ;;
     esac
