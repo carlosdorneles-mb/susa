@@ -3,6 +3,7 @@ set -euo pipefail
 
 
 # Source required libraries
+source "$LIB_DIR/internal/yaml.sh"
 source "$LIB_DIR/internal/registry.sh"
 source "$LIB_DIR/internal/plugin.sh"
 
@@ -281,9 +282,21 @@ execute_plugin_command() {
     # Get plugin directory from script path
     local plugin_dir=$(dirname $(dirname $(dirname "$script_path")))
 
+    # Get command directory and config file
+    local command_dir=$(dirname "$script_path")
+    local config_file="$command_dir/config.yaml"
+
     # Setup plugin environment
     export PLUGIN_DIR="$plugin_dir"
     export PLUGIN_CATEGORY="$category"
+
+    # Load command environment variables from config.yaml
+    if [ -f "$config_file" ]; then
+        log_debug "[execute_plugin_command] Carregando envs de: $config_file" >&2
+        load_command_envs "$config_file"
+    else
+        log_debug "[execute_plugin_command] Config não encontrado: $config_file" >&2
+    fi
 
     # Check if help was requested
     for arg in "${args[@]}"; do

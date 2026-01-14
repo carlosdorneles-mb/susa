@@ -12,7 +12,7 @@ build_command_path() {
     # Use BASH_SOURCE to walk up the call stack and find the main.sh script
     local i=1
     local script_path=""
-    
+
     # Walk up the call stack to find a main.sh file
     while [ -n "${BASH_SOURCE[$i]:-}" ]; do
         if [[ "${BASH_SOURCE[$i]}" == */main.sh ]]; then
@@ -21,10 +21,10 @@ build_command_path() {
         fi
         ((i++))
     done
-    
+
     # If no script path found, return empty
     [ -z "$script_path" ] && return 0
-    
+
     local script_dir="$(cd "$(dirname "$script_path")" && pwd)"
 
     # Remove the prefix up to /commands/
@@ -44,7 +44,7 @@ get_command_config_file() {
     # Use BASH_SOURCE to walk up the call stack and find the main.sh script
     local i=1
     local script_path=""
-    
+
     # Walk up the call stack to find a main.sh file
     while [ -n "${BASH_SOURCE[$i]:-}" ]; do
         if [[ "${BASH_SOURCE[$i]}" == */main.sh ]]; then
@@ -53,11 +53,11 @@ get_command_config_file() {
         fi
         ((i++))
     done
-    
+
     if [ -z "$script_path" ]; then
         return 1
     fi
-    
+
     local script_dir="$(cd "$(dirname "$script_path")" && pwd)"
     echo "$script_dir/config.yaml"
 }
