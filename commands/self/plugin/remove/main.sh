@@ -1,7 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-setup_command_env
 
 # Source necessary libraries
 source "$LIB_DIR/internal/registry.sh"

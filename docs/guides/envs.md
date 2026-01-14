@@ -36,7 +36,6 @@ envs:
 
 ```bash
 #!/bin/bash
-setup_command_env
 
 # Variáveis automaticamente disponíveis
 repo="${DOCKER_REPO_URL:-https://default.com}"
@@ -70,7 +69,6 @@ DEBUG_MODE="false"
 
 ```bash
 #!/bin/bash
-setup_command_env
 
 # Disponíveis em todos os comandos
 echo "API: ${API_ENDPOINT}"
@@ -177,7 +175,6 @@ Sempre use valores de fallback com a sintaxe `${VAR:-default}`:
 #!/bin/bash
 set -euo pipefail
 
-setup_command_env
 
 # ✅ Bom: funciona com ou sem env
 local timeout="${TIMEOUT:-30}"
@@ -406,7 +403,6 @@ envs:
 ```bash
 # plugins/deploy-tools/deploy/staging/main.sh
 #!/bin/bash
-setup_command_env
 
 api_url="${STAGING_API_URL:-https://default-staging.com}"
 timeout="${STAGING_TIMEOUT:-30}"
@@ -456,7 +452,6 @@ envs:
 #!/bin/bash
 set -euo pipefail
 
-setup_command_env
 
 url="${MY_URL:-https://default.com}"
 timeout="${MY_TIMEOUT:-30}"

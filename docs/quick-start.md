@@ -211,7 +211,6 @@ cat > commands/demo/hello/main.sh << 'EOF'
 #!/bin/bash
 set -euo pipefail
 
-setup_command_env
 
 show_help() {
     show_description
@@ -275,7 +274,7 @@ Agora que você tem o básico, explore mais:
 
 1. **Descoberta automática**: Comandos são descobertos da estrutura de diretórios
 2. **Campo `script`**: Determina se é comando (executável) ou categoria (navegável)
-3. **Sempre use `setup_command_env`**: Primeira linha após `set -euo pipefail`
+3. **Use as funções auxiliares do CLI**: 
 4. **Funções de log**: Use `log_*` em vez de `echo`
 5. **Teste com DEBUG**: `DEBUG=true susa comando` para ver logs detalhados
 

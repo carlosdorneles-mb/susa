@@ -2,7 +2,6 @@
 set -euo pipefail
 
 # Setup command environment
-setup_command_env
 
 source "$LIB_DIR/logger.sh"
 source "$LIB_DIR/internal/yaml.sh"

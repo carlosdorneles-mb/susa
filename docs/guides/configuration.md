@@ -64,7 +64,6 @@ O arquivo é carregado na linha 46 do `core/susa`:
 
 ```bash
 #!/bin/bash
-setup_command_env
 
 # Variáveis do settings.conf já estão disponíveis automaticamente
 echo "API_ENDPOINT: ${API_ENDPOINT:-https://api.default.com}"
@@ -378,7 +377,6 @@ No `main.sh` do comando, use as variáveis com valores padrão de fallback:
 #!/bin/bash
 set -euo pipefail
 
-setup_command_env
 
 # Usar variáveis com fallback para compatibilidade
 get_latest_version() {
@@ -535,7 +533,6 @@ envs:
 #!/bin/bash
 set -euo pipefail
 
-setup_command_env
 source "$LIB_DIR/logger.sh"
 
 download_docker() {
@@ -613,7 +610,6 @@ As variáveis globais estão automaticamente disponíveis:
 #!/bin/bash
 set -euo pipefail
 
-setup_command_env
 
 # Variáveis do settings.conf já estão disponíveis
 echo "API Endpoint: ${API_ENDPOINT:-não configurado}"
@@ -696,7 +692,6 @@ envs:
 #!/bin/bash
 set -euo pipefail
 
-setup_command_env
 
 deploy_app() {
     # Usa configuração global
@@ -1150,7 +1145,6 @@ envs:
 ```bash
 # commands/setup/docker/main.sh
 #!/bin/bash
-setup_command_env
 
 repo="${DOCKER_REPO_URL:-https://download.docker.com}"
 timeout="${DOCKER_TIMEOUT:-300}"

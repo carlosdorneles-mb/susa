@@ -253,7 +253,6 @@ envs:
 #!/bin/bash
 set -euo pipefail
 
-setup_command_env
 
 # Variáveis do config.yaml já estão exportadas
 install_app() {

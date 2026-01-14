@@ -78,7 +78,6 @@ envs:
 
 ```bash
 #!/bin/bash
-setup_command_env
 
 # Sempre use fallback
 api_url="${DEPLOY_API_URL:-https://default.com}"
@@ -125,7 +124,6 @@ envs:
 
 ```bash
 #!/bin/bash
-setup_command_env
 
 # Variáveis disponíveis automaticamente
 api_url="${MY_API_URL:-https://default.com}"

@@ -6,24 +6,26 @@ source "$LIB_DIR/internal/yaml.sh"
 
 # --- CLI Helper Functions ---
 
-# Sets up the command environment by determining SCRIPT_DIR and CONFIG_FILE
-setup_command_env() {
-    # BASH_SOURCE[1] points to the script that called this function
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[1]}")" && pwd)"
-    CONFIG_FILE="$SCRIPT_DIR/config.yaml"
-
-    # Export so that subprocesses also have access
-    export SCRIPT_DIR
-    export CONFIG_FILE
-}
-
-# Builds the command path based on SCRIPT_DIR
+# Builds the command path based on the script directory
 # Example: commands/self/plugin/add -> self plugin add
 build_command_path() {
-    local script_dir="${SCRIPT_DIR:-${1:-}}"
-
-    # If no script_dir is available, return empty
-    [ -z "$script_dir" ] && return 0
+    # Use BASH_SOURCE to walk up the call stack and find the main.sh script
+    local i=1
+    local script_path=""
+    
+    # Walk up the call stack to find a main.sh file
+    while [ -n "${BASH_SOURCE[$i]:-}" ]; do
+        if [[ "${BASH_SOURCE[$i]}" == */main.sh ]]; then
+            script_path="${BASH_SOURCE[$i]}"
+            break
+        fi
+        ((i++))
+    done
+    
+    # If no script path found, return empty
+    [ -z "$script_path" ] && return 0
+    
+    local script_dir="$(cd "$(dirname "$script_path")" && pwd)"
 
     # Remove the prefix up to /commands/
     local relative_path="${script_dir#*commands/}"
@@ -35,6 +37,29 @@ build_command_path() {
 
     # Convert / to space
     echo "$relative_path" | tr '/' ' '
+}
+
+# Gets the config file path for the calling script
+get_command_config_file() {
+    # Use BASH_SOURCE to walk up the call stack and find the main.sh script
+    local i=1
+    local script_path=""
+    
+    # Walk up the call stack to find a main.sh file
+    while [ -n "${BASH_SOURCE[$i]:-}" ]; do
+        if [[ "${BASH_SOURCE[$i]}" == */main.sh ]]; then
+            script_path="${BASH_SOURCE[$i]}"
+            break
+        fi
+        ((i++))
+    done
+    
+    if [ -z "$script_path" ]; then
+        return 1
+    fi
+    
+    local script_dir="$(cd "$(dirname "$script_path")" && pwd)"
+    echo "$script_dir/config.yaml"
 }
 
 # Displays the command usage information with customizable arguments
@@ -90,9 +115,9 @@ show_usage() {
 
 # Get and display the command description from config.yaml
 # The file config.yaml must have a "description" field.
-# The config.yaml file is loaded from the command directory.
 show_description() {
-    local cmd_desc=$(get_yaml_field "$CONFIG_FILE" "description")
+    local config_file=$(get_command_config_file)
+    local cmd_desc=$(get_yaml_field "$config_file" "description")
     echo -e "$cmd_desc"
 }
 

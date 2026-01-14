@@ -128,7 +128,6 @@ envs:
 #!/bin/bash
 set -euo pipefail
 
-setup_command_env
 
 install_docker() {
     # Use as variáveis com valores de fallback
@@ -168,7 +167,6 @@ Crie `commands/<categoria>/<comando>/main.sh`:
 #!/bin/bash
 set -euo pipefail
 
-setup_command_env
 
 # Help function
 show_help() {
@@ -269,7 +267,7 @@ Para detalhes completos de todas as bibliotecas, veja [Referência de Biblioteca
 
 ## 🎯 Boas Práticas
 
-1. **Sempre use `setup_command_env`**: Primeira linha após `set -euo pipefail`
+1. **Use as funções auxiliares do CLI**: 
 2. **Funções de log**: Use `log_*` em vez de `echo` para mensagens
 3. **Função de ajuda**: Sempre implemente `show_help()` com `show_description` e `show_usage`
 4. **Tratamento de erros**: Use `set -euo pipefail` no início
@@ -370,7 +368,6 @@ envs:
 #!/bin/bash
 set -euo pipefail
 
-setup_command_env
 source "$LIB_DIR/logger.sh"
 
 # Help function

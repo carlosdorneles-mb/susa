@@ -4,46 +4,48 @@ Funções auxiliares específicas do CLI.
 
 ## Funções
 
-### `setup_command_env()`
+### `build_command_path()`
 
-Configura o ambiente do comando determinando SCRIPT_DIR e CONFIG_FILE.
+Constrói o caminho do comando baseado no script que está sendo executado.
 
 **Comportamento:**
 
-- Define `SCRIPT_DIR` como o diretório do script que chamou a função
-- Define `CONFIG_FILE` como `$SCRIPT_DIR/config.yaml`
-- Exporta ambas as variáveis para uso em subprocessos
-
-**Uso:**
-
-```bash
-#!/bin/bash
-set -euo pipefail
-
-setup_command_env
-
-# Agora você tem acesso a:
-echo "Script dir: $SCRIPT_DIR"
-echo "Config file: $CONFIG_FILE"
-```
-
-### `build_command_path()`
-
-Constrói o caminho do comando baseado no SCRIPT_DIR.
-
-**Parâmetros:**
-
-- `$1` - Diretório do script (opcional, usa SCRIPT_DIR se não fornecido)
+- Detecta automaticamente o script main.sh na pilha de chamadas
+- Extrai o caminho relativo do comando
+- Funciona com comandos built-in e plugins
 
 **Retorno:** Caminho do comando sem barras (separado por espaços)
 
 **Exemplo:**
 
 ```bash
-# Se SCRIPT_DIR = /opt/susa/commands/self/plugin/add
+# Se executando /opt/susa/commands/self/plugin/add/main.sh
 path=$(build_command_path)
 echo "$path"  # self plugin add
 ```
+
+**Uso interno:** Chamada automaticamente por `show_usage()`
+
+### `get_command_config_file()`
+
+Obtém o caminho do arquivo config.yaml do comando sendo executado.
+
+**Comportamento:**
+
+- Detecta automaticamente o script main.sh na pilha de chamadas
+- Retorna o caminho para config.yaml do mesmo diretório
+
+**Retorno:** Caminho absoluto para config.yaml
+
+**Exemplo:**
+
+```bash
+# Se executando commands/setup/docker/main.sh
+config=$(get_command_config_file)
+echo "$config"  # /path/to/commands/setup/docker/config.yaml
+```
+
+**Uso interno:** Chamada automaticamente por `show_description()`
 
 ### `show_usage()`
 
@@ -52,30 +54,37 @@ Mostra mensagem de uso do comando com argumentos customizáveis.
 **Parâmetros:**
 
 - `$@` - Argumentos opcionais (padrão: "[opções]")
+- `--no-options` - Remove a exibição de "[opções]"
 
 **Uso:**
 
 ```bash
 show_usage
-# Output: Uso: susa <comando> [opções]
+# Output: Uso: susa setup docker [opções]
 
 show_usage "<arquivo> <destino>"
 # Output: Uso: susa setup docker <arquivo> <destino>
+
+show_usage --no-options
+# Output: Uso: susa self info
 ```
 
 ### `show_description()`
 
 Exibe a descrição do comando do arquivo config.yaml.
 
+**Comportamento:**
+
+- Detecta automaticamente o config.yaml do comando
+- Lê e exibe o campo "description"
+
 **Requisitos:**
 
-- Variável `CONFIG_FILE` deve estar definida (use `setup_command_env`)
 - O arquivo config.yaml deve ter um campo "description"
 
 **Uso:**
 
 ```bash
-setup_command_env
 show_description
 # Output: Instala Docker no sistema
 ```
@@ -107,7 +116,6 @@ set -euo pipefail
 source "$LIB_DIR/cli.sh"
 
 # Setup do ambiente
-setup_command_env
 
 if [ $# -eq 0 ]; then
     show_description
@@ -125,6 +133,5 @@ fi
 
 ## Boas Práticas
 
-1. Sempre chame `setup_command_env` após `set -euo pipefail`
-2. Use `show_description` e `show_usage` na função de ajuda
-3. Use `show_version` para comandos `--version`
+1. Use `show_description` e `show_usage` na função de ajuda
+2. Use `show_version` para comandos `--version`

@@ -1,7 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-setup_command_env
 
 # Source installations library
 source "$LIB_DIR/internal/installations.sh"

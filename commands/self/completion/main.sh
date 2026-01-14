@@ -1,7 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-setup_command_env
 
 # Source completion library
 source "$LIB_DIR/internal/completion.sh"

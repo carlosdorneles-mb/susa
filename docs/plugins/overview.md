@@ -78,7 +78,6 @@ EOF
 
 cat > meu-plugin/deploy/staging/main.sh << 'EOF'
 #!/bin/bash
-setup_command_env
 
 # Variáveis automaticamente disponíveis
 url="${STAGING_URL:-https://default-staging.com}"

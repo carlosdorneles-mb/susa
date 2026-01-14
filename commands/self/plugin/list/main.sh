@@ -1,7 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-setup_command_env
 
 # Source libs
 source "$LIB_DIR/color.sh"

@@ -97,8 +97,6 @@ envs:
 #!/bin/bash
 set -euo pipefail
 
-setup_command_env
-
 install() {
     local version="${MYAPP_VERSION:-1.0.0}"
     local install_dir="${MYAPP_INSTALL_DIR:-$HOME/.myapp}"

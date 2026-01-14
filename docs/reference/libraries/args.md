@@ -209,7 +209,6 @@ main "$PLUGIN_ARG"
 #!/bin/bash
 set -euo pipefail
 
-setup_command_env
 source "$LIB_DIR/internal/args.sh"
 
 show_help() {
@@ -234,7 +233,6 @@ main
 #!/bin/bash
 set -euo pipefail
 
-setup_command_env
 source "$LIB_DIR/internal/args.sh"
 
 show_help() {
@@ -275,7 +273,6 @@ main "$ARG"
 #!/bin/bash
 set -euo pipefail
 
-setup_command_env
 source "$LIB_DIR/internal/args.sh"
 
 VERBOSE="false"

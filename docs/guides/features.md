@@ -384,7 +384,6 @@ os: ["linux", "mac"]
 #!/bin/bash
 set -euo pipefail
 
-setup_command_env
 
 show_help() {
     show_description

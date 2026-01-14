@@ -125,7 +125,6 @@ kubernetes.sh
 set -euo pipefail
 
 # Setup environment
-setup_command_env
 
 # Importa bibliotecas necessárias
 source "$LIB_DIR/logger.sh"
@@ -176,7 +175,6 @@ fi
 7. **Teste compatibilidade de SO** com `is_command_compatible()` antes de executar
 8. **Use yq para YAML** ao invés de awk/grep para parsing confiável
 9. **Sempre termine cores com `${NC}`** para evitar poluição de estilo no terminal
-10. **Configure ambiente com `setup_command_env`** no início para acesso a variáveis padrão
 
 ## Recursos Adicionais
 
