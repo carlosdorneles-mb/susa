@@ -103,11 +103,16 @@ get_plugin_categories() {
     find "$plugin_dir" -mindepth 1 -maxdepth 1 -type d ! -name ".git" -exec basename {} \; 2>/dev/null | sort | paste -sd "," -
 }
 
-# Updates the lock file if it exists
+# Updates the lock file (creates if doesn't exist)
 update_lock_file() {
-    if [ -f "$CLI_DIR/susa.lock" ]; then
-        log_info "Atualizando arquivo susa.lock..."
-        "$CORE_DIR/susa" self lock > /dev/null 2>&1 || log_warning "Não foi possível atualizar o susa.lock. Execute 'susa self lock' manualmente."
+    log_info "Atualizando arquivo susa.lock..."
+    log_debug "Executando: $CORE_DIR/susa self lock"
+
+    if "$CORE_DIR/susa" self lock > /dev/null 2>&1; then
+        log_debug "Lock file atualizado com sucesso"
+    else
+        log_warning "Não foi possível atualizar o susa.lock. Execute 'susa self lock' manualmente."
+        log_debug "Você pode precisar executar: susa self lock"
     fi
 }
 

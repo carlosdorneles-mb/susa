@@ -178,6 +178,9 @@ main() {
         log_debug "Atualizando lock file"
         update_lock_file
         log_debug "=== Atualização concluída ==="
+
+        echo ""
+        log_info "💡 Os comandos atualizados já estão disponíveis!"
     else
         log_error "Falha ao baixar atualização"
         log_debug "Clone falhou"

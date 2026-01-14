@@ -68,21 +68,15 @@ validate_or_create_lock_file() {
         return 0
     fi
 
-    log_debug "Lock file não encontrado: $lock_file"
-    log_debug "SUSA_SKIP_LOCK_CHECK=${SUSA_SKIP_LOCK_CHECK:-não definido}"
     log_info "Primeira execução detectada. Configurando o Susa CLI..."
     log_info "Gerando arquivo de cache para otimizar o desempenho..."
 
-    log_debug "Chamando comando: SUSA_SKIP_LOCK_CHECK=1 $CORE_DIR/susa self lock"
-
     # Call the lock command bypassing the check to prevent infinite loop
     if ! SUSA_SKIP_LOCK_CHECK=1 "$CORE_DIR/susa" self lock > /dev/null 2>&1; then
-        log_debug "Comando falhou com código de saída: $?"
         log_error "Erro ao gerar arquivo de cache"
         exit 1
     fi
 
-    log_debug "Lock file gerado com sucesso"
     log_success "Configuração concluída! O CLI está pronto para uso."
     echo ""
 }
@@ -287,12 +281,12 @@ list_commands() {
         echo -e "${LIGHT_GREEN}Comandos:${NC}"
 
         # List commands without a group
-        list_ungrouped_commands "$category" "$commands" "$current_os"
+        list_ungrouped_commands "$category" "$commands" "$current_os" || true
         local has_ungrouped=$?
 
         # List grouped commands
         local groups=$(get_category_groups "$GLOBAL_CONFIG_FILE" "$category" "$current_os")
-        list_grouped_commands "$category" "$commands" "$current_os" "$groups"
+        list_grouped_commands "$category" "$commands" "$current_os" "$groups" || true
         local has_grouped=$?
 
         # Show message if no compatible commands found

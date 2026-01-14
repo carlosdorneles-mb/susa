@@ -236,10 +236,14 @@ main() {
     # Show success message
     show_installation_success "$plugin_name" "$plugin_url" "$plugin_version" "$cmd_count"
 
-    # Update lock file if it exists
-    log_debug "Atualizando lock file"
+    # Update lock file to make plugin commands available
+    log_debug "Atualizando lock file para disponibilizar comandos do plugin"
     update_lock_file
     log_debug "=== Instalação concluída ==="
+
+    echo ""
+    log_info "💡 Os comandos do plugin já estão disponíveis!"
+    log_info "Execute 'susa --help' para ver as novas categorias"
 }
 
 # Parse arguments first, before running main

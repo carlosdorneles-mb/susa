@@ -93,6 +93,9 @@ main() {
         log_debug "Atualizando lock file"
         update_lock_file
         log_debug "=== Remoção concluída ==="
+
+        echo ""
+        log_info "💡 Execute 'susa --help' para ver as categorias atualizadas"
     else
         log_error "Falha ao remover o plugin"
         log_debug "Erro ao executar rm -rf"
