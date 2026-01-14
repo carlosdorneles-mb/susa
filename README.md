@@ -15,13 +15,13 @@ Framework modular em Shell Script para criar CLIs extensíveis com descoberta au
 
 ## 🚀 Instalação
 
-### Instalação Rápida (Recomendado)
+### Instalação Rápida (recomendado)
 
 ```bash
 curl -LsSf https://raw.githubusercontent.com/duducp/susa/main/install-remote.sh | bash
 ```
 
-### Instalação Manual
+### Instalação Manual (para desenvolvimento)
 
 ```bash
 git clone https://github.com/duducp/susa.git
@@ -32,7 +32,6 @@ make cli-install
 ### Desinstalação
 
 ```bash
-cd susa
 make cli-uninstall
 ```
 

@@ -155,6 +155,14 @@ perform_update() {
 
     log_success "Arquivos atualizados com sucesso!"
 
+    # Update lock file after successful update
+    log_info "Atualizando arquivo de cache..."
+    if "$CORE_DIR/susa" self lock > /dev/null 2>&1; then
+        log_debug "Lock file atualizado com sucesso"
+    else
+        log_warning "Não foi possível atualizar o lock file. Execute 'susa self lock' manualmente."
+    fi
+
     return 0
 }
 
