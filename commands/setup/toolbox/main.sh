@@ -184,11 +184,15 @@ install_toolbox_linux() {
     log_debug "Diretório extraído: $extracted_dir"
 
     # Create installation directory
-    mkdir -p "$install_dir"
+    mkdir -p "$install_dir/bin"
     mkdir -p "$bin_dir"
 
-    # Find and copy the binary
-    local toolbox_binary=$(find "$extracted_dir" -type f -name "jetbrains-toolbox" | head -1)
+    # Copy all contents to installation directory
+    log_info "Copiando arquivos para $install_dir..."
+    cp -r "$extracted_dir"/* "$install_dir/"
+
+    # Find the binary in the installation directory
+    local toolbox_binary=$(find "$install_dir" -type f -name "jetbrains-toolbox" | head -1)
 
     if [ -z "$toolbox_binary" ]; then
         log_error "Binário do JetBrains Toolbox não encontrado"
@@ -197,12 +201,11 @@ install_toolbox_linux() {
     fi
 
     log_debug "Binário encontrado: $toolbox_binary"
+    chmod +x "$toolbox_binary"
 
-    # Copy binary to bin directory
-    cp "$toolbox_binary" "$bin_dir/jetbrains-toolbox"
-    chmod +x "$bin_dir/jetbrains-toolbox"
-
-    log_debug "Binário instalado em $bin_dir/jetbrains-toolbox"
+    # Create symlink in ~/.local/bin
+    ln -sf "$toolbox_binary" "$bin_dir/jetbrains-toolbox"
+    log_debug "Link simbólico criado: $bin_dir/jetbrains-toolbox -> $toolbox_binary"
 
     # Save version
     echo "$version" > "$install_dir/.version"
@@ -539,7 +542,6 @@ uninstall_toolbox() {
 
     echo ""
     echo -e "${YELLOW}Deseja remover também os dados das IDEs instaladas pelo Toolbox? (s/N)${NC}"
-    echo -e "${YELLOW}Isso inclui as IDEs e suas configurações (~/Library/Application Support/JetBrains)${NC}"
     read -r response
 
     if [[ "$response" =~ ^[sS]$ ]]; then

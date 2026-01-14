@@ -129,7 +129,7 @@ main() {
     show_banner
 
     # Confirmation
-    echo -ne "${YELLOW}Deseja realmente desinstalar o Susa CLI? [s/N]:${NC} "
+    echo -ne "${YELLOW}Deseja realmente desinstalar o Susa CLI? (s/N):${NC} "
     read -r confirm
     echo ""
 
