@@ -15,12 +15,12 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     # macOS
     OS_TYPE="macOS"
     INSTALL_DIR="$HOME/.local/bin"
-    SHELL_CONFIG="~/.zshrc ou ~/.bash_profile"
+    SHELL_CONFIG="$HOME/.zshrc ou $HOME/.bash_profile"
 else
     # Linux
     OS_TYPE="Linux"
     INSTALL_DIR="$HOME/.local/bin"
-    SHELL_CONFIG="~/.bashrc ou ~/.zshrc"
+    SHELL_CONFIG="$HOME/.bashrc ou $HOME/.zshrc"
 fi
 
 # Check if CLI is already installed

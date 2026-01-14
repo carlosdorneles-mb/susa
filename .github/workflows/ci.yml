@@ -12,54 +12,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  shellcheck:
-    name: ShellCheck
+  quality-check:
+    name: Quality Check (ShellCheck + shfmt)
     runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Install ShellCheck
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y shellcheck
-
-      - name: Show ShellCheck version
-        run: shellcheck --version
-
-      - name: Run ShellCheck on core files
-        run: |
-          echo "🔍 Verificando core/susa..."
-          shellcheck -x core/susa
-
-      - name: Run ShellCheck on library files
-        run: |
-          echo "🔍 Verificando bibliotecas..."
-          find core/lib -name "*.sh" -type f | while read -r file; do
-            echo "Verificando $file..."
-            shellcheck -x "$file"
-          done
-
-      - name: Run ShellCheck on command scripts
-        run: |
-          echo "🔍 Verificando comandos..."
-          find commands -name "*.sh" -type f | while read -r file; do
-            echo "Verificando $file..."
-            shellcheck -x "$file"
-          done
-
-      - name: Summary
-        if: success()
-        run: |
-          echo "✅ Todos os scripts passaram na verificação do ShellCheck!"
-
-  lint:
-    name: Code Quality Check
-    runs-on: ubuntu-latest
-    needs: shellcheck
 
     steps:
       - name: Checkout repository
@@ -70,45 +25,27 @@ jobs:
         with:
           go-version: '1.21'
 
-      - name: Install shfmt
-        run: go install mvdan.cc/sh/v3/cmd/shfmt@latest
-
-      - name: Show shfmt version
-        run: shfmt -version
-
-      - name: Run shfmt check
+      - name: Install dependencies
         run: |
-          echo "📝 Verificando formatação com shfmt..."
-          shfmt -d -i 4 -ci core/susa core/lib/*.sh core/lib/internal/*.sh commands/**/*.sh install*.sh uninstall*.sh || {
-            echo "❌ Problemas de formatação encontrados"
-            echo "💡 Execute 'make format' localmente para corrigir"
-            exit 1
-          }
-          echo "✅ Formatação verificada com sucesso!"
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+          go install mvdan.cc/sh/v3/cmd/shfmt@latest
 
-      - name: Check for trailing whitespaces
+      - name: Show versions
+        run: |
+          echo "ShellCheck version:"
+          shellcheck --version
+          echo ""
+          echo "shfmt version:"
+          shfmt -version
+
+      - name: Run quality checks
+        run: make lint
+
+      - name: Check trailing whitespaces
         run: |
           if git grep -n '[[:space:]]$' -- '*.sh' ':!*.md'; then
             echo "❌ Encontrados espaços em branco no final de linhas"
             exit 1
           fi
           echo "✅ Nenhum espaço em branco trailing encontrado"
-
-  summary:
-    name: CI Summary
-    runs-on: ubuntu-latest
-    needs: [shellcheck, lint]
-    if: always()
-
-    steps:
-      - name: Check status
-        run: |
-          if [ "${{ needs.shellcheck.result }}" == "success" ] && [ "${{ needs.lint.result }}" == "success" ]; then
-            echo "✅ Todos os checks passaram com sucesso!"
-            exit 0
-          else
-            echo "❌ Alguns checks falharam:"
-            echo "  - ShellCheck: ${{ needs.shellcheck.result }}"
-            echo "  - Lint: ${{ needs.lint.result }}"
-            exit 1
-          fi

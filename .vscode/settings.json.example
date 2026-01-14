@@ -1,0 +1,15 @@
+{
+  "bashIde.enableSourceErrorDiagnostics": true,
+  "bashIde.shellcheckPath": "shellcheck",
+  "bashIde.shfmt.path": "shfmt",
+  "bashIde.shfmt.caseIndent": true,
+  "bashIde.shfmt.binaryNextLine": false,
+  "bashIde.shfmt.spaceRedirects": true,
+  "bashIde.shfmt.keepPadding": false,
+  "bashIde.shfmt.functionNextLine": false,
+  "bashIde.explainshellEndpoint": "",
+  "[shellscript]": {
+    "editor.defaultFormatter": "foxundermoon.shell-format",
+    "editor.formatOnSave": true
+  }
+}

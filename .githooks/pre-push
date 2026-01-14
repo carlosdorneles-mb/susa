@@ -1,0 +1,25 @@
+#!/bin/bash
+set -euo pipefail
+IFS=$'\n\t'
+
+# Pre-push hook para executar testes
+# Este hook executa os testes antes de permitir o push
+
+# Se houver alteração nesse arquivo, execute "make install-hooks" para atualizar o hook.
+
+echo "🔍 Executando testes..."
+echo ""
+
+# Executar testes
+echo "📋 Testes..."
+if ! make test 2>&1 | grep -v "^make\["; then
+    echo ""
+    echo "❌ Testes falharam! Corrija os erros antes de commitar."
+    exit 1
+fi
+
+echo ""
+echo "✅ Todas os testes passaram!"
+echo ""
+
+exit 0

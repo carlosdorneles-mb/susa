@@ -163,16 +163,84 @@ make test
 ```
 
 **Ferramentas:**
+
 - 🔍 **ShellCheck**: Análise estática de código shell
 - 📝 **shfmt**: Formatação automática de scripts
-
-Para mais informações, veja [SHELLCHECK.md](.github/SHELLCHECK.md).
 
 [![CI Status](https://github.com/duducp/susa/actions/workflows/ci.yml/badge.svg)](https://github.com/duducp/susa/actions/workflows/ci.yml)
 
 ## 📚 Documentação
 
-- **[Documentação Completa](https://duducp.github.io/susa/)** - Guias e referências
+A documentação completa está disponível em [duducp.github.io/susa](https://duducp.github.io/susa/).
+
+Para rodar a documentação localmente:
+
+```bash
+# Instalar dependências (apenas primeira vez)
+make install
+
+# Iniciar servidor de documentação
+make doc
+```
+
+Acesse em: http://127.0.0.1:8000
+
+## 💻 Desenvolvimento
+
+### Configurar Ambiente de Desenvolvimento
+
+Para desenvolver com suporte de IDE completo (autocomplete, linting em tempo real, etc.):
+
+```bash
+# Instalar ferramentas de desenvolvimento e dependências para documentação
+make install
+
+# Instalar Git hooks (pre-commit com shellcheck + shfmt)
+make install-hooks
+
+# Configurar VS Code
+make setup-vscode
+```
+
+Após executar `setup-vscode`, reabra o VS Code e instale as extensões recomendadas quando solicitado.
+
+### Git Hooks
+
+O projeto inclui um **pre-commit hook** que executa automaticamente `shellcheck` e `shfmt` antes de cada commit:
+
+```bash
+# Instalar hook
+make install-hooks
+```
+
+O hook irá:
+
+- ✅ Verificar qualidade do código com ShellCheck
+- ✅ Verificar formatação com shfmt
+- ❌ Bloquear commit se houver erros
+
+Para corrigir problemas de formatação automaticamente: `make format`
+
+**Ferramentas Instaladas:**
+
+- 🔧 **bash-language-server**: Language Server Protocol para Bash
+- 🔍 **ShellCheck**: Análise estática de código shell
+- 📝 **shfmt**: Formatação automática de scripts
+
+**Extensões VS Code Recomendadas:**
+
+- **Bash IDE** (mads-hartmann.bash-ide-vscode): LSP para Bash com recursos avançados
+- **Shell Format** (foxundermoon.shell-format): Formatação automática
+- **ShellCheck** (timonwong.shellcheck): Linting em tempo real
+
+**Recursos IDE:**
+
+- Autocomplete inteligente de comandos e variáveis
+- Verificação de erros em tempo real
+- Formatação automática ao salvar
+- Navegação por definições (Ctrl+Click)
+- Documentação ao passar o mouse
+- Destaque de sintaxe aprimorado
 
 ## 🤝 Contribuindo
 

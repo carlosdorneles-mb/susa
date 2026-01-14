@@ -1,0 +1,35 @@
+#!/bin/bash
+set -euo pipefail
+IFS=$'\n\t'
+
+# Pre-commit hook para executar verificações de qualidade
+# Este hook executa shellcheck e shfmt antes de permitir o commit
+
+# Se houver alteração nesse arquivo, execute "make install-hooks" para atualizar o hook.
+
+echo "🔍 Executando verificações de qualidade..."
+echo ""
+
+# Executar shellcheck
+echo "📋 ShellCheck..."
+if ! make shellcheck 2>&1 | grep -v "^make\["; then
+    echo ""
+    echo "❌ ShellCheck falhou! Corrija os erros antes de commitar."
+    exit 1
+fi
+
+echo ""
+
+# Executar shfmt
+echo "📋 shfmt..."
+if ! make shfmt 2>&1 | grep -v "^make\["; then
+    echo ""
+    echo "❌ Formatação incorreta! Execute 'make format' e tente novamente."
+    exit 1
+fi
+
+echo ""
+echo "✅ Todas as verificações passaram!"
+echo ""
+
+exit 0
