@@ -26,22 +26,21 @@ curl -LsSf https://raw.githubusercontent.com/duducp/susa/main/install-remote.sh 
 ```bash
 git clone https://github.com/duducp/susa.git
 cd susa
-./install.sh
+make cli-install
 ```
 
 ### Desinstalação
 
 ```bash
-curl -LsSf https://raw.githubusercontent.com/duducp/susa/main/uninstall-remote.sh | bash
+cd susa
+make cli-uninstall
 ```
 
 ## 📖 Uso Básico
 
 ```bash
 susa                    # Listar categorias
-susa setup              # Listar comandos da categoria
-susa setup docker       # Executar comando
-susa setup --help       # Ajuda
+susa self               # Listar comandos da categoria
 susa --version          # Versão
 ```
 
@@ -49,61 +48,31 @@ susa --version          # Versão
 
 ```text
 susa/
-├── susa                    # Executável principal
-├── cli.yaml                # Configuração global
-├── commands/               # Comandos nativos
-│   ├── setup/             # Categoria de comandos
+├── core/                   # Core do CLI
+│   ├── susa               # Executável principal
+│   ├── cli.yaml           # Configuração global
+│   └── lib/               # Bibliotecas compartilhadas
+├── commands/              # Comandos nativos
+│   ├── setup/            # Categoria de comandos
 │   │   ├── config.yaml
-│   │   └── docker/        # Comando individual
+│   │   └── docker/       # Comando individual
 │   │       ├── config.yaml
 │   │       └── main.sh
-│   └── self/              # Comandos internos (plugin, completion)
-├── plugins/               # Plugins externos (Git)
+│   └── self/             # Comandos internos (plugin, completion)
+├── plugins/              # Plugins externos (Git)
 │   └── registry.yaml
-├── lib/                   # Bibliotecas compartilhadas
-└── docs/                  # Documentação MkDocs
+└── docs/                 # Documentação MkDocs
 ```
 
 ## 🚀 Começar Rápido
 
 ### Criar Novo Comando
 
-```bash
-# 1. Estrutura
-mkdir -p commands/setup/meuapp
-
-# 2. Configuração (commands/setup/meuapp/config.yaml)
-cat > commands/setup/meuapp/config.yaml << EOF
-name: "Meu App"
-description: "Instala Meu App"
-script: "main.sh"
-EOF
-
-# 3. Script (commands/setup/meuapp/main.sh)
-cat > commands/setup/meuapp/main.sh << 'EOF'
-#!/bin/bash
-set -euo pipefail
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$(cd "$SCRIPT_DIR/../../.." && pwd)/lib/logger.sh"
-
-log_info "Instalando Meu App..."
-# Sua lógica aqui
-log_success "Pronto!"
-EOF
-
-chmod +x commands/setup/meuapp/main.sh
-
-# 4. Usar
-susa setup meuapp
-```
+Consulte a [documentação oficial](https://duducp.github.io/susa/guides/adding-commands/).
 
 ### Instalar Plugins
 
-```bash
-susa self plugin add user/repo
-susa self plugin list
-```
+Consulte a [documentação oficial](https://duducp.github.io/susa/plugins/overview/).
 
 ### Otimizar Performance
 
@@ -113,7 +82,7 @@ O CLI utiliza um arquivo de cache (`susa.lock`) para acelerar a inicialização:
 susa self lock
 ```
 
-Este arquivo é **gerado automaticamente** na primeira execução e atualizado ao instalar/remover plugins. Ele proporciona uma inicialização ~38% mais rápida.
+Este arquivo é **gerado automaticamente** na primeira execução e atualizado ao instalar/remover plugins.
 
 Execute manualmente apenas se adicionar comandos diretamente no diretório `commands/`.
 
@@ -123,14 +92,9 @@ Execute manualmente apenas se adicionar comandos diretamente no diretório `comm
 susa self completion --install
 ```
 
-## 📚 Documentação Completa
+## 📚 Documentação
 
 - **[Documentação Completa](https://duducp.github.io/susa/)** - Guias e referências
-- **[Quick Start](docs/quick-start.md)** - Primeiros passos
-- **[Guia de Funcionalidades](docs/guides/features.md)** - Recursos detalhados
-- **[Adicionar Comandos](docs/guides/adding-commands.md)** - Tutorial passo-a-passo
-- **[Referência de Bibliotecas](docs/reference/libraries.md)** - API completa
-- **[Sistema de Plugins](docs/plugins/overview.md)** - Extensibilidade
 
 ## 🤝 Contribuindo
 

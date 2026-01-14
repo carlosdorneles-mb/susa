@@ -51,18 +51,30 @@ if [ ! -f "$GLOBAL_CONFIG_FILE" ]; then
 fi
 
 # ============================================================
-# Lock File Validation
+# Functions
 # ============================================================
 
-# Check if susa.lock exists, if not, generate it
-LOCK_FILE="$CLI_DIR/susa.lock"
-if [ ! -f "$LOCK_FILE" ] && [ "${SUSA_SKIP_LOCK_CHECK:-}" != "1" ]; then
-    log_debug "Lock file não encontrado: $LOCK_FILE"
+# Validates or creates the lock file on first execution
+validate_or_create_lock_file() {
+    local lock_file="$CLI_DIR/susa.lock"
+
+    # Skip check if explicitly requested
+    if [ "${SUSA_SKIP_LOCK_CHECK:-}" = "1" ]; then
+        return 0
+    fi
+
+    # Lock file exists, nothing to do
+    if [ -f "$lock_file" ]; then
+        return 0
+    fi
+
+    log_debug "Lock file não encontrado: $lock_file"
     log_debug "SUSA_SKIP_LOCK_CHECK=${SUSA_SKIP_LOCK_CHECK:-não definido}"
     log_info "Primeira execução detectada. Configurando o Susa CLI..."
     log_info "Gerando arquivo de cache para otimizar o desempenho..."
 
     log_debug "Chamando comando: SUSA_SKIP_LOCK_CHECK=1 $CORE_DIR/susa self lock"
+
     # Call the lock command bypassing the check to prevent infinite loop
     if ! SUSA_SKIP_LOCK_CHECK=1 "$CORE_DIR/susa" self lock > /dev/null 2>&1; then
         log_debug "Comando falhou com código de saída: $?"
@@ -73,12 +85,9 @@ if [ ! -f "$LOCK_FILE" ] && [ "${SUSA_SKIP_LOCK_CHECK:-}" != "1" ]; then
     log_debug "Lock file gerado com sucesso"
     log_success "Configuração concluída! O CLI está pronto para uso."
     echo ""
-fi
+}
 
-# ============================================================
-# Functions
-# ============================================================
-
+# Display CLI logo with version
 show_logo() {
     local version=$(show_number_version)
     cat << LOGO
@@ -92,7 +101,7 @@ show_logo() {
 LOGO
 }
 
-# Displays help information
+# Display global help information
 show_help() {
     show_logo
 
@@ -116,6 +125,110 @@ show_help() {
     printf "  ${LIGHT_CYAN}%-14s${NC} %s\n" "-V, --version" "Mostra a versão do CLI"
 }
 
+# Print subcategories for a given category
+print_subcategories() {
+    local category="$1"
+    local subcategories="$2"
+
+    if [ -z "$subcategories" ]; then
+        return 0
+    fi
+
+    echo -e "${LIGHT_GREEN}Subcategories:${NC}"
+    for subcat in $subcategories; do
+        local subcat_desc=$(get_category_info "$GLOBAL_CONFIG_FILE" "$category/$subcat" "description")
+        printf "  ${LIGHT_MAGENTA}%-15s${NC} %s\n" "$subcat" "$subcat_desc"
+    done
+}
+
+# Format and print a command with its indicators
+print_command_line() {
+    local category="$1"
+    local cmd="$2"
+    local cmd_desc="$3"
+
+    local indicators=""
+
+    # Add plugin indicator if necessary
+    if is_plugin_command "$category" "$cmd"; then
+        indicators="${indicators} ${GRAY}[plugin]${NC}"
+    fi
+
+    # Add sudo indicator if necessary
+    if requires_sudo "$GLOBAL_CONFIG_FILE" "$category" "$cmd"; then
+        indicators="${indicators} ${YELLOW}[sudo]${NC}"
+    fi
+
+    printf "  ${LIGHT_CYAN}%-15s${NC} %s%b\n" "$cmd" "$cmd_desc" "$indicators"
+}
+
+# List commands without a group
+list_ungrouped_commands() {
+    local category="$1"
+    local commands="$2"
+    local current_os="$3"
+    local has_compatible_commands=false
+
+    for cmd in $commands; do
+        # Check OS compatibility
+        if ! is_command_compatible "$GLOBAL_CONFIG_FILE" "$category" "$cmd" "$current_os"; then
+            continue
+        fi
+
+        # Skip commands that belong to a group
+        local cmd_group=$(get_command_group "$GLOBAL_CONFIG_FILE" "$category" "$cmd")
+        if [ -n "$cmd_group" ]; then
+            continue
+        fi
+
+        has_compatible_commands=true
+        local cmd_desc=$(get_command_info "$GLOBAL_CONFIG_FILE" "$category" "$cmd" "description")
+        print_command_line "$category" "$cmd" "$cmd_desc"
+    done
+
+    echo "$has_compatible_commands"
+}
+
+# List grouped commands
+list_grouped_commands() {
+    local category="$1"
+    local commands="$2"
+    local current_os="$3"
+    local groups="$4"
+    local has_compatible_commands=false
+
+    if [ -z "$groups" ]; then
+        echo "$has_compatible_commands"
+        return 0
+    fi
+
+    while IFS= read -r group; do
+        [ -z "$group" ] && continue
+
+        echo ""
+        echo -e " ${LIGHT_GRAY}$group${NC}"
+
+        for cmd in $commands; do
+            # Check OS compatibility
+            if ! is_command_compatible "$GLOBAL_CONFIG_FILE" "$category" "$cmd" "$current_os"; then
+                continue
+            fi
+
+            local cmd_group=$(get_command_group "$GLOBAL_CONFIG_FILE" "$category" "$cmd")
+
+            # List only commands from this group
+            if [ "$cmd_group" = "$group" ]; then
+                has_compatible_commands=true
+                local cmd_desc=$(get_command_info "$GLOBAL_CONFIG_FILE" "$category" "$cmd" "description")
+                print_command_line "$category" "$cmd" "$cmd_desc"
+            fi
+        done
+    done <<< "$groups"
+
+    echo "$has_compatible_commands"
+}
+
+# List available commands and subcategories for a given category
 list_commands() {
     local category="$1"
     local categories=$(get_all_categories "$GLOBAL_CONFIG_FILE")
@@ -128,8 +241,7 @@ list_commands() {
 
     # If not top-level, validate if directory exists
     if [ "$is_top_level" = false ]; then
-        local cli_dir="${CLI_DIR}"
-        if [ ! -d "$cli_dir/commands/$category" ] && [ ! -d "$cli_dir/plugins"/*/"$category" 2>/dev/null ]; then
+        if [ ! -d "$CLI_DIR/commands/$category" ] && [ ! -d "$CLI_DIR/plugins"/*/"$category" 2>/dev/null ]; then
             log_error "Categoria '$category' não encontrada"
             return 1
         fi
@@ -145,112 +257,37 @@ list_commands() {
     show_usage "$category"
     echo ""
 
-    # List subcategories first
-    if [ -n "$subcategories" ]; then
-        echo -e "${LIGHT_GREEN}Subcategories:${NC}"
-        for subcat in $subcategories; do
-            local subcat_desc=$(get_category_info "$GLOBAL_CONFIG_FILE" "$category/$subcat" "description")
-            printf "  ${LIGHT_MAGENTA}%-15s${NC} %s\n" "$subcat" "$subcat_desc"
-        done
+    # Print subcategories first
+    print_subcategories "$category" "$subcategories"
 
-        # Only add extra line if there are also commands
-        if [ -n "$commands" ]; then
-            echo ""
-        fi
+    # Add spacing between subcategories and commands if both exist
+    if [ -n "$subcategories" ] && [ -n "$commands" ]; then
+        echo ""
     fi
 
     # List commands
     if [ -n "$commands" ]; then
         echo -e "${LIGHT_GREEN}Comandos:${NC}"
 
-        local has_compatible_commands=false
+        # List commands without a group
+        local has_ungrouped=$(list_ungrouped_commands "$category" "$commands" "$current_os")
 
-        # First, list commands without a group
-        for cmd in $commands; do
-            # Check OS compatibility
-            if ! is_command_compatible "$GLOBAL_CONFIG_FILE" "$category" "$cmd" "$current_os"; then
-                continue
-            fi
-
-            # Skip commands that belong to a group
-            local cmd_group=$(get_command_group "$GLOBAL_CONFIG_FILE" "$category" "$cmd")
-            if [ -n "$cmd_group" ]; then
-                continue
-            fi
-
-            has_compatible_commands=true
-            local cmd_desc=$(get_command_info "$GLOBAL_CONFIG_FILE" "$category" "$cmd" "description")
-
-            # Add indicators
-            local indicators=""
-
-            # Add plugin indicator if necessary
-            if is_plugin_command "$category" "$cmd"; then
-                indicators="${indicators} ${GRAY}[plugin]${NC}"
-            fi
-
-            # Add sudo indicator if necessary
-            if requires_sudo "$GLOBAL_CONFIG_FILE" "$category" "$cmd"; then
-                indicators="${indicators} ${YELLOW}[sudo]${NC}"
-            fi
-
-            printf "  ${LIGHT_CYAN}%-15s${NC} %s%b\n" "$cmd" "$cmd_desc" "$indicators"
-        done
-
-        # Then, list grouped commands
+        # List grouped commands
         local groups=$(get_category_groups "$GLOBAL_CONFIG_FILE" "$category" "$current_os")
+        local has_grouped=$(list_grouped_commands "$category" "$commands" "$current_os" "$groups")
 
-        if [ -n "$groups" ]; then
-            while IFS= read -r group; do
-                [ -z "$group" ] && continue
-
-                echo ""
-                echo -e " ${LIGHT_GRAY}$group${NC}"
-
-                for cmd in $commands; do
-                    # Check OS compatibility
-                    if ! is_command_compatible "$GLOBAL_CONFIG_FILE" "$category" "$cmd" "$current_os"; then
-                        continue
-                    fi
-
-                    local cmd_group=$(get_command_group "$GLOBAL_CONFIG_FILE" "$category" "$cmd")
-
-                    # List only commands from this group
-                    if [ "$cmd_group" = "$group" ]; then
-                        has_compatible_commands=true
-                        local cmd_desc=$(get_command_info "$GLOBAL_CONFIG_FILE" "$category" "$cmd" "description")
-
-                        # Add indicators
-                        local indicators=""
-
-                        # Add plugin indicator if necessary
-                        if is_plugin_command "$category" "$cmd"; then
-                            indicators="${indicators} ${GRAY}[plugin]${NC}"
-                        fi
-
-                        # Add sudo indicator if necessary
-                        if requires_sudo "$GLOBAL_CONFIG_FILE" "$category" "$cmd"; then
-                            indicators="${indicators} ${YELLOW}[sudo]${NC}"
-                        fi
-
-                        printf "  ${LIGHT_CYAN}%-15s${NC} %s%b\n" "$cmd" "$cmd_desc" "$indicators"
-                    fi
-                done
-            done <<< "$groups"
-        fi
-
-        if [ "$has_compatible_commands" = false ] && [ -z "$subcategories" ]; then
+        # Show message if no compatible commands found
+        if [ "$has_ungrouped" = "false" ] && [ "$has_grouped" = "false" ] && [ -z "$subcategories" ]; then
             echo -e "  ${GRAY}Nenhum comando ou subcategoria disponível${NC}"
         fi
     fi
 }
 
-execute_command() {
+# Validate command exists and is compatible with current OS
+validate_command() {
     local category="$1"
     local command="$2"
-    shift 2
-
-    local current_os=$(get_simple_os)
+    local current_os="$3"
 
     # Find command config
     local config_file=$(find_command_config "$category" "$command")
@@ -268,6 +305,39 @@ execute_command() {
         exit 1
     fi
 
+    echo "$config_file"
+}
+
+# Check if help was requested for the command
+check_and_show_command_help() {
+    local script_path="$1"
+    shift
+
+    for arg in "$@"; do
+        if [ "$arg" = "--help" ] || [ "$arg" = "-h" ]; then
+            # Check if show_help function exists without executing the script
+            if grep -q "^show_help()" "$script_path" 2>/dev/null; then
+                export SUSA_SHOW_HELP_CALLED=true
+                source "$script_path"
+                show_help
+                unset SUSA_SHOW_HELP_CALLED
+            fi
+            exit 0
+        fi
+    done
+}
+
+# Execute a command with its arguments
+execute_command() {
+    local category="$1"
+    local command="$2"
+    shift 2
+
+    local current_os=$(get_simple_os)
+
+    # Validate command exists and is compatible
+    local config_file=$(validate_command "$category" "$command" "$current_os")
+
     # Get script name and build path
     local script_name=$(get_command_info "$GLOBAL_CONFIG_FILE" "$category" "$command" "script")
     local command_dir=$(dirname "$config_file")
@@ -279,25 +349,7 @@ execute_command() {
     fi
 
     # Check if help was requested for the command
-    local show_command_help=false
-    for arg in "$@"; do
-        if [ "$arg" = "--help" ] || [ "$arg" = "-h" ]; then
-            show_command_help=true
-            break
-        fi
-    done
-
-    # If help was requested, check if script has show_help function
-    if [ "$show_command_help" = true ]; then
-        # Check if show_help function exists without executing the script
-        if grep -q "^show_help()" "$script_path" 2>/dev/null; then
-            export SUSA_SHOW_HELP_CALLED=true
-            source "$script_path"
-            show_help
-            unset SUSA_SHOW_HELP_CALLED
-        fi
-        exit 0
-    fi
+    check_and_show_command_help "$script_path" "$@"
 
     # Check if sudo is required and notify user
     if requires_sudo "$GLOBAL_CONFIG_FILE" "$category" "$command"; then
@@ -307,8 +359,11 @@ execute_command() {
     source "$script_path" "$@"
 }
 
-# Main function
+# Main entry point
 main() {
+    # Validate or create lock file on first execution
+    validate_or_create_lock_file
+
     # No arguments - show help
     if [ $# -eq 0 ]; then
         show_help
