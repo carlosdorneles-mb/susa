@@ -20,6 +20,12 @@ susa self completion bash --install
 susa self completion zsh --install
 ```
 
+### Instalar no Fish
+
+```bash
+susa self completion fish --install
+```
+
 ### Remover autocompletar
 
 ```bash
@@ -30,6 +36,7 @@ susa self completion --uninstall
 
 ```bash
 susa self completion bash --print
+susa self completion fish --print
 ```
 
 ## Opções
@@ -51,12 +58,16 @@ source ~/.bashrc
 
 # Para Zsh
 source ~/.zshrc
+
+# Para Fish
+# Não é necessário recarregar, o completion é carregado automaticamente
 ```
 
 ## Shells suportados
 
 - ✅ Bash
 - ✅ Zsh
+- ✅ Fish
 
 ## Veja também
 

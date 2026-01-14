@@ -1,6 +1,6 @@
 # Shell Completion (Autocompletar)
 
-O Susa CLI oferece suporte completo a autocompletar (tab completion) para os shells **Bash** e **Zsh**, permitindo que você complete comandos, categorias e subcategorias pressionando a tecla **TAB**.
+O Susa CLI oferece suporte completo a autocompletar (tab completion) para os shells **Bash**, **Zsh** e **Fish**, permitindo que você complete comandos, categorias e subcategorias pressionando a tecla **TAB**.
 
 ---
 
@@ -30,6 +30,7 @@ Depois, recarregue seu shell:
 ```bash
 source ~/.zshrc    # Para Zsh
 source ~/.bashrc   # Para Bash
+# Para Fish não é necessário recarregar, o completion é carregado automaticamente
 ```
 
 ### Instalação para Shell Específico
@@ -42,6 +43,9 @@ susa self completion bash --install
 
 # Para Zsh
 susa self completion zsh --install
+
+# Para Fish
+susa self completion fish --install
 ```
 
 ---
@@ -101,6 +105,7 @@ susa self completion --install
 # Shell específico
 susa self completion bash --install
 susa self completion zsh --install
+susa self completion fish --install
 ```
 
 ### Visualizar Script de Completion
@@ -113,6 +118,9 @@ susa self completion bash --print
 
 # Zsh
 susa self completion zsh --print
+
+# Fish
+susa self completion fish --print
 ```
 
 ### Desinstalar Completion

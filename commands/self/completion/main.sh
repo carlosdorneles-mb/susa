@@ -19,6 +19,7 @@ show_help() {
     echo -e "${LIGHT_GREEN}Shells suportados:${NC}"
     echo "  bash              Gera completion para Bash"
     echo "  zsh               Gera completion para Zsh"
+    echo "  fish              Gera completion para Fish"
     echo ""
     echo -e "${LIGHT_GREEN}Options:${NC}"
     echo "  -h, --help        Mostra esta mensagem de ajuda"
@@ -29,6 +30,7 @@ show_help() {
     echo -e "${LIGHT_GREEN}Examples:${NC}"
     echo "  susa self completion bash --install       # Instala completion para bash"
     echo "  susa self completion zsh --install        # Instala completion para zsh"
+    echo "  susa self completion fish --install       # Instala completion para fish"
     echo "  susa self completion bash --print         # Mostra o script bash"
     echo "  susa self completion --uninstall          # Remove completion"
     echo ""
@@ -36,6 +38,7 @@ show_help() {
     echo "  Após a instalação, reinicie o terminal ou execute:"
     echo "    source ~/.bashrc   (para Bash)"
     echo "    source ~/.zshrc    (para Zsh)"
+    echo "    (Fish carrega automaticamente)"
 }
 
 # Discover available categories dynamically
@@ -291,6 +294,148 @@ _susa "$@"
 ZSH_COMPLETION_EOF
 }
 
+# Generate completion script for Fish
+generate_fish_completion() {
+    cat << 'FISH_COMPLETION_EOF'
+# Susa CLI - Fish Completion
+# Gerado automaticamente por: susa self completion fish
+
+# Função para obter o diretório do susa
+function __susa_get_dir
+    set -l susa_path (command -v susa)
+    if test -n "$susa_path"
+        dirname (readlink -f $susa_path)
+    end
+end
+
+# Função para listar categorias
+function __susa_categories
+    set -l susa_dir (__susa_get_dir)
+    test -z "$susa_dir"; and return
+
+    set -l categories
+
+    # Lista de commands/
+    if test -d "$susa_dir/commands"
+        for dir in $susa_dir/commands/*/
+            test -d $dir; and set -a categories (basename $dir)
+        end
+    end
+
+    # Lista de plugins/
+    if test -d "$susa_dir/plugins"
+        for plugin_dir in $susa_dir/plugins/*/
+            if test -d $plugin_dir
+                for cat_dir in $plugin_dir*/
+                    test -d $cat_dir; and set -a categories (basename $cat_dir)
+                end
+            end
+        end
+    end
+
+    # Remove duplicatas e imprime
+    printf '%s\n' $categories | sort -u
+end
+
+# Função para listar comandos de uma categoria
+function __susa_commands
+    set -l category $argv[1]
+    set -l susa_dir (__susa_get_dir)
+    test -z "$susa_dir"; and return
+
+    set -l commands
+
+    # Lista de commands/categoria/
+    if test -d "$susa_dir/commands/$category"
+        for item in $susa_dir/commands/$category/*/
+            set -l cmd (basename $item)
+            if test -d $item; and test "$cmd" != "config.yaml"
+                set -a commands $cmd
+            end
+        end
+    end
+
+    # Lista de plugins/*/categoria/
+    if test -d "$susa_dir/plugins"
+        for plugin_dir in $susa_dir/plugins/*/
+            if test -d "$plugin_dir/$category"
+                for item in $plugin_dir/$category/*/
+                    set -l cmd (basename $item)
+                    if test -d $item; and test "$cmd" != "config.yaml"
+                        set -a commands $cmd
+                    end
+                end
+            end
+        end
+    end
+
+    # Remove duplicatas e imprime
+    printf '%s\n' $commands | sort -u
+end
+
+# Função para listar subcomandos
+function __susa_subcommands
+    set -l path $argv[1]
+    set -l susa_dir (__susa_get_dir)
+    test -z "$susa_dir"; and return
+
+    set -l subcommands
+
+    # Lista de commands/path/
+    if test -d "$susa_dir/commands/$path"
+        for item in $susa_dir/commands/$path/*/
+            set -l sub (basename $item)
+            if test -d $item; and test "$sub" != "config.yaml"
+                set -a subcommands $sub
+            end
+        end
+    end
+
+    # Lista de plugins/*/path/
+    if test -d "$susa_dir/plugins"
+        for plugin_dir in $susa_dir/plugins/*/
+            if test -d "$plugin_dir/$path"
+                for item in $plugin_dir/$path/*/
+                    set -l sub (basename $item)
+                    if test -d $item; and test "$sub" != "config.yaml"
+                        set -a subcommands $sub
+                    end
+                end
+            end
+        end
+    end
+
+    # Remove duplicatas e imprime
+    printf '%s\n' $subcommands | sort -u
+end
+
+# Condições para quando completar
+function __susa_needs_category
+    not __fish_seen_subcommand_from (__susa_categories)
+end
+
+function __susa_needs_command
+    __fish_seen_subcommand_from (__susa_categories); and not __fish_seen_subcommand_from (__susa_commands (commandline -opc)[2])
+end
+
+# Completions principais
+complete -c susa -f
+
+# Opções globais
+complete -c susa -s h -l help -d "Mostra ajuda"
+complete -c susa -s V -l version -d "Mostra versão"
+
+# Nível 1: Categorias
+complete -c susa -n __susa_needs_category -a "(__susa_categories)" -d "Categoria"
+
+# Nível 2: Comandos da categoria
+complete -c susa -n __susa_needs_command -a "(__susa_commands (commandline -opc)[2])" -d "Comando"
+
+# Nível 3+: Subcomandos (para subcategorias)
+complete -c susa -n "test (count (commandline -opc)) -ge 3" -a "(__susa_subcommands (string join / (commandline -opc)[2..-1]))" -d "Subcomando"
+FISH_COMPLETION_EOF
+}
+
 # Install autocomplete for Bash
 install_bash_completion() {
     log_info "Instalando o autocompletar para Bash..."
@@ -361,6 +506,36 @@ install_zsh_completion() {
     echo -e "  2. Teste: ${LIGHT_CYAN}susa <TAB>${NC}"
 }
 
+# Install completion for Fish
+install_fish_completion() {
+    log_info "Instalando autocompletar para Fish..."
+
+    # Check if already installed
+    if is_completion_installed "fish"; then
+        log_warning "Autocompletar para Fish já está instalado"
+        local completion_file=$(get_completion_file_path "fish")
+        echo -e "${LIGHT_YELLOW}Para reinstalar, primeiro desinstale: ${LIGHT_CYAN}susa self completion --uninstall${NC}"
+        return 1
+    fi
+
+    local completion_dir=$(get_completion_dir_path "fish")
+    local completion_file=$(get_completion_file_path "fish")
+
+    # Create directory if it doesn't exist
+    mkdir -p "$completion_dir"
+
+    # Generate and save the script
+    generate_fish_completion > "$completion_file"
+    chmod +x "$completion_file"
+
+    log_success "Autocompletar instalado em: $completion_file"
+    echo ""
+    echo -e "${LIGHT_YELLOW}Próximos passos:${NC}"
+    echo -e "  1. O Fish carrega automaticamente os completions"
+    echo -e "  2. Abra um novo terminal ou execute: ${LIGHT_CYAN}fish${NC}"
+    echo -e "  3. Teste: ${LIGHT_CYAN}susa <TAB>${NC}"
+}
+
 # Remove completion
 uninstall_completion() {
     log_info "Removendo o autocompletar..."
@@ -380,6 +555,14 @@ uninstall_completion() {
         local zsh_completion=$(get_completion_file_path "zsh")
         rm "$zsh_completion"
         log_debug "Removido: $zsh_completion"
+        removed=true
+    fi
+
+    # Remove fish completion
+    if is_completion_installed "fish"; then
+        local fish_completion=$(get_completion_file_path "fish")
+        rm "$fish_completion"
+        log_debug "Removido: $fish_completion"
         removed=true
     fi
 
@@ -414,8 +597,7 @@ handle_install() {
             install_zsh_completion
             ;;
         fish)
-            log_error "Fish shell ainda não suportado"
-            return 1
+            install_fish_completion
             ;;
         *)
             log_error "Shell não suportado: $shell_type"
@@ -429,7 +611,7 @@ handle_print() {
     local shell_type="$1"
 
     if [ -z "$shell_type" ]; then
-        log_error "Especifique o shell: bash ou zsh"
+        log_error "Especifique o shell: bash, zsh ou fish"
         return 1
     fi
 
@@ -439,6 +621,9 @@ handle_print() {
             ;;
         zsh)
             generate_zsh_completion
+            ;;
+        fish)
+            generate_fish_completion
             ;;
         *)
             log_error "Shell não suportado: $shell_type"
