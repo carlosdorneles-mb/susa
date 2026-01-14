@@ -70,7 +70,7 @@ echo "Plugin myplugin: $version ($source)"
 
 ```bash
 #!/bin/bash
-source "$CLI_DIR/lib/registry.sh"
+source "$LIB_DIR/registry.sh"
 
 registry_file="$CLI_DIR/plugins/registry.yaml"
 

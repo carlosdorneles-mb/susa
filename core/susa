@@ -14,10 +14,18 @@ while [ -L "$CURRENT_SCRIPT" ]; do
     [[ $CURRENT_SCRIPT != /* ]] && CURRENT_SCRIPT="$SYMLINK_DIR/$CURRENT_SCRIPT"
 done
 
-CLI_DIR="$(cd -P "$(dirname "$CURRENT_SCRIPT")" && pwd)"
-LIB_DIR="$CLI_DIR/lib"
+CORE_DIR="$(cd -P "$(dirname "$CURRENT_SCRIPT")" && pwd)"
+CLI_DIR="$(cd -P "$CORE_DIR/.." && pwd)"
+LIB_DIR="$CORE_DIR/lib"
 PLUGINS_DIR="$CLI_DIR/plugins"
-GLOBAL_CONFIG_FILE="$CLI_DIR/cli.yaml"
+GLOBAL_CONFIG_FILE="$CORE_DIR/cli.yaml"
+
+# Export variables for child processes (commands)
+export CORE_DIR
+export CLI_DIR
+export LIB_DIR
+export PLUGINS_DIR
+export GLOBAL_CONFIG_FILE
 
 # ============================================================
 # Load Libraries
@@ -54,10 +62,10 @@ if [ ! -f "$LOCK_FILE" ] && [ "${SUSA_SKIP_LOCK_CHECK:-}" != "1" ]; then
     log_info "Primeira execução detectada. Configurando o Susa CLI..."
     log_info "Gerando arquivo de cache para otimizar o desempenho..."
 
-    log_debug "Chamando comando: SUSA_SKIP_LOCK_CHECK=1 $CLI_DIR/susa self lock"
+    log_debug "Chamando comando: SUSA_SKIP_LOCK_CHECK=1 $CORE_DIR/susa self lock"
     # Call the lock command bypassing the check to prevent infinite loop
-    SUSA_SKIP_LOCK_CHECK=1 "$CLI_DIR/susa" self lock > /dev/null 2>&1 || {
-        local exit_code=$?
+    SUSA_SKIP_LOCK_CHECK=1 "$CORE_DIR/susa" self lock > /dev/null 2>&1 || {
+        exit_code=$?
         log_debug "Comando falhou com código de saída: $exit_code"
         log_error "Erro ao gerar arquivo de cache"
         exit 1

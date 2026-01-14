@@ -101,9 +101,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLI_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
 # Importa bibliotecas necessárias
-source "$CLI_DIR/lib/logger.sh"
-source "$CLI_DIR/lib/color.sh"
-source "$CLI_DIR/lib/os.sh"
+source "$LIB_DIR/logger.sh"
+source "$LIB_DIR/color.sh"
+source "$LIB_DIR/os.sh"
 
 # Lógica do comando
 log_info "Iniciando..."

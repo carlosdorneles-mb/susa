@@ -4,9 +4,9 @@ set -euo pipefail
 setup_command_env
 
 # Source libs
-source "$CLI_DIR/lib/color.sh"
-source "$CLI_DIR/lib/logger.sh"
-source "$CLI_DIR/lib/registry.sh"
+source "$LIB_DIR/color.sh"
+source "$LIB_DIR/logger.sh"
+source "$LIB_DIR/registry.sh"
 
 # Help function
 show_help() {
@@ -31,29 +31,29 @@ show_help() {
 main() {
     echo -e "${BOLD}Plugins Instalados${NC}"
     echo ""
-    
+
     if [ ! -d "$PLUGINS_DIR" ]; then
         log_warning "Diretório de plugins não encontrado"
         return 0
     fi
-    
+
     REGISTRY_FILE="$PLUGINS_DIR/registry.yaml"
-    
+
     # Find all plugins
     local plugin_count=0
     for plugin_dir in "$PLUGINS_DIR"/*; do
         [ ! -d "$plugin_dir" ] && continue
         [ "$(basename "$plugin_dir")" = "registry.yaml" ] && continue
         [ "$(basename "$plugin_dir")" = "README.md" ] && continue
-        
+
         local plugin_name=$(basename "$plugin_dir")
-        
+
         # Counts plugin commands
         local cmd_count=$(find "$plugin_dir" -name "config.yaml" -type f | wc -l)
-        
+
         # List categories
         local categories=$(find "$plugin_dir" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | tr '\n' ', ' | sed 's/,$//')
-        
+
         # Get registry information if it exists
         local source_url version installed_at
         if [ -f "$REGISTRY_FILE" ]; then
@@ -65,7 +65,7 @@ main() {
             version="${GRAY}(desconhecida)${NC}"
             installed_at="${GRAY}(desconhecida)${NC}"
         fi
-        
+
         echo -e "${LIGHT_CYAN}📦 $plugin_name${NC}"
         [ -n "$source_url" ] && echo -e "   Origem: ${GRAY}$source_url${NC}"
         [ -n "$version" ] && echo -e "   Versão: ${GRAY}$version${NC}"
@@ -73,10 +73,10 @@ main() {
         echo -e "   Categorias: ${GRAY}$categories${NC}"
         [ -n "$installed_at" ] && echo -e "   Instalado: ${GRAY}$installed_at${NC}"
         echo ""
-        
+
         ((plugin_count++))
     done
-    
+
     if [ $plugin_count -eq 0 ]; then
         log_info "Nenhum plugin instalado"
         echo ""

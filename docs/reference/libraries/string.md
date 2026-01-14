@@ -61,7 +61,7 @@ echo "${arr[@]}"  # a,b,c
 
 ```bash
 #!/bin/bash
-source "$CLI_DIR/lib/string.sh"
+source "$LIB_DIR/string.sh"
 
 # Strings
 user_input="  Ubuntu  "

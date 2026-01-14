@@ -7,7 +7,7 @@
 set -e
 
 CLI_SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_FILE="$CLI_SOURCE_DIR/cli.yaml"
+CONFIG_FILE="$CLI_SOURCE_DIR/core/cli.yaml"
 CLI_NAME="susa"
 
 # Detects the operating system and sets the installation directory
@@ -28,7 +28,7 @@ if [ -L "$INSTALL_DIR/$CLI_NAME" ] || [ -f "$INSTALL_DIR/$CLI_NAME" ]; then
     INSTALLED_PATH=$(readlink -f "$INSTALL_DIR/$CLI_NAME" 2>/dev/null || echo "$INSTALL_DIR/$CLI_NAME")
 
     # Check if it's pointing to a different directory (not this installation)
-    if [[ "$INSTALLED_PATH" != "$CLI_SOURCE_DIR/$CLI_NAME" ]]; then
+    if [[ "$INSTALLED_PATH" != "$CLI_SOURCE_DIR/core/$CLI_NAME" ]]; then
         echo ""
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         echo "  ⚠  Susa CLI já está instalado"
@@ -64,7 +64,7 @@ fi
 
 # Create symlink for the CLI
 echo "→ Criando link simbólico..."
-ln -sf "$CLI_SOURCE_DIR/susa" "$INSTALL_DIR/$CLI_NAME"
+ln -sf "$CLI_SOURCE_DIR/core/susa" "$INSTALL_DIR/$CLI_NAME"
 echo "  ✓ Executável instalado"
 
 # Checks if the directory is in the PATH
@@ -206,7 +206,7 @@ if [ -t 0 ]; then
     if [[ $REPLY =~ ^[SsYy]$ ]]; then
         echo ""
         echo "→ Instalando autocompletar..."
-        if "$CLI_SOURCE_DIR/susa" self completion --install 2>&1 | grep -q "instalado em:"; then
+        if "$CLI_SOURCE_DIR/core/susa" self completion --install 2>&1 | grep -q "instalado em:"; then
             echo "  ✓ Autocompletar instalado"
             echo ""
             echo "  Nota: Reinicie o terminal ou execute 'source' no seu shell config"

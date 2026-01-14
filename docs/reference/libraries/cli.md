@@ -104,7 +104,7 @@ echo "$version"  # 1.0.0
 #!/bin/bash
 set -euo pipefail
 
-source "$CLI_DIR/lib/cli.sh"
+source "$LIB_DIR/cli.sh"
 
 # Setup do ambiente
 setup_command_env

@@ -57,17 +57,18 @@ Para exemplos detalhados e tutoriais práticos, veja o [Guia de Início Rápido]
 
 ```text
 cli/
-├── cli                    # Script principal
-├── cli.yaml              # Configuração global
-├── install.sh            # Instalador
-├── uninstall.sh          # Desinstalador
+├── core/                 # Core do CLI
+│   ├── susa             # Script principal
+│   ├── cli.yaml         # Configuração global
+│   └── lib/             # Bibliotecas
+│       ├── yaml.sh      # Parser YAML (com yq)
+│       ├── plugin.sh    # Sistema de plugins
+│       ├── registry.sh  # Registro de plugins
+│       ├── dependencies.sh  # Gerenciamento de dependências
+│       └── ...
 │
-├── lib/                  # Bibliotecas
-│   ├── yaml.sh          # Parser YAML (com yq)
-│   ├── plugin.sh        # Sistema de plugins
-│   ├── registry.sh      # Registro de plugins
-│   ├── dependencies.sh  # Gerenciamento de dependências
-│   └── ...
+├── install.sh           # Instalador
+├── uninstall.sh         # Desinstalador
 │
 ├── commands/            # Comandos built-in
 │   ├── install/        # Instalação de software

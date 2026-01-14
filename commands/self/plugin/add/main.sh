@@ -4,8 +4,8 @@ set -euo pipefail
 setup_command_env
 
 # Source necessary libraries
-source "$CLI_DIR/lib/registry.sh"
-source "$CLI_DIR/lib/plugin.sh"
+source "$LIB_DIR/registry.sh"
+source "$LIB_DIR/plugin.sh"
 
 # Help function
 show_help() {
@@ -198,7 +198,7 @@ main() {
     # Update lock file if it exists
     if [ -f "$CLI_DIR/susa.lock" ]; then
         log_info "Atualizando arquivo susa.lock..."
-        "$CLI_DIR/susa" self lock > /dev/null 2>&1 || log_warning "Não foi possível atualizar o susa.lock. Execute 'susa self lock' manualmente."
+        "$CORE_DIR/susa" self lock > /dev/null 2>&1 || log_warning "Não foi possível atualizar o susa.lock. Execute 'susa self lock' manualmente."
     fi
 }
 

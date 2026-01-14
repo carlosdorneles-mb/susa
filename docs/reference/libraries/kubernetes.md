@@ -68,8 +68,8 @@ print_current_context
 
 ```bash
 #!/bin/bash
-source "$CLI_DIR/lib/kubernetes.sh"
-source "$CLI_DIR/lib/logger.sh"
+source "$LIB_DIR/kubernetes.sh"
+source "$LIB_DIR/logger.sh"
 
 # Garante kubectl instalado
 check_kubectl_installed "exit_on_error"

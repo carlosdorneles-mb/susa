@@ -171,11 +171,11 @@ fi
 
 ```bash
 #!/bin/bash
-source "$CLI_DIR/lib/yaml.sh"
-source "$CLI_DIR/lib/os.sh"
+source "$LIB_DIR/yaml.sh"
+source "$LIB_DIR/os.sh"
 
 # Configuração
-GLOBAL_CONFIG_FILE="$CLI_DIR/cli.yaml"
+GLOBAL_CONFIG_FILE="$CORE_DIR/cli.yaml"
 
 # Obtém info global
 cli_name=$(get_yaml_field "$GLOBAL_CONFIG_FILE" "name")

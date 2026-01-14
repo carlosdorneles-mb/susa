@@ -51,7 +51,7 @@ Define constantes de cores para formatação de texto no console.
 
 ```bash
 #!/bin/bash
-source "$CLI_DIR/lib/color.sh"
+source "$LIB_DIR/color.sh"
 
 # Mensagens simples
 echo -e "${GREEN}Sucesso!${NC}"
@@ -76,7 +76,7 @@ echo -e "${YELLOW}Atenção: ${GRAY}arquivo não encontrado${NC}"
 
 ```bash
 #!/bin/bash
-source "$CLI_DIR/lib/color.sh"
+source "$LIB_DIR/color.sh"
 
 mostrar_status() {
     local status=$1

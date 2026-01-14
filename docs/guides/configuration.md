@@ -14,7 +14,7 @@ O CLI usa diversos níveis de configuração:
 
 Arquivo principal localizado na raiz do Susa CLI que define metadados gerais.
 
-**Localização:** `/caminho/para/susa/cli.yaml`
+**Localização:** `/caminho/para/susa/core/cli.yaml`
 
 **Conteúdo:**
 
@@ -140,7 +140,7 @@ DEBUG=true susa setup docker
 
 ```bash
 #!/bin/bash
-source "$CLI_DIR/lib/logger.sh"
+source "$LIB_DIR/logger.sh"
 
 log_debug "Valor da variável X: $X"  # Só aparece com DEBUG=true
 ```
@@ -290,7 +290,10 @@ Ou durante instalação, o `install.sh` já faz isso automaticamente:
 
 ```text
 susa/
-├── cli.yaml                     # ✅ Config global (obrigatório)
+├── core/
+│   ├── cli.yaml                 # ✅ Config global (obrigatório)
+│   ├── susa                    # Script principal
+│   └── lib/                    # Bibliotecas
 ├── config/
 │   └── settings.conf           # ⚠️ Opcional (não usado por padrão)
 ├── commands/

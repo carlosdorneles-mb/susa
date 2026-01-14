@@ -37,7 +37,7 @@ Garante privilégios sudo ou sai com erro.
 
 ```bash
 #!/bin/bash
-source "$CLI_DIR/lib/sudo.sh"
+source "$LIB_DIR/sudo.sh"
 
 # Garante que temos sudo antes de continuar
 required_sudo
@@ -51,8 +51,8 @@ apt-get install package
 
 ```bash
 #!/bin/bash
-source "$CLI_DIR/lib/sudo.sh"
-source "$CLI_DIR/lib/logger.sh"
+source "$LIB_DIR/sudo.sh"
+source "$LIB_DIR/logger.sh"
 
 # Verifica se precisa de sudo
 if ! check_sudo; then

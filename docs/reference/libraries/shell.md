@@ -60,7 +60,7 @@ Detecta qual arquivo de configuração do shell usar (.zshrc, .bashrc, etc.).
 **Uso:**
 
 ```bash
-source "$CLI_DIR/lib/shell.sh"
+source "$LIB_DIR/shell.sh"
 
 shell_config=$(detect_shell_config)
 echo "export PATH=\"\$PATH:/opt/susa/bin\"" >> "$shell_config"
@@ -72,8 +72,8 @@ echo "Configuração adicionada em: $shell_config"
 
 ```bash
 #!/bin/bash
-source "$CLI_DIR/lib/shell.sh"
-source "$CLI_DIR/lib/logger.sh"
+source "$LIB_DIR/shell.sh"
+source "$LIB_DIR/logger.sh"
 
 # Adiciona PATH ao shell config
 shell_config=$(detect_shell_config)

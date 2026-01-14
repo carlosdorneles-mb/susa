@@ -8,7 +8,11 @@ O CLI agora suporta uma arquitetura descentralizada com suporte a plugins extern
 
 ```text
 cli/
-├── cli.yaml                 # Config global (nome, versão, categorias)
+├── core/                    # Core do CLI
+│   ├── susa                # Script principal
+│   ├── cli.yaml            # Config global (nome, versão, categorias)
+│   └── lib/                # Bibliotecas
+│
 ├── commands/                # Comandos built-in
 │   ├── install/
 │   │   ├── asdf/

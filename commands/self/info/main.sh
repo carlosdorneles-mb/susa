@@ -4,7 +4,7 @@ set -euo pipefail
 setup_command_env
 
 # Source completion library
-source "$CLI_DIR/lib/completion.sh"
+source "$LIB_DIR/completion.sh"
 
 # Help function
 show_help() {

@@ -190,8 +190,8 @@ fi
 
 ```bash
 #!/bin/bash
-source "$CLI_DIR/lib/dependencies.sh"
-source "$CLI_DIR/lib/logger.sh"
+source "$LIB_DIR/dependencies.sh"
+source "$LIB_DIR/logger.sh"
 
 log_info "Verificando dependências..."
 
@@ -215,8 +215,8 @@ log_info "Ambiente selecionado: $selected_env"
 
 ```bash
 #!/bin/bash
-source "$CLI_DIR/lib/dependencies.sh"
-source "$CLI_DIR/lib/logger.sh"
+source "$LIB_DIR/dependencies.sh"
+source "$LIB_DIR/logger.sh"
 
 install_package() {
     local package_name="$1"

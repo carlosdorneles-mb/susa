@@ -18,7 +18,7 @@ Tipo do sistema operacional detectado.
 **Exemplo:**
 
 ```bash
-source "$CLI_DIR/lib/os.sh"
+source "$LIB_DIR/os.sh"
 
 if [ "$OS_TYPE" = "macos" ]; then
     echo "Executando no macOS"
@@ -40,7 +40,7 @@ Retorna nome simplificado do OS (linux ou mac).
 **Uso:**
 
 ```bash
-source "$CLI_DIR/lib/os.sh"
+source "$LIB_DIR/os.sh"
 
 simple_os=$(get_simple_os)
 
@@ -57,8 +57,8 @@ fi
 
 ```bash
 #!/bin/bash
-source "$CLI_DIR/lib/os.sh"
-source "$CLI_DIR/lib/logger.sh"
+source "$LIB_DIR/os.sh"
+source "$LIB_DIR/logger.sh"
 
 log_info "Sistema detectado: $OS_TYPE"
 

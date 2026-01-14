@@ -191,8 +191,8 @@ echo "$name"  # awesome-plugin
 
 ```bash
 #!/bin/bash
-source "$CLI_DIR/lib/plugin.sh"
-source "$CLI_DIR/lib/logger.sh"
+source "$LIB_DIR/plugin.sh"
+source "$LIB_DIR/logger.sh"
 
 # Parse argumentos
 use_ssh="false"

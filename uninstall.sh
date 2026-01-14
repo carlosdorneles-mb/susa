@@ -5,7 +5,7 @@
 # =================
 
 CLI_SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_FILE="$CLI_SOURCE_DIR/cli.yaml"
+CONFIG_FILE="$CLI_SOURCE_DIR/core/cli.yaml"
 CLI_NAME="susa"
 
 # Detects the operating system
@@ -24,9 +24,9 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 
 # Remove completion using existing command
-if [ -x "$CLI_SOURCE_DIR/susa" ]; then
+if [ -x "$CLI_SOURCE_DIR/core/susa" ]; then
     echo "→ Removendo autocompletar..."
-    if "$CLI_SOURCE_DIR/susa" self completion --uninstall 2>&1 | grep -q "removido com sucesso"; then
+    if "$CLI_SOURCE_DIR/core/susa" self completion --uninstall 2>&1 | grep -q "removido com sucesso"; then
         echo "  ✓ Autocompletar removido"
     fi
 fi

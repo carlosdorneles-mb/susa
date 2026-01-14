@@ -40,7 +40,7 @@ clean: ## Remove arquivos gerados
 
 # CLI Installation
 cli-install: ## Instala o CLI no sistema
-	@if command -v susa &> /dev/null; then \
+	@if command -v susa > /dev/null 2>&1; then \
 		echo "$(YELLOW)⚠️  SUSA já está instalado$(NC)"; \
 		read -p "Deseja reinstalar? (s/N): " response; \
 		if [ "$$response" = "s" ] || [ "$$response" = "S" ]; then \
@@ -57,9 +57,3 @@ cli-install: ## Instala o CLI no sistema
 cli-uninstall: ## Remove o CLI do sistema
 	@echo "$(YELLOW)🗑️  Desinstalando CLI...$(NC)"
 	@./uninstall.sh
-
-# Development
-new-command: ## Cria um novo comando
-	@read -p "Categoria do comando (ex: setup, utils): " category; \
-	read -p "ID do comando (ex: tilix, cleanup): " id; \
-	./create_command.sh "$$category" "$$id"
