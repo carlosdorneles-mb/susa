@@ -62,6 +62,7 @@ Gerencia plugins externos que estendem as funcionalidades do Susa CLI.
 ```bash
 susa self plugin add usuario/plugin-name
 susa self plugin list
+susa self plugin run meu-plugin text comando
 susa self plugin update nome-plugin
 susa self plugin remove nome-plugin
 ```
@@ -77,6 +78,7 @@ susa self plugin remove nome-plugin
 | `update` | Atualiza o Susa CLI |
 | `plugin add` | Instala novo plugin |
 | `plugin list` | Lista plugins instalados |
+| `plugin run` | Executa plugin (instalado ou dev mode) |
 | `plugin update` | Atualiza plugin |
 | `plugin remove` | Remove plugin |
 
@@ -86,4 +88,3 @@ susa self plugin remove nome-plugin
 - [Guia de Shell Completion](../../../guides/shell-completion.md) - Mais sobre autocompletar
 - [Visão Geral de Plugins](../../../plugins/overview.md) - Entenda o sistema de plugins
 - [Arquitetura de Plugins](../../../plugins/architecture.md) - Como funcionam os plugins
-

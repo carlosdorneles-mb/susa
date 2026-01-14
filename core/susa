@@ -154,6 +154,11 @@ print_command_line() {
         indicators="${indicators} ${GRAY}[plugin]${NC}"
     fi
 
+    # Add dev indicator if necessary
+    if is_dev_plugin_command "$category" "$cmd"; then
+        indicators="${indicators} ${MAGENTA}[dev]${NC}"
+    fi
+
     # Add sudo indicator if necessary
     if requires_sudo "$GLOBAL_CONFIG_FILE" "$category" "$cmd"; then
         indicators="${indicators} ${YELLOW}[sudo]${NC}"
@@ -341,11 +346,27 @@ execute_command() {
 
     # Get script name and build path
     local script_name=$(get_command_info "$GLOBAL_CONFIG_FILE" "$category" "$command" "script")
-    local command_dir=$(dirname "$config_file")
-    local script_path="$command_dir/$script_name"
+
+    # Check if this is a plugin command (has source in lock)
+    local plugin_source=""
+    if has_valid_lock_file; then
+        local lock_file="$CLI_DIR/susa.lock"
+        plugin_source=$(yq eval ".commands[] | select(.category == \"$category\" and .name == \"$command\" and .plugin != null) | .plugin.source" "$lock_file" 2>/dev/null | head -1)
+    fi
+
+    # Build script path - use plugin source if available
+    local script_path=""
+    if [ -n "$plugin_source" ] && [ "$plugin_source" != "null" ]; then
+        # Plugin with source - use source from lock
+        script_path="$plugin_source/$category/$command/$script_name"
+    else
+        # Regular command
+        local command_dir=$(dirname "$config_file")
+        script_path="$command_dir/$script_name"
+    fi
 
     if [ ! -f "$script_path" ]; then
-        log_error "Script '$script_name' não encontrado em $command_dir/"
+        log_error "Script '$script_name' não encontrado em $(dirname "$script_path")/"
         exit 1
     fi
 

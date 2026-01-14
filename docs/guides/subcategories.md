@@ -329,6 +329,30 @@ plugins/
 ./susa test unit                 # Executa testes unitários
 ```
 
+### Usando Plugin Run com Subcategorias
+
+Ao usar `susa self plugin run` para executar plugins em desenvolvimento, use barra `/` para indicar subcategorias:
+
+```bash
+# Plugin instalado (navegação normal)
+susa deploy aws ec2
+
+# Plugin em desenvolvimento (usar barra /)
+cd ~/dev-tools
+susa self plugin run dev-tools deploy/aws ec2
+
+# Múltiplos níveis
+susa self plugin run dev-tools infra/k8s/deploy production
+```
+
+**Por que barra `/`?**
+
+- No modo run, você passa `<plugin> <categoria> <comando>`
+- Para subcategorias, a categoria vira `categoria/subcategoria`
+- Sistema converte automaticamente para navegação em diretórios
+
+Veja [Self Plugin Run](../reference/commands/self/plugins/run.md) para mais detalhes sobre o comando run.
+
 ### Importante sobre Plugins
 
 ✅ Plugins funcionam **exatamente** como `commands/`:

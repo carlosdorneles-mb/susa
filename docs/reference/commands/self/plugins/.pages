@@ -3,5 +3,6 @@ nav:
   - Visão Geral: index.md
   - Add: add.md
   - List: list.md
+  - Run: run.md
   - Remove: remove.md
   - Update: update.md

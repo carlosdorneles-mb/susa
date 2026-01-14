@@ -278,6 +278,20 @@ find_command_config() {
     local command_id="$2"
     local cli_dir="${CLI_DIR:-$(dirname "$GLOBAL_CONFIG_FILE")}"
 
+    # First check if it's a plugin command in lock (has source)
+    if has_valid_lock_file; then
+        local lock_file="$cli_dir/susa.lock"
+        local plugin_source=$(yq eval ".commands[] | select(.category == \"$category\" and .name == \"$command_id\" and .plugin != null) | .plugin.source" "$lock_file" 2>/dev/null | head -1)
+
+        if [ -n "$plugin_source" ] && [ "$plugin_source" != "null" ]; then
+            local config_path="$plugin_source/$category/$command_id/config.yaml"
+            if [ -f "$config_path" ]; then
+                echo "$config_path"
+                return 0
+            fi
+        fi
+    fi
+
     # Search in commands/
     local config_path="$cli_dir/commands/$category/$command_id/config.yaml"
     if [ -f "$config_path" ]; then
@@ -310,10 +324,44 @@ find_command_config() {
 is_plugin_command() {
     local category="$1"
     local command_id="$2"
+
+    # First, try to check via lock file (faster)
+    if has_valid_lock_file; then
+        local cli_dir="${CLI_DIR:-$(dirname "$GLOBAL_CONFIG_FILE")}"
+        local lock_file="$cli_dir/susa.lock"
+
+        local plugin_name=$(yq eval ".commands[] | select(.category == \"$category\" and .name == \"$command_id\") | .plugin.name" "$lock_file" 2>/dev/null)
+
+        if [ -n "$plugin_name" ] && [ "$plugin_name" != "null" ]; then
+            return 0
+        fi
+    fi
+
+    # Fallback: check via file path
     local config_file=$(find_command_config "$category" "$command_id")
 
     if [ -n "$config_file" ] && [[ "$config_file" == */plugins/* ]]; then
         return 0
+    fi
+
+    return 1
+}
+
+# Checks if a command is from a dev plugin
+is_dev_plugin_command() {
+    local category="$1"
+    local command_id="$2"
+
+    # Check via lock file only (dev flag is only in lock)
+    if has_valid_lock_file; then
+        local cli_dir="${CLI_DIR:-$(dirname "$GLOBAL_CONFIG_FILE")}"
+        local lock_file="$cli_dir/susa.lock"
+
+        local is_dev=$(yq eval ".commands[] | select(.category == \"$category\" and .name == \"$command_id\") | .dev" "$lock_file" 2>/dev/null)
+
+        if [ "$is_dev" = "true" ]; then
+            return 0
+        fi
     fi
 
     return 1

@@ -18,6 +18,10 @@ Adiciona um novo plugin ao sistema a partir de um repositório Git.
 
 Lista todos os plugins instalados e suas informações.
 
+### [Run](run.md)
+
+Executa um plugin instalado ou em modo de desenvolvimento sem instalação permanente.
+
 ### [Remove](remove.md)
 
 Remove um plugin instalado do sistema.

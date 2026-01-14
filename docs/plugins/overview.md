@@ -34,6 +34,23 @@ meu-plugin/
 
 Veja nas [referências](../reference/commands/self/plugins/index.md) todos os comandos disponíveis.
 
+### Modo Desenvolvimento
+
+O comando `susa self plugin run` permite testar plugins sem instalação permanente:
+
+```bash
+# Executar plugin em desenvolvimento
+cd ~/meu-plugin
+susa self plugin run meu-plugin deploy staging
+
+# Plugin é automaticamente:
+# 1. Adicionado ao registry temporariamente
+# 2. Executado
+# 3. Removido após execução
+```
+
+Veja [Self Plugin Run](../reference/commands/self/plugins/run.md) para detalhes completos.
+
 ## 🏗️ Criando um Plugin
 
 > **💡 Exemplo completo:** Veja o [susa-plugin-hello-world](https://github.com/duducp/susa-plugin-hello-world) como referência de implementação.

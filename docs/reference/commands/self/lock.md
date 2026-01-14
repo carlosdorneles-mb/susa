@@ -82,6 +82,13 @@ commands:
     os: ["linux", "mac"]
     sudo: "true"
     group: "containers"
+  - category: "deploy"
+    name: "staging"
+    description: "Deploy para staging"
+    plugin:
+      name: "backup-tools"
+      source: "/home/user/.config/susa/plugins/backup-tools"
+      dev: false
 ```
 
 ## Impacto na Performance
@@ -92,12 +99,32 @@ Benchmark médio em um CLI com 10 comandos:
 - **Sem susa.lock**: 0.823s
 - **Ganho**: 38% mais rápido
 
+## Campo Source em Plugins
+
+Para comandos de plugins, o lock inclui o campo `plugin.source` que indica o caminho do plugin:
+
+- **Plugins instalados**: `$CLI_DIR/plugins/nome-plugin`
+- **Plugins dev**: Diretório atual durante desenvolvimento
+
+Esse campo permite ao sistema resolver corretamente os paths dos scripts mesmo quando plugins estão em desenvolvimento.
+
+## Plugins em Modo Dev
+
+Quando usando `susa self plugin run` sem `--prepare`, o plugin dev:
+
+- É adicionado ao lock temporariamente com `dev: true`
+- Tem `source` apontando para diretório atual
+- É automaticamente removido após execução
+
+Veja [Self Plugin Run](../plugins/run.md) para detalhes.
+
 ## Observações
 
 - O arquivo `susa.lock` não deve ser editado manualmente
 - O arquivo pode ser versionado no Git
 - **Obrigatório**: O CLI requer este arquivo para funcionar
 - Se deletado, será recriado automaticamente na próxima execução
+- Campo `source` é essencial para resolução de paths de plugins
 
 ## Ver Também
 

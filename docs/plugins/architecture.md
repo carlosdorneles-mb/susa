@@ -152,6 +152,22 @@ Atualiza o plugin para a versão mais recente:
 - Origem deve ser um repositório Git válido
 - Plugins locais não podem ser atualizados
 
+### Executar Plugin (Dev Mode)
+
+```bash
+cd ~/meu-plugin
+susa self plugin run meu-plugin deploy staging
+```
+
+Executa plugin sem instalação permanente:
+
+- **Modo automático**: Plugin é adicionado, executado e removido automaticamente
+- **Modo manual**: Use `--prepare` para adicionar, execute múltiplos comandos, use `--cleanup` para remover
+- **Subcategorias**: Use barra `/` para indicar hierarquia (ex: `deploy/aws`)
+- **Separador `--`**: Separa opções do run de argumentos do plugin
+
+Veja [Self Plugin Run](../reference/commands/self/plugins/run.md) para mais detalhes.
+
 ## 📦 Distribuindo Plugins
 
 Plugins podem ser distribuídos como repositórios Git:
@@ -194,6 +210,7 @@ plugins:
     source: "https://github.com/user/backup-tools.git"
     version: "1.2.0"
     installed_at: "2026-01-11T22:30:00Z"
+    dev: false
 ```
 
 **Funcionalidades:**
@@ -201,6 +218,27 @@ plugins:
 - **Tracking**: Origem, versão, data de instalação
 - **Histórico**: Mantém registro de todos os plugins
 - **Metadados**: Informações úteis para atualização futura
+- **Dev Mode**: Campo `dev: true` para plugins em desenvolvimento
+
+## 📄 Lock File (susa.lock)
+
+O arquivo `susa.lock` contém cache de todos os comandos, incluindo campo `source` para resolução de paths:
+
+```yaml
+commands:
+  - category: "deploy"
+    name: "staging"
+    description: "Deploy para staging"
+    plugin:
+      name: "backup-tools"
+      source: "/home/user/.config/susa/plugins/backup-tools"
+```
+
+**Campo `source` no plugin:**
+
+- **Plugins instalados**: Aponta para `$CLI_DIR/plugins/nome-plugin`
+- **Plugins dev**: Aponta para diretório atual do plugin
+- **Uso**: Sistema usa `source` para construir path completo do script
 
 ## ⚡ Performance
 
