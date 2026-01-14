@@ -64,12 +64,11 @@ if [ ! -f "$LOCK_FILE" ] && [ "${SUSA_SKIP_LOCK_CHECK:-}" != "1" ]; then
 
     log_debug "Chamando comando: SUSA_SKIP_LOCK_CHECK=1 $CORE_DIR/susa self lock"
     # Call the lock command bypassing the check to prevent infinite loop
-    SUSA_SKIP_LOCK_CHECK=1 "$CORE_DIR/susa" self lock > /dev/null 2>&1 || {
-        exit_code=$?
-        log_debug "Comando falhou com código de saída: $exit_code"
+    if ! SUSA_SKIP_LOCK_CHECK=1 "$CORE_DIR/susa" self lock > /dev/null 2>&1; then
+        log_debug "Comando falhou com código de saída: $?"
         log_error "Erro ao gerar arquivo de cache"
         exit 1
-    }
+    fi
 
     log_debug "Lock file gerado com sucesso"
     log_success "Configuração concluída! O CLI está pronto para uso."

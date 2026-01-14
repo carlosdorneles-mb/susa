@@ -1,3 +1,4 @@
 name: lock
 description: Atualiza o arquivo susa.lock com os comandos e categorias disponíveis
 script: main.sh
+os: ["linux", "mac"]

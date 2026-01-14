@@ -113,6 +113,27 @@ is_command_compatible_from_lock() {
     local lock_file="$cli_dir/susa.lock"
 
     if [ ! -f "$lock_file" ]; then
+        # Fallback: check config.yaml directly if lock file doesn't exist
+        local command_dir="$cli_dir/commands/$category/$command"
+        local config_file="$command_dir/config.yaml"
+
+        if [ -f "$config_file" ]; then
+            local supported_os=$(yq eval '.os[]' "$config_file" 2>/dev/null)
+
+            # If there's no OS restriction, it's compatible
+            if [ -z "$supported_os" ]; then
+                return 0
+            fi
+
+            # Check if current OS is in the list
+            if echo "$supported_os" | grep -qw "$current_os"; then
+                return 0
+            fi
+
+            return 1
+        fi
+
+        # If no config file found, assume incompatible
         return 1
     fi
 
@@ -188,7 +209,7 @@ get_category_commands() {
     # Only read from lock file - no fallback
     if has_valid_lock_file; then
         local commands=$(get_category_commands_from_lock "$category")
-        
+
         # If OS filter is provided, filter commands by compatibility
         if [ -n "$current_os" ]; then
             local filtered_commands=""
@@ -308,6 +329,19 @@ get_command_info() {
     # Only read from lock file
     if has_valid_lock_file; then
         local value=$(get_command_info_from_lock "$category" "$command_id" "$field")
+        if [ -n "$value" ] && [ "$value" != "null" ]; then
+            echo "$value"
+            return 0
+        fi
+    fi
+
+    # Fallback: read directly from config.yaml if lock file doesn't exist
+    local cli_dir="${CLI_DIR:-$(dirname "$GLOBAL_CONFIG_FILE")}"
+    local command_dir="$cli_dir/commands/$category/$command_id"
+    local config_file="$command_dir/config.yaml"
+
+    if [ -f "$config_file" ]; then
+        local value=$(yq eval ".$field" "$config_file" 2>/dev/null)
         if [ -n "$value" ] && [ "$value" != "null" ]; then
             echo "$value"
             return 0

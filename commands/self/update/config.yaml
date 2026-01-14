@@ -1,3 +1,4 @@
 name: "Update"
 description: "Atualiza o Susa CLI para a versão mais recente"
 script: "main.sh"
+os: ["linux", "mac"]
