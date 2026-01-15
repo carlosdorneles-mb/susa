@@ -126,8 +126,17 @@ perform_update() {
     log_info "Baixando versão mais recente do repositório..."
     log_debug "Clonando de: $REPO_URL (branch: $REPO_BRANCH)"
 
-    if ! git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" susa-update 2> /dev/null; then
+    # Captura a saída de erro do git clone, mas oculta do usuário
+    local error_output
+    error_output=$(git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" susa-update 2>&1)
+    local exit_code=$?
+
+    if [ $exit_code -ne 0 ]; then
         log_error "Falha ao baixar atualização do repositório"
+        log_debug "URL: $REPO_URL"
+        log_debug "Branch: $REPO_BRANCH"
+        log_debug "Detalhes do erro:"
+        log_debug "$error_output"
         log_info "Verifique sua conexão com a internet e tente novamente"
         return 1
     fi

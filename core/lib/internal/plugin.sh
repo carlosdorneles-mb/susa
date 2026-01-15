@@ -132,12 +132,22 @@ validate_repo_access() {
 clone_plugin() {
     local url="$1"
     local dest_dir="$2"
+    local error_output
 
-    if git clone "$url" "$dest_dir" 2>&1; then
+    # Captura a saída de erro do git clone, mas oculta do usuário
+    error_output=$(git clone "$url" "$dest_dir" 2>&1)
+    local exit_code=$?
+
+    if [ $exit_code -eq 0 ]; then
         # Remove .git to save space
         rm -rf "$dest_dir/.git"
         return 0
     else
+        log_error "Falha ao clonar o repositório"
+        log_debug "URL: $url"
+        log_debug "Destino: $dest_dir"
+        log_debug "Detalhes do erro:"
+        log_debug "$error_output"
         return 1
     fi
 }
