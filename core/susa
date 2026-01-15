@@ -260,11 +260,38 @@ list_commands() {
         # Check in plugins directories
         if [ -d "$CLI_DIR/plugins" ]; then
             for plugin_dir in "$CLI_DIR/plugins"/*/; do
+                # Check if plugin has config.json with directory setting
+                if [ -f "${plugin_dir}config.json" ]; then
+                    local plugin_directory=$(jq -r '.directory // empty' "${plugin_dir}config.json" 2> /dev/null)
+                    if [ -n "$plugin_directory" ] && [ -d "${plugin_dir}${plugin_directory}/${category}" ]; then
+                        found=true
+                        break
+                    fi
+                fi
+                # Check without directory setting (fallback)
                 if [ -d "${plugin_dir}${category}" ]; then
                     found=true
                     break
                 fi
             done
+        fi
+        # Check in dev plugins from registry
+        if [ "$found" = false ] && [ -f "$CLI_DIR/plugins/registry.json" ]; then
+            local dev_plugins=$(jq -r '.plugins[] | select(.dev == true) | .name + "|" + (.source // "")' "$CLI_DIR/plugins/registry.json" 2> /dev/null)
+            while IFS='|' read -r plugin_name plugin_source; do
+                [ -z "$plugin_source" ] || [ ! -d "$plugin_source" ] && continue
+                # Check if plugin has directory setting in registry
+                local plugin_directory=$(jq -r ".plugins[] | select(.name == \"$plugin_name\") | .directory // empty" "$CLI_DIR/plugins/registry.json" 2> /dev/null)
+                if [ -n "$plugin_directory" ] && [ -d "$plugin_source/$plugin_directory/$category" ]; then
+                    found=true
+                    break
+                fi
+                # Check without directory setting (fallback)
+                if [ -d "$plugin_source/$category" ]; then
+                    found=true
+                    break
+                fi
+            done <<< "$dev_plugins"
         fi
         if [ "$found" = false ]; then
             log_error "Categoria '$category' não encontrada"
