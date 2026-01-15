@@ -108,6 +108,117 @@ if string_starts_with "hello world" "hello"; then
 fi
 ```
 
+### `validate_name()`
+
+Valida se um nome segue as convenções de nomenclatura do Susa CLI.
+
+**Convenções:**
+
+- Apenas letras minúsculas (a-z)
+- Números (0-9)
+- Hífens (-) para separar palavras
+- Não pode começar ou terminar com hífen
+- Não pode ter hífens consecutivos
+
+**Parâmetros:**
+
+- `$1` - Nome a validar
+
+**Retorno:**
+
+- `0` (true) - Nome é válido
+- `1` (false) - Nome é inválido
+
+**Uso:**
+
+```bash
+# Validar nome de comando
+if validate_name "my-command"; then
+    echo "Nome válido"
+else
+    echo "Nome inválido"
+fi
+
+# Validar input do usuário
+read -p "Nome do comando: " cmd_name
+if ! validate_name "$cmd_name"; then
+    log_error "Nome inválido. Use apenas letras minúsculas, números e hífens."
+    exit 1
+fi
+
+# Exemplos de validação
+validate_name "docker"           # ✅ Válido
+validate_name "mysql-client"     # ✅ Válido
+validate_name "python3"          # ✅ Válido
+validate_name "Docker"           # ❌ Inválido (maiúsculas)
+validate_name "my_command"       # ❌ Inválido (underscore)
+validate_name "my command"       # ❌ Inválido (espaço)
+validate_name "-docker"          # ❌ Inválido (começa com hífen)
+```
+
+### `sanitize_name()`
+
+Sanitiza um nome para seguir as convenções de nomenclatura do Susa CLI.
+
+**Transformações aplicadas:**
+
+- Converte para lowercase
+- Substitui espaços e underscores por hífens
+- Remove caracteres especiais
+- Remove hífens consecutivos
+- Remove hífens no início e fim
+
+**Parâmetros:**
+
+- `$1` - Nome a sanitizar
+
+**Retorno:**
+
+- String sanitizada
+
+**Uso:**
+
+```bash
+# Sanitizar nome de comando
+raw_name="My Command_Name"
+clean_name=$(sanitize_name "$raw_name")
+echo "$clean_name"  # my-command-name
+
+# Sanitizar input do usuário
+read -p "Nome do comando: " user_input
+command_name=$(sanitize_name "$user_input")
+log_info "Nome sanitizado: $command_name"
+
+# Exemplos de sanitização
+sanitize_name "Docker"           # docker
+sanitize_name "My Command"       # my-command
+sanitize_name "my_command"       # my-command
+sanitize_name "MySQL__Client"    # mysql-client
+sanitize_name "--start--"        # start
+sanitize_name "Hello World!"     # hello-world
+```
+
+**Nota:** Esta função é usada internamente pelo comando `susa self lock` para processar nomes durante a geração do cache.
+
+### `strtobool()`
+
+Converte string para valor booleano.
+
+**Parâmetros:**
+
+- `$1` - String a converter
+
+**Retorno:**
+- `1` (false) - String não começa com o prefixo
+
+**Uso:**
+
+```bash
+if string_starts_with "hello world" "hello"; then
+    echo "Começa com 'hello'"
+fi
+```
+
 ## Funções de Conversão
 
 ### `strtobool()`

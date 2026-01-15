@@ -771,9 +771,6 @@ handle_uninstall() {
 
     # Se não especificou shell, remove de todos instalados
     if [ -z "$shell_type" ]; then
-        log_info "Removendo autocompletar de todos os shells instalados..."
-        log_output ""
-
         local removed_count=0
         local shells_to_remove=()
 
@@ -795,23 +792,22 @@ handle_uninstall() {
             return 0
         fi
 
-        log_info "Completions encontrados: ${shells_to_remove[*]}"
-        log_output ""
+        # Formata lista de shells encontrados em uma linha
+        local shells_list=$(printf '%s, ' "${shells_to_remove[@]}" | sed 's/, $//')
+        log_info "Removendo autocompletar dos shells: $shells_list"
 
         # Remove completion de cada shell encontrado
         for shell in "${shells_to_remove[@]}"; do
-            log_info "Removendo completion do $shell..."
-
             local completion_file=$(get_completion_file_path "$shell")
 
             if rm "$completion_file" 2> /dev/null; then
-                log_success "✅ Completion do $shell removido"
+                log_success "  ✅ $shell: removido"
                 removed_count=$((removed_count + 1))
             else
-                log_error "Erro ao remover completion do $shell"
+                log_error "  ❌ $shell: erro ao remover"
             fi
-            log_output ""
         done
+        log_output ""
 
         if [ $removed_count -gt 0 ]; then
             # Limpa cache do zsh se foi removido
@@ -819,7 +815,7 @@ handle_uninstall() {
                 rm -f ~/.zcompdump* 2> /dev/null
             fi
 
-            log_success "✅ Completion removido de $removed_count shell(s)!"
+            log_success "Autocompletar removido com sucesso!"
             log_output ""
             log_output "${LIGHT_YELLOW}Próximos passos:${NC}"
             log_output "  • Abra um novo terminal para aplicar as mudanças"
@@ -836,12 +832,12 @@ handle_uninstall() {
     case "$shell_type" in
         bash | zsh | fish)
             if ! is_completion_installed "$shell_type"; then
-                log_warning "Completion para $shell_type não está instalado"
+                log_warning "Autocompletar para $shell_type não está instalado"
                 return 0
             fi
 
             local completion_file=$(get_completion_file_path "$shell_type")
-            log_info "Removendo completion do $shell_type..."
+            log_info "Removendo autocompletar do $shell_type..."
 
             if rm "$completion_file" 2> /dev/null; then
                 # Limpa cache do zsh se necessário
@@ -849,7 +845,7 @@ handle_uninstall() {
                     rm -f ~/.zcompdump* 2> /dev/null
                 fi
 
-                log_success "Completion do $shell_type removido com sucesso!"
+                log_success "Autocompletar do $shell_type removido com sucesso!"
                 log_output ""
                 log_output "${LIGHT_YELLOW}Nota:${NC} Reinicie o terminal para aplicar as mudanças"
                 return 0
@@ -903,7 +899,7 @@ handle_install() {
             log_info "📦 Instalando completion para $shell..."
 
             if is_completion_installed "$shell"; then
-                log_warning "Completion para $shell já está instalado (pulando)"
+                log_warning "Autocompletar para $shell já está instalado (pulando)"
             else
                 case "$shell" in
                     bash)
@@ -927,7 +923,7 @@ handle_install() {
 
         if [ $installed_count -gt 0 ]; then
             log_output ""
-            log_success "🎉 Completion instalado com sucesso em $installed_count shell(s)!"
+            log_success "🎉 Autocompletar instalado com sucesso em $installed_count shell(s)!"
             log_output ""
             log_output "${LIGHT_YELLOW}Para ativar:${NC}"
             log_output "  • Abra um novo terminal, ou"

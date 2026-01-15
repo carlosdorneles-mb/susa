@@ -5,6 +5,7 @@ IFS=$'\n\t'
 # Setup command environment
 
 source "$LIB_DIR/logger.sh"
+source "$LIB_DIR/string.sh"
 source "$LIB_DIR/internal/config.sh"
 source "$LIB_DIR/internal/json.sh"
 source "$LIB_DIR/internal/installations.sh"
@@ -74,6 +75,15 @@ scan_category_dir() {
 
         local item_name=$(basename "$item_dir")
 
+        # Validate item name
+        if ! validate_name "$item_name"; then
+            # Remove internal marker for display
+            local display_source="${source%###DEV}"
+            log_warning "Nome inválido ignorado: '$item_name' em '$category_path/' (fonte: $display_source)" >&2
+            log_warning "  Use apenas letras minúsculas, números e hífens (ex: meu-comando)" >&2
+            continue
+        fi
+
         # Check if it's a command (has entrypoint field in config.json)
         if [ -f "$item_dir/config.json" ]; then
             local script_name=$(jq -r '.entrypoint // empty' "$item_dir/config.json" 2> /dev/null)
@@ -122,6 +132,13 @@ scan_all_structure() {
             [ ! -d "$cat_dir" ] && continue
             local cat_name=$(basename "$cat_dir")
 
+            # Validate category name
+            if ! validate_name "$cat_name"; then
+                log_warning "Nome de categoria inválido ignorado: '$cat_name' (fonte: commands)" >&2
+                log_warning "  Use apenas letras minúsculas, números e hífens (ex: minha-categoria)" >&2
+                continue
+            fi
+
             # Read category info
             if [ -f "$cat_dir/config.json" ]; then
                 local cat_desc=$(jq -r '.description // empty' "$cat_dir/config.json" 2> /dev/null)
@@ -161,6 +178,13 @@ scan_all_structure() {
             for cat_dir in "$plugin_scan_dir"/*; do
                 [ ! -d "$cat_dir" ] && continue
                 local cat_name=$(basename "$cat_dir")
+
+                # Validate category name
+                if ! validate_name "$cat_name"; then
+                    log_warning "Nome de categoria inválido ignorado: '$cat_name' (fonte: plugin '$plugin_name')" >&2
+                    log_warning "  Use apenas letras minúsculas, números e hífens (ex: minha-categoria)" >&2
+                    continue
+                fi
 
                 # Read category info
                 if [ -f "$cat_dir/config.json" ]; then
@@ -205,6 +229,13 @@ scan_all_structure() {
                 # Skip non-category files
                 [[ "$cat_name" =~ ^\. ]] && continue
                 [ "$cat_name" = "README.md" ] && continue
+
+                # Validate category name
+                if ! validate_name "$cat_name"; then
+                    log_warning "Nome de categoria inválido ignorado: '$cat_name' (fonte: dev plugin '$plugin_name')" >&2
+                    log_warning "  Use apenas letras minúsculas, números e hífens (ex: minha-categoria)" >&2
+                    continue
+                fi
 
                 # Read category info
                 if [ -f "$cat_dir/config.json" ]; then

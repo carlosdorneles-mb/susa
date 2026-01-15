@@ -114,3 +114,52 @@ strtobool() {
             ;;
     esac
 }
+
+# Validates if a name follows naming conventions (lowercase with hyphens only)
+# Returns 0 if valid, 1 if invalid
+# Usage:
+#   validate_name "command-name"
+# Example:
+#   if validate_name "my-command"; then
+#       echo "Valid name"
+#   fi
+validate_name() {
+    local name="$1"
+    # Check if name contains only lowercase letters, numbers, and hyphens
+    # Cannot start or end with hyphen, no consecutive hyphens
+    if [[ "$name" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Sanitizes a name to follow naming conventions (lowercase with hyphens only)
+# Converts to lowercase, replaces invalid characters with hyphens
+# Removes leading/trailing hyphens and consecutive hyphens
+# Usage:
+#   sanitize_name "CommandName"
+# Example:
+#   result=$(sanitize_name "My Command_Name")
+#   echo "$result"  # Output: my-command-name
+sanitize_name() {
+    local name="$1"
+
+    # Convert to lowercase
+    name=$(string_to_lower "$name")
+
+    # Replace spaces and underscores with hyphens
+    name="${name// /-}"
+    name="${name//_/-}"
+
+    # Remove any character that is not lowercase letter, number, or hyphen
+    name=$(echo "$name" | sed 's/[^a-z0-9-]//g')
+
+    # Remove consecutive hyphens
+    name=$(echo "$name" | sed 's/-\+/-/g')
+
+    # Remove leading and trailing hyphens
+    name=$(echo "$name" | sed 's/^-//;s/-$//')
+
+    echo "$name"
+}

@@ -14,6 +14,46 @@ O comando `susa self lock` varre os diretórios `commands/` e `plugins/` para de
 - **Automático**: Gerado na primeira execução e atualizado ao gerenciar plugins
 - **Obrigatório**: O CLI requer este arquivo para funcionar
 - **Rastreamento**: Mantém registro de instalações de software via `setup` commands
+- **Validação**: Ignora comandos e categorias com nomes inválidos
+
+## Validação de Nomes
+
+Durante a geração do lock, todos os nomes de categorias, subcategorias e comandos são validados. Nomes que não seguem as convenções são **automaticamente ignorados** e um warning é exibido.
+
+### Convenções de Nomenclatura
+
+✅ **Permitido:**
+
+- Letras minúsculas: `docker`, `mysql`
+- Números: `python3`, `node18`
+- Hífens: `mysql-client`, `setup-env`
+
+❌ **Não permitido:**
+
+- Letras maiúsculas: `Docker`, `MySQL`
+- Underscores: `my_command`
+- Espaços: `my command`
+- Caracteres especiais: `@`, `#`, `$`
+- Iniciar/terminar com hífen: `-docker`, `mysql-`
+
+### Exemplo de Validação
+
+```bash
+$ susa self lock
+[INFO] Gerando o lock...
+[WARNING] Nome inválido ignorado: 'MyCommand' em 'setup/' (fonte: commands)
+[WARNING]   Use apenas letras minúsculas, números e hífens (ex: meu-comando)
+[WARNING] Nome de categoria inválido ignorado: 'InvalidCategory' (fonte: commands)
+[WARNING]   Use apenas letras minúsculas, números e hífens (ex: minha-categoria)
+[SUCCESS] Lock gerado com sucesso!
+```
+
+**Comportamento:**
+
+- ✅ Comandos válidos são mapeados normalmente
+- ❌ Comandos inválidos são ignorados (não aparecem no lock)
+- ❌ Categorias inválidas são ignoradas (junto com todos os seus comandos)
+- ⚠️ Warnings informativos são exibidos para cada item inválido
 
 ## Uso
 

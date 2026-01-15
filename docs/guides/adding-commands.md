@@ -4,6 +4,35 @@ Este guia mostra como adicionar novos comandos ao Susa CLI de forma dinâmica.
 
 > **💡 Dica:** Para criar estruturas hierárquicas com subcategorias e múltiplos níveis, veja [Sistema de Categorias e Subcategorias Aninhadas](subcategories.md).
 
+## ⚠️ Convenções de Nomenclatura
+
+**IMPORTANTE:** Todos os nomes de categorias, subcategorias e comandos devem seguir estas regras:
+
+✅ **Permitido:**
+
+- Apenas letras minúsculas (`a-z`)
+- Números (`0-9`)
+- Hífens (`-`) para separar palavras
+- Exemplos válidos: `docker`, `setup-env`, `mysql-client`, `python3`
+
+❌ **Não permitido:**
+
+- Letras maiúsculas: `Docker`, `SetupEnv`
+- Underscores: `setup_env`
+- Espaços: `my command`
+- Caracteres especiais: `@`, `#`, `$`, etc.
+- Começar ou terminar com hífen: `-docker`, `docker-`
+- Hífens consecutivos: `my--command`
+
+> **⚡ Validação automática:** Durante a geração do lock (`susa self lock`), nomes inválidos são automaticamente ignorados e um warning é exibido. Comandos e categorias com nomes inválidos não serão mapeados no sistema.
+
+**Exemplo de warning:**
+
+```text
+[WARNING] Nome inválido ignorado: 'MyCommand' em 'setup/' (fonte: commands)
+[WARNING]   Use apenas letras minúsculas, números e hífens (ex: meu-comando)
+```
+
 ## 📋 Estrutura de um Comando
 
 Cada comando deve seguir esta estrutura hierárquica:
@@ -42,10 +71,18 @@ commands/
 mkdir -p commands/<categoria>/<comando>
 ```
 
-**Exemplo:**
+**Exemplos:**
 
 ```bash
+# ✅ Correto - nomes em lowercase com hífens
 mkdir -p commands/setup/vscode
+mkdir -p commands/database/mysql-server
+mkdir -p commands/tools/python3-env
+
+# ❌ Incorreto - serão ignorados pelo sistema
+mkdir -p commands/Setup/VSCode        # Letras maiúsculas
+mkdir -p commands/database/MySQL_Server  # Underscore
+mkdir -p commands/tools/My Tool       # Espaço
 ```
 
 ### 2. Configurar a Categoria
