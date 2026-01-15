@@ -11,32 +11,32 @@ show_help() {
     echo ""
     show_usage
     echo ""
-    echo -e "${LIGHT_GREEN}O que é:${NC}"
-    echo "  Podman é um motor de container open-source para desenvolvimento,"
-    echo "  gerenciamento e execução de containers OCI. É uma alternativa"
+    log_output "${LIGHT_GREEN}O que é:${NC}"
+    log_output "  Podman é um motor de container open-source para desenvolvimento,"
+    log_output "  gerenciamento e execução de containers OCI. É uma alternativa"
     echo "  daemon-less e rootless ao Docker."
     echo ""
-    echo -e "${LIGHT_GREEN}Opções:${NC}"
-    echo "  -h, --help        Mostra esta mensagem de ajuda"
-    echo "  --uninstall       Desinstala o Podman do sistema"
-    echo "  --update          Atualiza o Podman para a versão mais recente"
-    echo "  -v, --verbose     Habilita saída detalhada para depuração"
-    echo "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
+    log_output "${LIGHT_GREEN}Opções:${NC}"
+    log_output "  -h, --help        Mostra esta mensagem de ajuda"
+    log_output "  --uninstall       Desinstala o Podman do sistema"
+    log_output "  --update          Atualiza o Podman para a versão mais recente"
+    log_output "  -v, --verbose     Habilita saída detalhada para depuração"
+    log_output "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
     echo ""
-    echo -e "${LIGHT_GREEN}Exemplos:${NC}"
-    echo "  susa setup podman              # Instala o Podman"
-    echo "  susa setup podman --update     # Atualiza o Podman"
-    echo "  susa setup podman --uninstall  # Desinstala o Podman"
+    log_output "${LIGHT_GREEN}Exemplos:${NC}"
+    log_output "  susa setup podman              # Instala o Podman"
+    log_output "  susa setup podman --update     # Atualiza o Podman"
+    log_output "  susa setup podman --uninstall  # Desinstala o Podman"
     echo ""
-    echo -e "${LIGHT_GREEN}Pós-instalação:${NC}"
-    echo "  Após a instalação, reinicie o terminal ou execute:"
+    log_output "${LIGHT_GREEN}Pós-instalação:${NC}"
+    log_output "  Após a instalação, reinicie o terminal ou execute:"
     echo "    source ~/.bashrc   (para Bash)"
     echo "    source ~/.zshrc    (para Zsh)"
     echo ""
-    echo -e "${LIGHT_GREEN}Próximos passos:${NC}"
-    echo "  podman --version                   # Verifica a instalação"
-    echo "  podman run hello-world             # Teste com container simples"
-    echo "  podman images                      # Lista imagens disponíveis"
+    log_output "${LIGHT_GREEN}Próximos passos:${NC}"
+    log_output "  podman --version                   # Verifica a instalação"
+    log_output "  podman run hello-world             # Teste com container simples"
+    log_output "  podman images                      # Lista imagens disponíveis"
 }
 
 get_latest_podman_version() {
@@ -105,8 +105,8 @@ check_existing_installation() {
         local latest_clean="${latest_version#v}"
         if [ "$current_version" != "$latest_clean" ]; then
             echo ""
-            echo -e "${YELLOW}Nova versão disponível ($latest_clean).${NC}"
-            echo -e "Para atualizar, execute: ${LIGHT_CYAN}susa setup podman --update${NC}"
+            log_output "${YELLOW}Nova versão disponível ($latest_clean).${NC}"
+            log_output "Para atualizar, execute: ${LIGHT_CYAN}susa setup podman --update${NC}"
         fi
     else
         log_warning "Não foi possível verificar atualizações"
@@ -122,7 +122,7 @@ install_podman_macos() {
     # Check if Homebrew is installed
     if ! command -v brew &>/dev/null; then
         log_error "Homebrew não está instalado. Instale-o primeiro:"
-        echo "  /bin/bash -c \"\$(curl -fsSL ${PODMAN_HOMEBREW_INSTALL_URL:-https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh})\""
+        log_output "  /bin/bash -c \"\$(curl -fsSL ${PODMAN_HOMEBREW_INSTALL_URL:-https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh})\""
         return 1
     fi
 
@@ -326,14 +326,14 @@ install_podman() {
             echo "Próximos passos:"
 
             if [ "$os_name" = "darwin" ]; then
-                echo -e "  1. A máquina virtual do Podman foi iniciada"
-                echo -e "  2. Execute: ${LIGHT_CYAN}podman run hello-world${NC}"
+                log_output "  1. A máquina virtual do Podman foi iniciada"
+                log_output "  2. Execute: ${LIGHT_CYAN}podman run hello-world${NC}"
             else
-                echo -e "  1. Reinicie o terminal ou execute: ${LIGHT_CYAN}source $(detect_shell_config)${NC}"
-                echo -e "  2. Execute: ${LIGHT_CYAN}podman --version${NC}"
+                log_output "  1. Reinicie o terminal ou execute: ${LIGHT_CYAN}source $(detect_shell_config)${NC}"
+                log_output "  2. Execute: ${LIGHT_CYAN}podman --version${NC}"
             fi
 
-            echo -e "  2. Use ${LIGHT_CYAN}susa setup podman --help${NC} para mais informações"
+            log_output "  2. Use ${LIGHT_CYAN}susa setup podman --help${NC} para mais informações"
         else
             log_error "Podman foi instalado mas não está disponível no PATH"
             return 1

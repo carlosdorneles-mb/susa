@@ -211,7 +211,7 @@ generate_lock_file() {
         fi
     fi
 
-    # Change to CLI_DIR to avoid yq reading .version files from plugin directories
+    # Change to CLI_DIR for consistent path resolution
     local original_dir="$PWD"
     cd "$CLI_DIR" || {
         log_error "Não foi possível acessar o diretório $CLI_DIR"

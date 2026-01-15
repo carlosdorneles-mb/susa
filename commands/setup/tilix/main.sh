@@ -11,29 +11,29 @@ show_help() {
     echo ""
     show_usage
     echo ""
-    echo -e "${LIGHT_GREEN}O que é:${NC}"
-    echo "  Tilix é um emulador de terminal avançado para Linux usando GTK+ 3."
-    echo "  Oferece recursos como tiles (painéis lado a lado), notificações,"
-    echo "  transparência, temas personalizáveis e muito mais."
+    log_output "${LIGHT_GREEN}O que é:${NC}"
+    log_output "  Tilix é um emulador de terminal avançado para Linux usando GTK+ 3."
+    log_output "  Oferece recursos como tiles (painéis lado a lado), notificações,"
+    log_output "  transparência, temas personalizáveis e muito mais."
     echo ""
-    echo -e "${LIGHT_GREEN}Opções:${NC}"
-    echo "  -h, --help        Mostra esta mensagem de ajuda"
-    echo "  --uninstall       Desinstala o Tilix do sistema"
-    echo "  --update          Atualiza o Tilix para a versão mais recente"
-    echo "  -v, --verbose     Habilita saída detalhada para depuração"
-    echo "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
+    log_output "${LIGHT_GREEN}Opções:${NC}"
+    log_output "  -h, --help        Mostra esta mensagem de ajuda"
+    log_output "  --uninstall       Desinstala o Tilix do sistema"
+    log_output "  --update          Atualiza o Tilix para a versão mais recente"
+    log_output "  -v, --verbose     Habilita saída detalhada para depuração"
+    log_output "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
     echo ""
-    echo -e "${LIGHT_GREEN}Exemplos:${NC}"
-    echo "  susa setup tilix              # Instala o Tilix"
-    echo "  susa setup tilix --update     # Atualiza o Tilix"
-    echo "  susa setup tilix --uninstall  # Desinstala o Tilix"
+    log_output "${LIGHT_GREEN}Exemplos:${NC}"
+    log_output "  susa setup tilix              # Instala o Tilix"
+    log_output "  susa setup tilix --update     # Atualiza o Tilix"
+    log_output "  susa setup tilix --uninstall  # Desinstala o Tilix"
     echo ""
-    echo -e "${LIGHT_GREEN}Pós-instalação:${NC}"
-    echo "  O Tilix estará disponível no menu de aplicativos."
-    echo "  Para configurá-lo como terminal padrão:"
-    echo "    sudo update-alternatives --config x-terminal-emulator"
+    log_output "${LIGHT_GREEN}Pós-instalação:${NC}"
+    log_output "  O Tilix estará disponível no menu de aplicativos."
+    log_output "  Para configurá-lo como terminal padrão:"
+    log_output "    sudo update-alternatives --config x-terminal-emulator"
     echo ""
-    echo -e "${LIGHT_GREEN}Recursos principais:${NC}"
+    log_output "${LIGHT_GREEN}Recursos principais:${NC}"
     echo "  • Tiles (painéis lado a lado)"
     echo "  • Transparência e efeitos visuais"
     echo "  • Drag and drop de arquivos"
@@ -126,8 +126,8 @@ check_existing_installation() {
     if [ $? -eq 0 ] && [ -n "$latest_version" ]; then
         if [ "$current_version" != "$latest_version" ]; then
             echo ""
-            echo -e "${YELLOW}Nova versão disponível ($latest_version).${NC}"
-            echo -e "Para atualizar, execute: ${LIGHT_CYAN}susa setup tilix --update${NC}"
+            log_output "${YELLOW}Nova versão disponível ($latest_version).${NC}"
+            log_output "Para atualizar, execute: ${LIGHT_CYAN}susa setup tilix --update${NC}"
         fi
     else
         log_warning "Não foi possível verificar atualizações"
@@ -159,8 +159,8 @@ install_tilix() {
 
         if [ "$current_version" != "$latest_version" ]; then
             echo ""
-            echo -e "${YELLOW}Uma versão mais recente está disponível ($latest_version).${NC}"
-            echo -e "Para atualizar, execute: ${LIGHT_CYAN}susa setup tilix --update${NC}"
+            log_output "${YELLOW}Uma versão mais recente está disponível ($latest_version).${NC}"
+            log_output "Para atualizar, execute: ${LIGHT_CYAN}susa setup tilix --update${NC}"
         fi
 
         return 0
@@ -174,8 +174,8 @@ install_tilix() {
     if [ "$pkg_manager" = "unknown" ]; then
         log_error "Gerenciador de pacotes não suportado"
         echo ""
-        echo -e "${YELLOW}Instalação manual necessária:${NC}"
-        echo "  Visite: https://gnunn1.github.io/tilix-web/"
+        log_output "${YELLOW}Instalação manual necessária:${NC}"
+        log_output "  Visite: https://gnunn1.github.io/tilix-web/"
         return 1
     fi
 
@@ -277,7 +277,7 @@ update_tilix() {
     if ! command -v tilix &>/dev/null; then
         log_error "Tilix não está instalado"
         echo ""
-        echo -e "${YELLOW}Para instalar, execute:${NC}"
+        log_output "${YELLOW}Para instalar, execute:${NC}"
         echo "  susa setup tilix"
         return 1
     fi
@@ -367,7 +367,7 @@ uninstall_tilix() {
 
     # Confirm uninstallation
     echo ""
-    echo -e "${YELLOW}Deseja realmente desinstalar o Tilix $version? (s/N)${NC}"
+    log_output "${YELLOW}Deseja realmente desinstalar o Tilix $version? (s/N)${NC}"
     read -r response
 
     if [[ ! "$response" =~ ^[sS]$ ]]; then
@@ -384,7 +384,7 @@ uninstall_tilix() {
 
             # Ask about purge
             echo ""
-            echo -e "${YELLOW}Deseja remover também os arquivos de configuração? (s/N)${NC}"
+            log_output "${YELLOW}Deseja remover também os arquivos de configuração? (s/N)${NC}"
             read -r purge_response
 
             if [[ "$purge_response" =~ ^[sS]$ ]]; then
@@ -424,7 +424,7 @@ uninstall_tilix() {
 
     # Clean up user configurations (optional)
     echo ""
-    echo -e "${YELLOW}Deseja remover as configurações de usuário do Tilix? (s/N)${NC}"
+    log_output "${YELLOW}Deseja remover as configurações de usuário do Tilix? (s/N)${NC}"
     read -r config_response
 
     if [[ "$config_response" =~ ^[sS]$ ]]; then

@@ -151,29 +151,29 @@ Exibe ajuda completa do comando com estrutura padronizada:
 ```bash
 show_help() {
     show_description  # Função da biblioteca
-    echo ""
+    log_output ""
     show_usage        # Função da biblioteca
-    echo ""
-    echo -e "${LIGHT_GREEN}O que é:${NC}"
-    echo "  Descrição detalhada da ferramenta e seu propósito."
-    echo ""
-    echo -e "${LIGHT_GREEN}Opções:${NC}"
-    echo "  -h, --help        Mostra esta mensagem de ajuda"
-    echo "  --uninstall       Desinstala a ferramenta do sistema"
-    echo "  --update          Atualiza a ferramenta para a versão mais recente"
-    echo "  -v, --verbose     Habilita saída detalhada para depuração"
-    echo "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
-    echo ""
-    echo -e "${LIGHT_GREEN}Exemplos:${NC}"
-    echo "  susa setup tool              # Instala a ferramenta"
-    echo "  susa setup tool --update     # Atualiza a ferramenta"
-    echo "  susa setup tool --uninstall  # Desinstala a ferramenta"
-    echo ""
-    echo -e "${LIGHT_GREEN}Pós-instalação:${NC}"
-    echo "  Instruções específicas pós-instalação"
-    echo ""
-    echo -e "${LIGHT_GREEN}Próximos passos:${NC}"
-    echo "  Comandos úteis para começar a usar"
+    log_output ""
+    log_output "${LIGHT_GREEN}O que é:${NC}"
+    log_output "  Descrição detalhada da ferramenta e seu propósito."
+    log_output ""
+    log_output "${LIGHT_GREEN}Opções:${NC}"
+    log_output "  -h, --help        Mostra esta mensagem de ajuda"
+    log_output "  --uninstall       Desinstala a ferramenta do sistema"
+    log_output "  --update          Atualiza a ferramenta para a versão mais recente"
+    log_output "  -v, --verbose     Habilita saída detalhada para depuração"
+    log_output "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
+    log_output ""
+    log_output "${LIGHT_GREEN}Exemplos:${NC}"
+    log_output "  susa setup tool              # Instala a ferramenta"
+    log_output "  susa setup tool --update     # Atualiza a ferramenta"
+    log_output "  susa setup tool --uninstall  # Desinstala a ferramenta"
+    log_output ""
+    log_output "${LIGHT_GREEN}Pós-instalação:${NC}"
+    log_output "  Instruções específicas pós-instalação"
+    log_output ""
+    log_output "${LIGHT_GREEN}Próximos passos:${NC}"
+    log_output "  Comandos úteis para começar a usar"
 }
 ```
 
@@ -274,9 +274,9 @@ check_existing_installation() {
 
     if [ $? -eq 0 ] && [ -n "$latest_version" ]; then
         if [ "$current_version" != "$latest_version" ]; then
-            echo ""
-            echo -e "${YELLOW}Nova versão disponível ($latest_version).${NC}"
-            echo -e "Para atualizar, execute: ${LIGHT_CYAN}susa setup tool --update${NC}"
+            log_output ""
+            log_output "${YELLOW}Nova versão disponível ($latest_version).${NC}"
+            log_output "Para atualizar, execute: ${LIGHT_CYAN}susa setup tool --update${NC}"
         fi
     else
         log_warning "Não foi possível verificar atualizações"
@@ -332,9 +332,9 @@ install_tool() {
         log_success "Ferramenta $installed_version instalada com sucesso!"
 
         # Instruções pós-instalação
-        echo ""
+        log_output ""
         log_info "Próximos passos:"
-        echo "  tool --version    # Verificar instalação"
+        log_output "  tool --version    # Verificar instalação"
     else
         log_error "Falha na instalação"
         return 1
@@ -388,8 +388,8 @@ uninstall_tool() {
     fi
 
     # Confirmar desinstalação
-    echo ""
-    echo -e "${YELLOW}Deseja realmente desinstalar? (s/N)${NC}"
+    log_output ""
+    log_output "${YELLOW}Deseja realmente desinstalar? (s/N)${NC}"
     read -r response
 
     if [[ ! "$response" =~ ^[sS]$ ]]; then
@@ -633,7 +633,45 @@ curl --max-time 10 --connect-timeout 5 URL
 timeout 5 git ls-remote URL
 ```
 
-### 2. Mensagens Claras
+### 2. Suporte à Flag --quiet
+
+**IMPORTANTE**: Use sempre `log_output` em vez de `echo` para mensagens de saída:
+
+```bash
+# ❌ ERRADO - echo não respeita a flag --quiet
+echo "Mensagem para o usuário"
+echo ""
+echo -e "${GREEN}Sucesso!${NC}"
+
+# ✅ CORRETO - log_output respeita a flag --quiet
+log_output "Mensagem para o usuário"
+log_output ""
+log_output "${GREEN}Sucesso!${NC}"
+```
+
+**Exceções** - Use `echo` apenas para:
+
+```bash
+# Retornos de função (valores, não mensagens)
+get_version() {
+    echo "1.2.3"  # OK - retorna um valor
+}
+
+# Redirecionamento para arquivos
+echo "export PATH=..." >> ~/.bashrc  # OK - escreve em arquivo
+
+# Pipes que não são saída para o usuário
+echo "content" | sudo tee /etc/config  # OK - pipe para comando
+```
+
+**Por que isso é importante:**
+
+- `log_output` respeita a variável `SILENT` definida por `--quiet`
+- Permite que usuários suprimam saída em scripts automatizados
+- Mantém consistência com outras funções de log (`log_info`, `log_error`, etc.)
+- Facilita debugging com `--verbose` e `--quiet`
+
+### 3. Mensagens Claras
 
 ```bash
 # Informar o que está acontecendo
@@ -646,7 +684,7 @@ log_debug "URL da API: $API_URL"
 log_debug "Versão detectada: $version"
 ```
 
-### 3. Tratamento de Erros
+### 4. Tratamento de Erros
 
 ```bash
 # Verificar comandos antes de usar
@@ -665,14 +703,15 @@ fi
 version=$(get_from_api) || version=$(get_from_git) || return 1
 ```
 
-### 4. Consistência
+### 5. Consistência
 
 - Use sempre as mesmas convenções de nomenclatura
 - Mantenha a ordem das funções consistente
 - Siga o padrão de mensagens do show_help()
 - Use as cores padronizadas ($YELLOW, $GREEN, etc.)
+- **Use `log_output` em vez de `echo` para mensagens de saída**
 
-### 5. Documentação
+### 6. Documentação
 
 ```bash
 # Comentar decisões importantes
@@ -701,16 +740,16 @@ source "$LIB_DIR/internal/installations.sh"
 
 show_help() {
     show_description
-    echo ""
+    log_output ""
     show_usage
-    echo ""
-    echo -e "${LIGHT_GREEN}O que é:${NC}"
-    echo "  Descrição da ferramenta"
-    echo ""
-    echo -e "${LIGHT_GREEN}Opções:${NC}"
-    echo "  -h, --help        Mostra ajuda"
-    echo "  --uninstall       Desinstala"
-    echo "  --update          Atualiza"
+    log_output ""
+    log_output "${LIGHT_GREEN}O que é:${NC}"
+    log_output "  Descrição da ferramenta"
+    log_output ""
+    log_output "${LIGHT_GREEN}Opções:${NC}"
+    log_output "  -h, --help        Mostra ajuda"
+    log_output "  --uninstall       Desinstala"
+    log_output "  --update          Atualiza"
 }
 
 get_tool_version() {

@@ -182,7 +182,7 @@ O plugin deve seguir a estrutura padrão:
 
 ```text
 meu-plugin/
-├── .version              # Versão do plugin
+├── version.txt           # Versão do plugin
 ├── categoria1/
 │   ├── config.yaml       # Config da categoria
 │   ├── comando1/

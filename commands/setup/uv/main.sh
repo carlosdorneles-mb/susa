@@ -11,33 +11,33 @@ show_help() {
     echo ""
     show_usage
     echo ""
-    echo -e "${LIGHT_GREEN}O que é:${NC}"
-    echo "  UV (by Astral) é um gerenciador de pacotes e projetos Python extremamente"
-    echo "  rápido, escrito em Rust. Substitui pip, pip-tools, pipx, poetry, pyenv,"
-    echo "  virtualenv e muito mais, com velocidade 10-100x mais rápida."
+    log_output "${LIGHT_GREEN}O que é:${NC}"
+    log_output "  UV (by Astral) é um gerenciador de pacotes e projetos Python extremamente"
+    log_output "  rápido, escrito em Rust. Substitui pip, pip-tools, pipx, poetry, pyenv,"
+    log_output "  virtualenv e muito mais, com velocidade 10-100x mais rápida."
     echo ""
-    echo -e "${LIGHT_GREEN}Opções:${NC}"
-    echo "  -h, --help        Mostra esta mensagem de ajuda"
-    echo "  --uninstall       Desinstala o UV do sistema"
-    echo "  --update          Atualiza o UV para a versão mais recente"
-    echo "  -v, --verbose     Habilita saída detalhada para depuração"
-    echo "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
+    log_output "${LIGHT_GREEN}Opções:${NC}"
+    log_output "  -h, --help        Mostra esta mensagem de ajuda"
+    log_output "  --uninstall       Desinstala o UV do sistema"
+    log_output "  --update          Atualiza o UV para a versão mais recente"
+    log_output "  -v, --verbose     Habilita saída detalhada para depuração"
+    log_output "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
     echo ""
-    echo -e "${LIGHT_GREEN}Exemplos:${NC}"
-    echo "  susa setup uv              # Instala o UV"
-    echo "  susa setup uv --update     # Atualiza o UV"
-    echo "  susa setup uv --uninstall  # Desinstala o UV"
+    log_output "${LIGHT_GREEN}Exemplos:${NC}"
+    log_output "  susa setup uv              # Instala o UV"
+    log_output "  susa setup uv --update     # Atualiza o UV"
+    log_output "  susa setup uv --uninstall  # Desinstala o UV"
     echo ""
-    echo -e "${LIGHT_GREEN}Pós-instalação:${NC}"
-    echo "  Após a instalação, reinicie o terminal ou execute:"
+    log_output "${LIGHT_GREEN}Pós-instalação:${NC}"
+    log_output "  Após a instalação, reinicie o terminal ou execute:"
     echo "    source ~/.bashrc   (para Bash)"
     echo "    source ~/.zshrc    (para Zsh)"
     echo ""
-    echo -e "${LIGHT_GREEN}Próximos passos:${NC}"
-    echo "  uv init meu-projeto                 # Criar novo projeto"
-    echo "  uv add requests                     # Adicionar dependência"
-    echo "  uv sync                             # Instalar dependências"
-    echo "  uv run python script.py             # Executar script"
+    log_output "${LIGHT_GREEN}Próximos passos:${NC}"
+    log_output "  uv init meu-projeto                 # Criar novo projeto"
+    log_output "  uv add requests                     # Adicionar dependência"
+    log_output "  uv sync                             # Instalar dependências"
+    log_output "  uv run python script.py             # Executar script"
 }
 # Get latest UV version
 get_latest_uv_version() {
@@ -104,8 +104,8 @@ check_existing_installation() {
     if [ $? -eq 0 ] && [ -n "$latest_version" ]; then
         if [ "$current_version" != "$latest_version" ]; then
             echo ""
-            echo -e "${YELLOW}Nova versão disponível ($latest_version).${NC}"
-            echo -e "Para atualizar, execute: ${LIGHT_CYAN}susa setup uv --update${NC}"
+            log_output "${YELLOW}Nova versão disponível ($latest_version).${NC}"
+            log_output "Para atualizar, execute: ${LIGHT_CYAN}susa setup uv --update${NC}"
         fi
     else
         log_warning "Não foi possível verificar atualizações"
@@ -208,15 +208,15 @@ install_uv() {
         echo ""
         echo "Próximos passos:"
         local shell_config=$(detect_shell_config)
-        echo -e "  1. Reinicie o terminal ou execute: ${LIGHT_CYAN}source $shell_config${NC}"
-        echo -e "  2. Crie um novo projeto: ${LIGHT_CYAN}uv init meu-projeto${NC}"
-        echo -e "  3. Use ${LIGHT_CYAN}susa setup uv --help${NC} para mais informações"
+        log_output "  1. Reinicie o terminal ou execute: ${LIGHT_CYAN}source $shell_config${NC}"
+        log_output "  2. Crie um novo projeto: ${LIGHT_CYAN}uv init meu-projeto${NC}"
+        log_output "  3. Use ${LIGHT_CYAN}susa setup uv --help${NC} para mais informações"
 
         # Show uvx info
         echo ""
-        echo -e "${LIGHT_GREEN}Dica:${NC} Use ${LIGHT_CYAN}uvx${NC} para executar ferramentas Python sem instalação:"
+        log_output "${LIGHT_GREEN}Dica:${NC} Use ${LIGHT_CYAN}uvx${NC} para executar ferramentas Python sem instalação:"
         echo "  uvx ruff check .    # Executar ruff"
-        echo "  uvx black .         # Executar black"
+        log_output "  uvx black .         # Executar black"
 
         return 0
     else
@@ -237,7 +237,7 @@ update_uv() {
     if ! command -v uv &>/dev/null; then
         log_error "UV não está instalado"
         echo ""
-        echo -e "${YELLOW}Para instalar, execute:${NC} ${LIGHT_CYAN}susa setup uv${NC}"
+        log_output "${YELLOW}Para instalar, execute:${NC} ${LIGHT_CYAN}susa setup uv${NC}"
         return 1
     fi
 
@@ -296,7 +296,7 @@ uninstall_uv() {
 
     # Confirm uninstallation
     echo ""
-    echo -e "${YELLOW}Deseja realmente desinstalar o UV $version? (s/N)${NC}"
+    log_output "${YELLOW}Deseja realmente desinstalar o UV $version? (s/N)${NC}"
     read -r response
 
     if [[ ! "$response" =~ ^[sS]$ ]]; then
@@ -353,7 +353,7 @@ uninstall_uv() {
 
     # Ask about cache removal
     echo ""
-    echo -e "${YELLOW}Deseja remover também o cache do UV? (s/N)${NC}"
+    log_output "${YELLOW}Deseja remover também o cache do UV? (s/N)${NC}"
     read -r cache_response
 
     if [[ "$cache_response" =~ ^[sS]$ ]]; then

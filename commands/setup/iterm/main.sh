@@ -11,29 +11,29 @@ show_help() {
     echo ""
     show_usage
     echo ""
-    echo -e "${LIGHT_GREEN}O que é:${NC}"
-    echo "  iTerm2 é um substituto para o Terminal do macOS com recursos"
-    echo "  avançados como split panes, busca, autocompletar, histórico,"
+    log_output "${LIGHT_GREEN}O que é:${NC}"
+    log_output "  iTerm2 é um substituto para o Terminal do macOS com recursos"
+    log_output "  avançados como split panes, busca, autocompletar, histórico,"
     echo "  notificações e muito mais."
     echo ""
-    echo -e "${LIGHT_GREEN}Opções:${NC}"
-    echo "  -h, --help        Mostra esta mensagem de ajuda"
-    echo "  --uninstall       Desinstala o iTerm2 do sistema"
-    echo "  --update          Atualiza o iTerm2 para a versão mais recente"
-    echo "  -v, --verbose     Habilita saída detalhada para depuração"
-    echo "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
+    log_output "${LIGHT_GREEN}Opções:${NC}"
+    log_output "  -h, --help        Mostra esta mensagem de ajuda"
+    log_output "  --uninstall       Desinstala o iTerm2 do sistema"
+    log_output "  --update          Atualiza o iTerm2 para a versão mais recente"
+    log_output "  -v, --verbose     Habilita saída detalhada para depuração"
+    log_output "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
     echo ""
-    echo -e "${LIGHT_GREEN}Exemplos:${NC}"
-    echo "  susa setup iterm              # Instala o iTerm2"
-    echo "  susa setup iterm --update     # Atualiza o iTerm2"
-    echo "  susa setup iterm --uninstall  # Desinstala o iTerm2"
+    log_output "${LIGHT_GREEN}Exemplos:${NC}"
+    log_output "  susa setup iterm              # Instala o iTerm2"
+    log_output "  susa setup iterm --update     # Atualiza o iTerm2"
+    log_output "  susa setup iterm --uninstall  # Desinstala o iTerm2"
     echo ""
-    echo -e "${LIGHT_GREEN}Pós-instalação:${NC}"
-    echo "  O iTerm2 estará disponível na pasta Aplicativos."
+    log_output "${LIGHT_GREEN}Pós-instalação:${NC}"
+    log_output "  O iTerm2 estará disponível na pasta Aplicativos."
     echo "  Configure-o como terminal padrão em: Preferências do Sistema > Geral"
     echo ""
-    echo -e "${LIGHT_GREEN}Recursos principais:${NC}"
-    echo "  • Split panes horizontais e verticais"
+    log_output "${LIGHT_GREEN}Recursos principais:${NC}"
+    log_output "  • Split panes horizontais e verticais"
     echo "  • Busca em todo o histórico"
     echo "  • Autocompletar inteligente"
     echo "  • Suporte a temas e cores"
@@ -115,8 +115,8 @@ check_existing_installation() {
     if [ $? -eq 0 ] && [ -n "$latest_version" ]; then
         if [ "$current_version" != "$latest_version" ]; then
             echo ""
-            echo -e "${YELLOW}Nova versão disponível ($latest_version).${NC}"
-            echo -e "Para atualizar, execute: ${LIGHT_CYAN}susa setup iterm --update${NC}"
+            log_output "${YELLOW}Nova versão disponível ($latest_version).${NC}"
+            log_output "Para atualizar, execute: ${LIGHT_CYAN}susa setup iterm --update${NC}"
         fi
     else
         log_warning "Não foi possível verificar atualizações"
@@ -130,8 +130,8 @@ install_iterm() {
     # Check if Homebrew is installed
     if ! check_homebrew; then
         echo ""
-        echo -e "${YELLOW}Para instalar o Homebrew, execute:${NC}"
-        echo "  /bin/bash -c \"\$(curl -fsSL ${ITERM_HOMEBREW_INSTALL_URL:-https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh})\""
+        log_output "${YELLOW}Para instalar o Homebrew, execute:${NC}"
+        log_output "  /bin/bash -c \"\$(curl -fsSL ${ITERM_HOMEBREW_INSTALL_URL:-https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh})\""
         return 1
     fi
 
@@ -179,7 +179,7 @@ update_iterm() {
     if ! brew list --cask iterm2 &>/dev/null; then
         log_error "iTerm2 não está instalado"
         echo ""
-        echo -e "${YELLOW}Para instalar, execute:${NC}"
+        log_output "${YELLOW}Para instalar, execute:${NC}"
         echo "  susa setup iterm"
         return 1
     fi
@@ -233,7 +233,7 @@ uninstall_iterm() {
         if [ -d "/Applications/iTerm.app" ]; then
             log_warning "iTerm2 encontrado em /Applications mas não via Homebrew"
             echo ""
-            echo -e "${YELLOW}Deseja remover manualmente? (s/N)${NC}"
+            log_output "${YELLOW}Deseja remover manualmente? (s/N)${NC}"
             read -r response
 
             if [[ "$response" =~ ^[sS]$ ]]; then
@@ -256,7 +256,7 @@ uninstall_iterm() {
 
     # Confirm uninstallation
     echo ""
-    echo -e "${YELLOW}Deseja realmente desinstalar o iTerm2 $version? (s/N)${NC}"
+    log_output "${YELLOW}Deseja realmente desinstalar o iTerm2 $version? (s/N)${NC}"
     read -r response
 
     if [[ ! "$response" =~ ^[sS]$ ]]; then
@@ -281,7 +281,7 @@ uninstall_iterm() {
 
     # Clean up preferences (optional)
     echo ""
-    echo -e "${YELLOW}Deseja remover as preferências e configurações do iTerm2? (s/N)${NC}"
+    log_output "${YELLOW}Deseja remover as preferências e configurações do iTerm2? (s/N)${NC}"
     read -r response
 
     if [[ "$response" =~ ^[sS]$ ]]; then

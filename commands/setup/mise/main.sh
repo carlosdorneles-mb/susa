@@ -11,32 +11,32 @@ show_help() {
     echo ""
     show_usage
     echo ""
-    echo -e "${LIGHT_GREEN}O que é:${NC}"
-    echo "  Mise (anteriormente rtx) é um gerenciador de versões de ferramentas"
-    echo "  de desenvolvimento polyglot, escrito em Rust. É compatível com ASDF,"
-    echo "  mas oferece melhor performance e recursos adicionais como task runner."
+    log_output "${LIGHT_GREEN}O que é:${NC}"
+    log_output "  Mise (anteriormente rtx) é um gerenciador de versões de ferramentas"
+    log_output "  de desenvolvimento polyglot, escrito em Rust. É compatível com ASDF,"
+    log_output "  mas oferece melhor performance e recursos adicionais como task runner."
     echo ""
-    echo -e "${LIGHT_GREEN}Opções:${NC}"
-    echo "  -h, --help        Mostra esta mensagem de ajuda"
-    echo "  --uninstall       Desinstala o Mise do sistema"
-    echo "  --update          Atualiza o Mise para a versão mais recente"
-    echo "  -v, --verbose     Habilita saída detalhada para depuração"
-    echo "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
+    log_output "${LIGHT_GREEN}Opções:${NC}"
+    log_output "  -h, --help        Mostra esta mensagem de ajuda"
+    log_output "  --uninstall       Desinstala o Mise do sistema"
+    log_output "  --update          Atualiza o Mise para a versão mais recente"
+    log_output "  -v, --verbose     Habilita saída detalhada para depuração"
+    log_output "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
     echo ""
-    echo -e "${LIGHT_GREEN}Exemplos:${NC}"
-    echo "  susa setup mise              # Instala o Mise"
-    echo "  susa setup mise --update     # Atualiza o Mise"
-    echo "  susa setup mise --uninstall  # Desinstala o Mise"
+    log_output "${LIGHT_GREEN}Exemplos:${NC}"
+    log_output "  susa setup mise              # Instala o Mise"
+    log_output "  susa setup mise --update     # Atualiza o Mise"
+    log_output "  susa setup mise --uninstall  # Desinstala o Mise"
     echo ""
-    echo -e "${LIGHT_GREEN}Pós-instalação:${NC}"
-    echo "  Após a instalação, reinicie o terminal ou execute:"
+    log_output "${LIGHT_GREEN}Pós-instalação:${NC}"
+    log_output "  Após a instalação, reinicie o terminal ou execute:"
     echo "    source ~/.bashrc   (para Bash)"
     echo "    source ~/.zshrc    (para Zsh)"
     echo ""
-    echo -e "${LIGHT_GREEN}Próximos passos:${NC}"
-    echo "  mise use --global node@20    # Instalar e usar Node.js 20"
-    echo "  mise use --global python@3.12 # Instalar e usar Python 3.12"
-    echo "  mise install                  # Instalar ferramentas do .mise.toml"
+    log_output "${LIGHT_GREEN}Próximos passos:${NC}"
+    log_output "  mise use --global node@20    # Instalar e usar Node.js 20"
+    log_output "  mise use --global python@3.12 # Instalar e usar Python 3.12"
+    log_output "  mise install                  # Instalar ferramentas do .mise.toml"
 }
 
 # Get latest Mise version from GitHub
@@ -80,7 +80,7 @@ get_mise_version() {
 
 # Get local bin directory path
 get_local_bin_dir() {
-    echo "${MISE_LOCAL_BIN_DIR:-$HOME/.local/bin}"
+    log_output "${MISE_LOCAL_BIN_DIR:-$HOME/.local/bin}"
 }
 
 # Detect operating system and architecture
@@ -107,7 +107,7 @@ detect_os_and_arch() {
     esac
 
     log_debug "SO: $os_name | Arquitetura: $arch" >&2
-    echo "${os_name}:${arch}"
+    log_output "${os_name}:${arch}"
 }
 
 # Check if Mise is already installed
@@ -133,8 +133,8 @@ check_existing_installation() {
         local latest_clean="${latest_version#v}"
         if [ "$current_version" != "$latest_clean" ]; then
             echo ""
-            echo -e "${YELLOW}Nova versão disponível ($latest_clean).${NC}"
-            echo -e "Para atualizar, execute: ${LIGHT_CYAN}susa setup mise --update${NC}"
+            log_output "${YELLOW}Nova versão disponível ($latest_clean).${NC}"
+            log_output "Para atualizar, execute: ${LIGHT_CYAN}susa setup mise --update${NC}"
         fi
     else
         log_warning "Não foi possível verificar atualizações"
@@ -318,9 +318,9 @@ install_mise() {
         log_debug "Executável: $(which mise)"
         echo ""
         echo "Próximos passos:"
-        echo -e "  1. Reinicie o terminal ou execute: ${LIGHT_CYAN}source $shell_config${NC}"
-        echo -e "  2. Instale ferramentas: ${LIGHT_CYAN}mise use --global node@20${NC}"
-        echo -e "  3. Use ${LIGHT_CYAN}susa setup mise --help${NC} para mais informações"
+        log_output "  1. Reinicie o terminal ou execute: ${LIGHT_CYAN}source $shell_config${NC}"
+        log_output "  2. Instale ferramentas: ${LIGHT_CYAN}mise use --global node@20${NC}"
+        log_output "  3. Use ${LIGHT_CYAN}susa setup mise --help${NC} para mais informações"
     else
         log_error "Mise foi instalado mas não está disponível no PATH"
         log_info "Tente reiniciar o terminal ou executar: source $shell_config"
@@ -428,7 +428,7 @@ uninstall_mise() {
 
     # Confirm uninstallation
     echo ""
-    echo -e "${YELLOW}Deseja realmente desinstalar o Mise $version? (s/N)${NC}"
+    log_output "${YELLOW}Deseja realmente desinstalar o Mise $version? (s/N)${NC}"
     read -r response
 
     if [[ ! "$response" =~ ^[sS]$ ]]; then
@@ -491,7 +491,7 @@ uninstall_mise() {
 
     # Ask about cache removal
     echo ""
-    echo -e "${YELLOW}Deseja remover também o cache do Mise? (s/N)${NC}"
+    log_output "${YELLOW}Deseja remover também o cache do Mise? (s/N)${NC}"
     read -r cache_response
 
     if [[ "$cache_response" =~ ^[sS]$ ]]; then

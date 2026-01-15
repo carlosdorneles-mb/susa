@@ -84,10 +84,6 @@ detect_plugin_version() {
 
     if [ -f "$plugin_dir/version.txt" ]; then
         version=$(cat "$plugin_dir/version.txt" | tr -d '\n')
-    elif [ -f "$plugin_dir/VERSION" ]; then
-        version=$(cat "$plugin_dir/VERSION" | tr -d '\n')
-    elif [ -f "$plugin_dir/.version" ]; then
-        version=$(cat "$plugin_dir/.version" | tr -d '\n')
     fi
 
     echo "$version"

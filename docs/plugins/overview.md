@@ -96,8 +96,6 @@ chmod +x meu-plugin/deploy/staging/main.sh
 echo "1.0.0" > meu-plugin/version.txt
 ```
 
-Tambem pode se utilizar o arquivo com a nomeclatura `.version`.
-
 ### 3. Publicar no GitHub
 
 ```bash

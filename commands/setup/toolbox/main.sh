@@ -11,30 +11,30 @@ show_help() {
     echo ""
     show_usage
     echo ""
-    echo -e "${LIGHT_GREEN}O que é:${NC}"
-    echo "  JetBrains Toolbox é um aplicativo que facilita o gerenciamento"
-    echo "  de todas as IDEs da JetBrains (IntelliJ IDEA, PyCharm, WebStorm,"
-    echo "  GoLand, etc.) a partir de uma única interface."
+    log_output "${LIGHT_GREEN}O que é:${NC}"
+    log_output "  JetBrains Toolbox é um aplicativo que facilita o gerenciamento"
+    log_output "  de todas as IDEs da JetBrains (IntelliJ IDEA, PyCharm, WebStorm,"
+    log_output "  GoLand, etc.) a partir de uma única interface."
     echo ""
-    echo -e "${LIGHT_GREEN}Opções:${NC}"
-    echo "  -h, --help        Mostra esta mensagem de ajuda"
-    echo "  --uninstall       Desinstala o JetBrains Toolbox do sistema"
-    echo "  --update          Atualiza o JetBrains Toolbox para a versão mais recente"
-    echo "  -v, --verbose     Habilita saída detalhada para depuração"
-    echo "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
+    log_output "${LIGHT_GREEN}Opções:${NC}"
+    log_output "  -h, --help        Mostra esta mensagem de ajuda"
+    log_output "  --uninstall       Desinstala o JetBrains Toolbox do sistema"
+    log_output "  --update          Atualiza o JetBrains Toolbox para a versão mais recente"
+    log_output "  -v, --verbose     Habilita saída detalhada para depuração"
+    log_output "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
     echo ""
-    echo -e "${LIGHT_GREEN}Exemplos:${NC}"
-    echo "  susa setup jetbrains-toolbox              # Instala o JetBrains Toolbox"
-    echo "  susa setup jetbrains-toolbox --update     # Atualiza o JetBrains Toolbox"
-    echo "  susa setup jetbrains-toolbox --uninstall  # Desinstala o JetBrains Toolbox"
+    log_output "${LIGHT_GREEN}Exemplos:${NC}"
+    log_output "  susa setup jetbrains-toolbox              # Instala o JetBrains Toolbox"
+    log_output "  susa setup jetbrains-toolbox --update     # Atualiza o JetBrains Toolbox"
+    log_output "  susa setup jetbrains-toolbox --uninstall  # Desinstala o JetBrains Toolbox"
     echo ""
-    echo -e "${LIGHT_GREEN}Pós-instalação:${NC}"
-    echo "  O JetBrains Toolbox será iniciado automaticamente."
-    echo "  Use-o para instalar e gerenciar suas IDEs JetBrains."
+    log_output "${LIGHT_GREEN}Pós-instalação:${NC}"
+    log_output "  O JetBrains Toolbox será iniciado automaticamente."
+    log_output "  Use-o para instalar e gerenciar suas IDEs JetBrains."
     echo ""
-    echo -e "${LIGHT_GREEN}Próximos passos:${NC}"
-    echo "  1. Execute o Toolbox a partir do menu de aplicativos"
-    echo "  2. Faça login com sua conta JetBrains"
+    log_output "${LIGHT_GREEN}Próximos passos:${NC}"
+    log_output "  1. Execute o Toolbox a partir do menu de aplicativos"
+    log_output "  2. Faça login com sua conta JetBrains"
     echo "  3. Instale as IDEs que desejar"
 }
 
@@ -77,7 +77,7 @@ detect_os_and_arch() {
             ;;
     esac
 
-    echo "${os_name}:${arch}"
+    log_output "${os_name}:${arch}"
 }
 
 # Get installation directory based on OS
@@ -89,7 +89,7 @@ get_install_dir() {
             echo "$HOME/.local/share/JetBrains/Toolbox"
             ;;
         darwin)
-            echo "$HOME/Library/Application Support/JetBrains/Toolbox"
+            log_output "$HOME/Library/Application Support/JetBrains/Toolbox"
             ;;
     esac
 }
@@ -160,8 +160,8 @@ check_existing_installation() {
     if [ $? -eq 0 ] && [ -n "$latest_version" ]; then
         if [ "$current_version" != "$latest_version" ] && [ "$current_version" != "desconhecida" ]; then
             echo ""
-            echo -e "${YELLOW}Nova versão disponível ($latest_version).${NC}"
-            echo -e "Para atualizar, execute: ${LIGHT_CYAN}susa setup jetbrains-toolbox --update${NC}"
+            log_output "${YELLOW}Nova versão disponível ($latest_version).${NC}"
+            log_output "Para atualizar, execute: ${LIGHT_CYAN}susa setup jetbrains-toolbox --update${NC}"
         fi
     else
         log_warning "Não foi possível verificar atualizações"
@@ -421,10 +421,10 @@ install_toolbox() {
 
         echo ""
         echo "Próximos passos:"
-        echo -e "  1. O JetBrains Toolbox foi iniciado automaticamente"
-        echo -e "  2. Faça login com sua conta JetBrains"
-        echo -e "  3. Instale as IDEs que desejar através do Toolbox"
-        echo -e "  4. Use ${LIGHT_CYAN}susa setup jetbrains-toolbox --help${NC} para mais informações"
+        log_output "  1. O JetBrains Toolbox foi iniciado automaticamente"
+        log_output "  2. Faça login com sua conta JetBrains"
+        log_output "  3. Instale as IDEs que desejar através do Toolbox"
+        log_output "  4. Use ${LIGHT_CYAN}susa setup jetbrains-toolbox --help${NC} para mais informações"
     else
         log_error "Falha na instalação do JetBrains Toolbox"
         return $install_result
@@ -519,7 +519,7 @@ uninstall_toolbox() {
     log_debug "Localização: $(get_binary_location)"
 
     echo ""
-    echo -e "${YELLOW}Deseja realmente desinstalar o JetBrains Toolbox $current_version? (s/N)${NC}"
+    log_output "${YELLOW}Deseja realmente desinstalar o JetBrains Toolbox $current_version? (s/N)${NC}"
     read -r response
 
     if [[ ! "$response" =~ ^[sS]$ ]]; then
@@ -576,7 +576,7 @@ uninstall_toolbox() {
     fi
 
     echo ""
-    echo -e "${YELLOW}Deseja remover também os dados das IDEs instaladas pelo Toolbox? (s/N)${NC}"
+    log_output "${YELLOW}Deseja remover também os dados das IDEs instaladas pelo Toolbox? (s/N)${NC}"
     read -r response
 
     if [[ "$response" =~ ^[sS]$ ]]; then

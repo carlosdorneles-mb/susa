@@ -11,30 +11,30 @@ show_help() {
     echo ""
     show_usage
     echo ""
-    echo -e "${LIGHT_GREEN}O que é:${NC}"
-    echo "  ASDF é um gerenciador de versões universal que suporta múltiplas"
-    echo "  linguagens de programação através de plugins (Node.js, Python, Ruby,"
+    log_output "${LIGHT_GREEN}O que é:${NC}"
+    log_output "  ASDF é um gerenciador de versões universal que suporta múltiplas"
+    log_output "  linguagens de programação através de plugins (Node.js, Python, Ruby,"
     echo "  Elixir, Java, e muitos outros)."
     echo ""
-    echo -e "${LIGHT_GREEN}Opções:${NC}"
-    echo "  -h, --help        Mostra esta mensagem de ajuda"
-    echo "  --uninstall       Desinstala o ASDF do sistema"
-    echo "  --update          Atualiza o ASDF para a versão mais recente"
-    echo "  -v, --verbose     Habilita saída detalhada para depuração"
-    echo "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
+    log_output "${LIGHT_GREEN}Opções:${NC}"
+    log_output "  -h, --help        Mostra esta mensagem de ajuda"
+    log_output "  --uninstall       Desinstala o ASDF do sistema"
+    log_output "  --update          Atualiza o ASDF para a versão mais recente"
+    log_output "  -v, --verbose     Habilita saída detalhada para depuração"
+    log_output "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
     echo ""
-    echo -e "${LIGHT_GREEN}Exemplos:${NC}"
-    echo "  susa setup asdf              # Instala o ASDF"
-    echo "  susa setup asdf --update     # Atualiza o ASDF"
-    echo "  susa setup asdf --uninstall  # Desinstala o ASDF"
+    log_output "${LIGHT_GREEN}Exemplos:${NC}"
+    log_output "  susa setup asdf              # Instala o ASDF"
+    log_output "  susa setup asdf --update     # Atualiza o ASDF"
+    log_output "  susa setup asdf --uninstall  # Desinstala o ASDF"
     echo ""
-    echo -e "${LIGHT_GREEN}Pós-instalação:${NC}"
-    echo "  Após a instalação, reinicie o terminal ou execute:"
+    log_output "${LIGHT_GREEN}Pós-instalação:${NC}"
+    log_output "  Após a instalação, reinicie o terminal ou execute:"
     echo "    source ~/.bashrc   (para Bash)"
     echo "    source ~/.zshrc    (para Zsh)"
     echo ""
-    echo -e "${LIGHT_GREEN}Próximos passos:${NC}"
-    echo "  asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git"
+    log_output "${LIGHT_GREEN}Próximos passos:${NC}"
+    log_output "  asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git"
     echo "  asdf install nodejs latest"
     echo "  asdf global nodejs latest"
 }
@@ -83,7 +83,7 @@ get_asdf_version() {
 
 # Get local bin directory path
 get_local_bin_dir() {
-    echo "${ASDF_LOCAL_BIN_DIR:-$HOME/.local/bin}"
+    log_output "${ASDF_LOCAL_BIN_DIR:-$HOME/.local/bin}"
 }
 
 # Detect operating system and architecture
@@ -117,7 +117,7 @@ detect_os_and_arch() {
     esac
 
     log_debug "SO: $os_name | Arquitetura: $arch" >&2
-    echo "${os_name}:${arch}"
+    log_output "${os_name}:${arch}"
 }
 
 # Check if ASDF is already installed and ask about update
@@ -143,8 +143,8 @@ check_existing_installation() {
     if [ $? -eq 0 ] && [ -n "$latest_version" ]; then
         if [ "$current_version" != "$latest_version" ]; then
             echo ""
-            echo -e "${YELLOW}Nova versão disponível ($latest_version).${NC}"
-            echo -e "Para atualizar, execute: ${LIGHT_CYAN}susa setup asdf --update${NC}"
+            log_output "${YELLOW}Nova versão disponível ($latest_version).${NC}"
+            log_output "Para atualizar, execute: ${LIGHT_CYAN}susa setup asdf --update${NC}"
         fi
     else
         log_warning "Não foi possível verificar atualizações"
@@ -318,9 +318,9 @@ install_asdf() {
         mark_installed "asdf" "$version"
         echo ""
         echo "Próximos passos:"
-        echo -e "  1. Reinicie o terminal ou execute: ${LIGHT_CYAN}source $shell_config${NC}"
-        echo -e "  2. Liste plugins disponíveis: ${LIGHT_CYAN}asdf plugin list all${NC}"
-        echo -e "  3. Use ${LIGHT_CYAN}susa setup asdf --help${NC} para mais informações"
+        log_output "  1. Reinicie o terminal ou execute: ${LIGHT_CYAN}source $shell_config${NC}"
+        log_output "  2. Liste plugins disponíveis: ${LIGHT_CYAN}asdf plugin list all${NC}"
+        log_output "  3. Use ${LIGHT_CYAN}susa setup asdf --help${NC} para mais informações"
     else
         log_error "ASDF foi instalado mas não está disponível no PATH"
         log_info "Tente reiniciar o terminal ou executar: source $shell_config"
@@ -426,7 +426,7 @@ update_asdf() {
         log_success "ASDF atualizado com sucesso para versão $new_version!"
         update_version "asdf" "$new_version"
         echo ""
-        echo "Plugins e versões de ferramentas foram preservados."
+        log_output "Plugins e versões de ferramentas foram preservados."
     else
         log_error "Falha na atualização do ASDF"
         return 1

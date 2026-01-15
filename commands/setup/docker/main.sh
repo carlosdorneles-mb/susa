@@ -11,33 +11,33 @@ show_help() {
     echo ""
     show_usage
     echo ""
-    echo -e "${LIGHT_GREEN}O que é:${NC}"
-    echo "  Docker é a plataforma líder em containers para desenvolvimento,"
-    echo "  empacotamento e execução de aplicações. Esta instalação inclui"
-    echo "  apenas o Docker CLI e Engine, sem o Docker Desktop."
+    log_output "${LIGHT_GREEN}O que é:${NC}"
+    log_output "  Docker é a plataforma líder em containers para desenvolvimento,"
+    log_output "  empacotamento e execução de aplicações. Esta instalação inclui"
+    log_output "  apenas o Docker CLI e Engine, sem o Docker Desktop."
     echo ""
-    echo -e "${LIGHT_GREEN}Opções:${NC}"
-    echo "  -h, --help        Mostra esta mensagem de ajuda"
-    echo "  --uninstall       Desinstala o Docker do sistema"
-    echo "  --update          Atualiza o Docker para a versão mais recente"
-    echo "  -v, --verbose     Habilita saída detalhada para depuração"
-    echo "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
+    log_output "${LIGHT_GREEN}Opções:${NC}"
+    log_output "  -h, --help        Mostra esta mensagem de ajuda"
+    log_output "  --uninstall       Desinstala o Docker do sistema"
+    log_output "  --update          Atualiza o Docker para a versão mais recente"
+    log_output "  -v, --verbose     Habilita saída detalhada para depuração"
+    log_output "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
     echo ""
-    echo -e "${LIGHT_GREEN}Exemplos:${NC}"
-    echo "  susa setup docker              # Instala o Docker"
-    echo "  susa setup docker --update     # Atualiza o Docker"
-    echo "  susa setup docker --uninstall  # Desinstala o Docker"
+    log_output "${LIGHT_GREEN}Exemplos:${NC}"
+    log_output "  susa setup docker              # Instala o Docker"
+    log_output "  susa setup docker --update     # Atualiza o Docker"
+    log_output "  susa setup docker --uninstall  # Desinstala o Docker"
     echo ""
-    echo -e "${LIGHT_GREEN}Pós-instalação:${NC}"
-    echo "  Após a instalação, faça logout e login novamente para que"
-    echo "  as permissões do grupo docker sejam aplicadas, ou execute:"
+    log_output "${LIGHT_GREEN}Pós-instalação:${NC}"
+    log_output "  Após a instalação, faça logout e login novamente para que"
+    log_output "  as permissões do grupo docker sejam aplicadas, ou execute:"
     echo "    newgrp docker"
     echo ""
-    echo -e "${LIGHT_GREEN}Próximos passos:${NC}"
-    echo "  docker --version               # Verifica a instalação"
-    echo "  docker run hello-world         # Teste com container simples"
-    echo "  docker images                  # Lista imagens disponíveis"
-    echo "  docker ps                      # Lista containers em execução"
+    log_output "${LIGHT_GREEN}Próximos passos:${NC}"
+    log_output "  docker --version               # Verifica a instalação"
+    log_output "  docker run hello-world         # Teste com container simples"
+    log_output "  docker images                  # Lista imagens disponíveis"
+    log_output "  docker ps                      # Lista containers em execução"
 }
 
 get_latest_docker_version() {
@@ -102,8 +102,8 @@ check_existing_installation() {
     if [ $? -eq 0 ] && [ -n "$latest_version" ]; then
         if [ "$current_version" != "$latest_version" ]; then
             echo ""
-            echo -e "${YELLOW}Nova versão disponível ($latest_version).${NC}"
-            echo -e "Para atualizar, execute: ${LIGHT_CYAN}susa setup docker --update${NC}"
+            log_output "${YELLOW}Nova versão disponível ($latest_version).${NC}"
+            log_output "Para atualizar, execute: ${LIGHT_CYAN}susa setup docker --update${NC}"
         fi
     else
         log_warning "Não foi possível verificar atualizações"
@@ -136,7 +136,7 @@ detect_os_and_arch() {
             ;;
     esac
 
-    echo "${os_name}:${arch}"
+    log_output "${os_name}:${arch}"
 }
 
 # Configure user to run Docker without sudo
@@ -175,7 +175,7 @@ install_docker_macos() {
     # Check if Homebrew is installed
     if ! command -v brew &>/dev/null; then
         log_error "Homebrew não está instalado. Instale-o primeiro:"
-        echo "  /bin/bash -c \"\$(curl -fsSL ${DOCKER_HOMEBREW_INSTALL_URL:-https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh})\""
+        log_output "  /bin/bash -c \"\$(curl -fsSL ${DOCKER_HOMEBREW_INSTALL_URL:-https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh})\""
         return 1
     fi
 
@@ -385,13 +385,13 @@ install_docker() {
             echo "Próximos passos:"
 
             if [ "$os_name" = "darwin" ]; then
-                echo -e "  1. Instale colima: ${LIGHT_CYAN}brew install colima${NC}"
-                echo -e "  2. Inicie colima: ${LIGHT_CYAN}colima start${NC}"
-                echo -e "  3. Execute: ${LIGHT_CYAN}docker run hello-world${NC}"
+                log_output "  1. Instale colima: ${LIGHT_CYAN}brew install colima${NC}"
+                log_output "  2. Inicie colima: ${LIGHT_CYAN}colima start${NC}"
+                log_output "  3. Execute: ${LIGHT_CYAN}docker run hello-world${NC}"
             else
-                echo -e "  1. Faça logout e login novamente, ou execute: ${LIGHT_CYAN}newgrp docker${NC}"
-                echo -e "  2. Execute: ${LIGHT_CYAN}docker run hello-world${NC}"
-                echo -e "  3. Use ${LIGHT_CYAN}susa setup docker --help${NC} para mais informações"
+                log_output "  1. Faça logout e login novamente, ou execute: ${LIGHT_CYAN}newgrp docker${NC}"
+                log_output "  2. Execute: ${LIGHT_CYAN}docker run hello-world${NC}"
+                log_output "  3. Use ${LIGHT_CYAN}susa setup docker --help${NC} para mais informações"
             fi
         else
             log_error "Docker foi instalado mas não está disponível no PATH"
@@ -529,7 +529,7 @@ uninstall_docker() {
     log_debug "Executável: $(which docker)"
 
     echo ""
-    echo -e "${YELLOW}Deseja realmente desinstalar o Docker $current_version? (s/N)${NC}"
+    log_output "${YELLOW}Deseja realmente desinstalar o Docker $current_version? (s/N)${NC}"
     read -r response
 
     if [[ ! "$response" =~ ^[sS]$ ]]; then
@@ -612,7 +612,7 @@ uninstall_docker() {
     fi
 
     echo ""
-    echo -e "${YELLOW}Deseja remover também as imagens, containers e volumes do Docker? (s/N)${NC}"
+    log_output "${YELLOW}Deseja remover também as imagens, containers e volumes do Docker? (s/N)${NC}"
     read -r response
 
     if [[ "$response" =~ ^[sS]$ ]]; then

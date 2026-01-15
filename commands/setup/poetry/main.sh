@@ -11,33 +11,33 @@ show_help() {
     echo ""
     show_usage
     echo ""
-    echo -e "${LIGHT_GREEN}O que é:${NC}"
-    echo "  Poetry é um gerenciador de dependências e empacotamento para Python."
-    echo "  Facilita o gerenciamento de bibliotecas, criação de ambientes virtuais"
-    echo "  e publicação de pacotes Python de forma simplificada."
+    log_output "${LIGHT_GREEN}O que é:${NC}"
+    log_output "  Poetry é um gerenciador de dependências e empacotamento para Python."
+    log_output "  Facilita o gerenciamento de bibliotecas, criação de ambientes virtuais"
+    log_output "  e publicação de pacotes Python de forma simplificada."
     echo ""
-    echo -e "${LIGHT_GREEN}Opções:${NC}"
-    echo "  -h, --help        Mostra esta mensagem de ajuda"
-    echo "  --uninstall       Desinstala o Poetry do sistema"
-    echo "  --update          Atualiza o Poetry para a versão mais recente"
-    echo "  -v, --verbose     Habilita saída detalhada para depuração"
-    echo "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
+    log_output "${LIGHT_GREEN}Opções:${NC}"
+    log_output "  -h, --help        Mostra esta mensagem de ajuda"
+    log_output "  --uninstall       Desinstala o Poetry do sistema"
+    log_output "  --update          Atualiza o Poetry para a versão mais recente"
+    log_output "  -v, --verbose     Habilita saída detalhada para depuração"
+    log_output "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
     echo ""
-    echo -e "${LIGHT_GREEN}Exemplos:${NC}"
-    echo "  susa setup poetry              # Instala o Poetry"
-    echo "  susa setup poetry --update     # Atualiza o Poetry"
-    echo "  susa setup poetry --uninstall  # Desinstala o Poetry"
+    log_output "${LIGHT_GREEN}Exemplos:${NC}"
+    log_output "  susa setup poetry              # Instala o Poetry"
+    log_output "  susa setup poetry --update     # Atualiza o Poetry"
+    log_output "  susa setup poetry --uninstall  # Desinstala o Poetry"
     echo ""
-    echo -e "${LIGHT_GREEN}Pós-instalação:${NC}"
-    echo "  Após a instalação, reinicie o terminal ou execute:"
+    log_output "${LIGHT_GREEN}Pós-instalação:${NC}"
+    log_output "  Após a instalação, reinicie o terminal ou execute:"
     echo "    source ~/.bashrc   (para Bash)"
     echo "    source ~/.zshrc    (para Zsh)"
     echo ""
-    echo -e "${LIGHT_GREEN}Próximos passos:${NC}"
-    echo "  poetry new meu-projeto              # Criar novo projeto"
-    echo "  poetry add requests                 # Adicionar dependência"
-    echo "  poetry install                      # Instalar dependências"
-    echo "  poetry run python script.py         # Executar script"
+    log_output "${LIGHT_GREEN}Próximos passos:${NC}"
+    log_output "  poetry new meu-projeto              # Criar novo projeto"
+    log_output "  poetry add requests                 # Adicionar dependência"
+    log_output "  poetry install                      # Instalar dependências"
+    log_output "  poetry run python script.py         # Executar script"
 }
 # Get latest Poetry version
 get_latest_poetry_version() {
@@ -80,7 +80,7 @@ get_poetry_version() {
 
 # Get Poetry installation path
 get_poetry_home() {
-    echo "${POETRY_HOME:-$HOME/.local/share/pypoetry}"
+    log_output "${POETRY_HOME:-$HOME/.local/share/pypoetry}"
 }
 
 # Check if Poetry is already installed
@@ -104,8 +104,8 @@ check_existing_installation() {
     if [ $? -eq 0 ] && [ -n "$latest_version" ]; then
         if [ "$current_version" != "$latest_version" ]; then
             echo ""
-            echo -e "${YELLOW}Nova versão disponível ($latest_version).${NC}"
-            echo -e "Para atualizar, execute: ${LIGHT_CYAN}susa setup poetry --update${NC}"
+            log_output "${YELLOW}Nova versão disponível ($latest_version).${NC}"
+            log_output "Para atualizar, execute: ${LIGHT_CYAN}susa setup poetry --update${NC}"
         fi
     else
         log_warning "Não foi possível verificar atualizações"
@@ -208,9 +208,9 @@ install_poetry() {
         echo ""
         echo "Próximos passos:"
         local shell_config=$(detect_shell_config)
-        echo -e "  1. Reinicie o terminal ou execute: ${LIGHT_CYAN}source $shell_config${NC}"
-        echo -e "  2. Crie um novo projeto: ${LIGHT_CYAN}poetry new meu-projeto${NC}"
-        echo -e "  3. Use ${LIGHT_CYAN}susa setup poetry --help${NC} para mais informações"
+        log_output "  1. Reinicie o terminal ou execute: ${LIGHT_CYAN}source $shell_config${NC}"
+        log_output "  2. Crie um novo projeto: ${LIGHT_CYAN}poetry new meu-projeto${NC}"
+        log_output "  3. Use ${LIGHT_CYAN}susa setup poetry --help${NC} para mais informações"
 
         return 0
     else
@@ -231,7 +231,7 @@ update_poetry() {
     if ! command -v poetry &>/dev/null; then
         log_error "Poetry não está instalado"
         echo ""
-        echo -e "${YELLOW}Para instalar, execute:${NC} ${LIGHT_CYAN}susa setup poetry${NC}"
+        log_output "${YELLOW}Para instalar, execute:${NC} ${LIGHT_CYAN}susa setup poetry${NC}"
         return 1
     fi
 
@@ -292,7 +292,7 @@ uninstall_poetry() {
 
     # Confirm uninstallation
     echo ""
-    echo -e "${YELLOW}Deseja realmente desinstalar o Poetry $version? (s/N)${NC}"
+    log_output "${YELLOW}Deseja realmente desinstalar o Poetry $version? (s/N)${NC}"
     read -r response
 
     if [[ ! "$response" =~ ^[sS]$ ]]; then
@@ -376,7 +376,7 @@ uninstall_poetry() {
 
     # Ask about cache and config removal
     echo ""
-    echo -e "${YELLOW}Deseja remover também o cache e configurações do Poetry? (s/N)${NC}"
+    log_output "${YELLOW}Deseja remover também o cache e configurações do Poetry? (s/N)${NC}"
     read -r config_response
 
     if [[ "$config_response" =~ ^[sS]$ ]]; then

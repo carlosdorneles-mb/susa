@@ -111,8 +111,7 @@ Detecta a versão de um plugin no diretório.
 **Lógica:**
 
 1. Verifica `version.txt`
-2. Se não existe, verifica `VERSION`
-3. Se não existe, retorna "1.0.0"
+2. Se não existe, retorna "0.0.0"
 
 ```bash
 version=$(detect_plugin_version "/opt/susa/plugins/myplugin")

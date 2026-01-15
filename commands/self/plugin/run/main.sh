@@ -241,7 +241,7 @@ show_help() {
     log_output ""
     log_output "${LIGHT_GREEN}Estrutura esperada do plugin:${NC}"
     log_output "  plugin-name/"
-    log_output "    .version              # Versão do plugin (ou version.txt)"
+    log_output "    version.txt           # Versão do plugin"
     log_output "    categoria1/"
     log_output "      config.yaml         # Configuração da categoria"
     log_output "      comando1/"

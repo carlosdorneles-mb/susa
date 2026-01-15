@@ -176,7 +176,7 @@ susa self plugin add user/cli-plugin-name
 Durante a instalação:
 
 - Clona o repositório
-- Detecta versão (de version.txt ou VERSION)
+- Detecta versão (de version.txt)
 - Registra no registry.yaml
 
 ### Remover Plugin
