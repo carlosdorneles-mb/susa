@@ -94,6 +94,68 @@ _susa_completion() {
 
     local susa_dir="$(dirname "$(dirname "$(readlink -f "$(command -v susa)")")")"  # Volta 2 níveis
 
+    # Função para detectar o OS atual (linux ou mac)
+    _susa_get_os() {
+        local uname_cmd
+        for uname_cmd in uname /usr/bin/uname /bin/uname; do
+            if command -v "$uname_cmd" >/dev/null 2>&1; then
+                if [[ "$("$uname_cmd" 2>/dev/null)" == "Darwin" ]]; then
+                    echo "mac"
+                else
+                    echo "linux"
+                fi
+                return 0
+            fi
+        done
+        echo "linux"  # fallback
+    }
+
+    # Função para verificar se comando é compatível com o OS atual
+    _susa_is_compatible() {
+        local category="$1"
+        local command="$2"
+        local current_os="$(_susa_get_os)"
+        local config_file=""
+
+        # Tentar encontrar config.yaml do comando (commands ou plugins)
+        if [ -f "$susa_dir/commands/$category/$command/config.yaml" ]; then
+            config_file="$susa_dir/commands/$category/$command/config.yaml"
+        elif [ -d "$susa_dir/plugins" ]; then
+            for plugin_dir in "$susa_dir/plugins"/*/ ; do
+                if [ -f "${plugin_dir}${category}/${command}/config.yaml" ]; then
+                    config_file="${plugin_dir}${category}/${command}/config.yaml"
+                    break
+                fi
+            done
+        fi
+
+        # Se não encontrou config, assume compatível
+        [ -z "$config_file" ] && return 0
+
+        # Verifica se tem restrição de OS (usa comandos com fallback)
+        local grep_cmd sed_cmd tr_cmd
+        for grep_cmd in grep /usr/bin/grep /bin/grep; do command -v "$grep_cmd" >/dev/null 2>&1 && break; done
+        for sed_cmd in sed /usr/bin/sed /bin/sed; do command -v "$sed_cmd" >/dev/null 2>&1 && break; done
+        for tr_cmd in tr /usr/bin/tr /bin/tr; do command -v "$tr_cmd" >/dev/null 2>&1 && break; done
+
+        # Se não tiver as ferramentas necessárias, assume compatível
+        if ! command -v "$grep_cmd" >/dev/null 2>&1; then return 0; fi
+
+        # Tenta formato multi-linha (os:\n  - mac\n  - linux)
+        local os_list=$("$grep_cmd" -A5 '^os:' "$config_file" 2>/dev/null | "$grep_cmd" -E '^  - ' 2>/dev/null | "$sed_cmd" 's/^  - //' 2>/dev/null | "$tr_cmd" -d '"' 2>/dev/null)
+
+        # Se não encontrou em formato multi-linha, tenta formato inline (os: ["mac", "linux"])
+        if [ -z "$os_list" ]; then
+            os_list=$("$grep_cmd" '^os:' "$config_file" 2>/dev/null | "$sed_cmd" 's/^os: *//' 2>/dev/null | "$sed_cmd" 's/\[//g; s/\]//g; s/,/ /g' 2>/dev/null | "$tr_cmd" -d '"' 2>/dev/null)
+        fi
+
+        # Se não tem restrição de OS, é compatível
+        [ -z "$os_list" ] && return 0
+
+        # Verifica se o OS atual está na lista
+        echo "$os_list" | "$grep_cmd" -qw "$current_os" 2>/dev/null
+    }
+
     # Função para listar categorias (commands + plugins)
     _susa_get_categories() {
         local categories=""
@@ -124,10 +186,11 @@ _susa_completion() {
     _susa_get_commands() {
         local category="$1"
         local commands=""
+        local all_commands=""
 
         # Lista de commands/categoria/
         if [ -d "$susa_dir/commands/$category" ]; then
-            commands="$(ls -1 "$susa_dir/commands/$category" 2>/dev/null | grep -v "config.yaml")"
+            all_commands="$(ls -1 "$susa_dir/commands/$category" 2>/dev/null | grep -v "config.yaml")"
         fi
 
         # Lista de plugins/*/categoria/
@@ -135,10 +198,17 @@ _susa_completion() {
             for plugin_dir in "$susa_dir/plugins"/*/ ; do
                 if [ -d "$plugin_dir/$category" ]; then
                     local plugin_cmds="$(ls -1 "$plugin_dir/$category" 2>/dev/null | grep -v "config.yaml")"
-                    commands="$commands $plugin_cmds"
+                    all_commands="$all_commands $plugin_cmds"
                 fi
             done
         fi
+
+        # Filtra comandos compatíveis com o OS atual
+        for cmd in $all_commands; do
+            if _susa_is_compatible "$category" "$cmd"; then
+                commands="$commands $cmd"
+            fi
+        done
 
         echo "$commands" | tr ' ' '\n' | sort -u
     }
@@ -207,17 +277,82 @@ _susa() {
 
     local susa_dir="$(dirname "$(dirname "$(readlink -f "$(command -v susa)")")")"  # Volta 2 níveis
 
+    # Função para detectar o OS atual
+    _susa_get_os() {
+        local uname_cmd
+        for uname_cmd in uname /usr/bin/uname /bin/uname; do
+            if command -v "$uname_cmd" >/dev/null 2>&1; then
+                if [[ "$("$uname_cmd" 2>/dev/null)" == "Darwin" ]]; then
+                    echo "mac"
+                else
+                    echo "linux"
+                fi
+                return 0
+            fi
+        done
+        echo "linux"  # fallback
+    }
+
+    # Função para verificar compatibilidade de comando
+    _susa_is_compatible() {
+        local category="$1"
+        local command="$2"
+        local current_os="$(_susa_get_os)"
+        local config_file=""
+
+        # Procura config.yaml
+        if [ -f "$susa_dir/commands/$category/$command/config.yaml" ]; then
+            config_file="$susa_dir/commands/$category/$command/config.yaml"
+        elif [ -d "$susa_dir/plugins" ]; then
+            for plugin_dir in "$susa_dir/plugins"/*/; do
+                if [ -f "${plugin_dir}${category}/${command}/config.yaml" ]; then
+                    config_file="${plugin_dir}${category}/${command}/config.yaml"
+                    break
+                fi
+            done
+        fi
+
+        [ -z "$config_file" ] && return 0
+
+        # Usa comandos com fallback para caminhos absolutos
+        local grep_cmd sed_cmd tr_cmd
+        for grep_cmd in grep /usr/bin/grep /bin/grep; do command -v "$grep_cmd" >/dev/null 2>&1 && break; done
+        for sed_cmd in sed /usr/bin/sed /bin/sed; do command -v "$sed_cmd" >/dev/null 2>&1 && break; done
+        for tr_cmd in tr /usr/bin/tr /bin/tr; do command -v "$tr_cmd" >/dev/null 2>&1 && break; done
+
+        # Se não tiver as ferramentas, assume compatível
+        if ! command -v "$grep_cmd" >/dev/null 2>&1; then return 0; fi
+
+        # Tenta formato multi-linha (os:\n  - mac\n  - linux)
+        local os_list=$("$grep_cmd" -A5 '^os:' "$config_file" 2>/dev/null | "$grep_cmd" -E '^  - ' 2>/dev/null | "$sed_cmd" 's/^  - //' 2>/dev/null | "$tr_cmd" -d '"' 2>/dev/null)
+
+        # Se não encontrou em formato multi-linha, tenta formato inline (os: ["mac", "linux"])
+        if [ -z "$os_list" ]; then
+            os_list=$("$grep_cmd" '^os:' "$config_file" 2>/dev/null | "$sed_cmd" 's/^os: *//' 2>/dev/null | "$sed_cmd" 's/\[//g; s/\]//g; s/,/ /g' 2>/dev/null | "$tr_cmd" -d '"' 2>/dev/null)
+        fi
+
+        [ -z "$os_list" ] && return 0
+
+        echo "$os_list" | "$grep_cmd" -qw "$current_os" 2>/dev/null
+    }
+
     # Função para listar itens de um diretório
     _susa_list_items() {
         local path="$1"
         local items=()
+        local all_items=()
+        local category="${path%%/*}"
+        local is_command_level=false
+
+        # Detecta se está no nível de comandos (categoria/comando)
+        [[ "$path" =~ ^[^/]+$ ]] && is_command_level=true
 
         # Lista de commands/path/
         if [ -d "$susa_dir/commands/$path" ]; then
             for item in "$susa_dir/commands/$path"/*/; do
                 if [ -d "$item" ]; then
                     local name="${item:t}"
-                    [ "$name" != "config.yaml" ] && items+=("$name")
+                    [ "$name" != "config.yaml" ] && all_items+=("$name")
                 fi
             done
         fi
@@ -229,11 +364,22 @@ _susa() {
                     for item in "$plugin_dir/$path"/*/; do
                         if [ -d "$item" ]; then
                             local name="${item:t}"
-                            [ "$name" != "config.yaml" ] && items+=("$name")
+                            [ "$name" != "config.yaml" ] && all_items+=("$name")
                         fi
                     done
                 fi
             done
+        fi
+
+        # Filtra por compatibilidade se estiver listando comandos
+        if [ "$is_command_level" = true ]; then
+            for item in "${all_items[@]}"; do
+                if _susa_is_compatible "$category" "$item"; then
+                    items+=("$item")
+                fi
+            done
+        else
+            items=("${all_items[@]}")
         fi
 
         # Remove duplicatas
@@ -246,9 +392,16 @@ _susa() {
         local -a completions
         local path=""
 
+        # Valida se CURRENT existe e é um número
+        [[ -z "$CURRENT" || ! "$CURRENT" =~ ^[0-9]+$ ]] && CURRENT=${#words[@]}
+
+        # Protege contra arrays vazios ou inválidos
+        [[ ${#words[@]} -lt 2 ]] && return 0
+
         # Constrói o path baseado nos argumentos já fornecidos
-        for ((i=2; i<=$CURRENT; i++)); do
-            if [ -n "$words[$i]" ] && [ "$i" -lt "$CURRENT" ]; then
+        local max_index=$((CURRENT - 1))
+        for ((i=2; i<=max_index; i++)); do
+            if [[ -n "${words[$i]:-}" ]]; then
                 if [ -z "$path" ]; then
                     path="$words[$i]"
                 else
@@ -287,6 +440,91 @@ function __susa_get_dir
     end
 end
 
+# Função para detectar o OS atual
+function __susa_get_os
+    set -l uname_cmd ""
+    for cmd in uname /usr/bin/uname /bin/uname
+        if command -v $cmd >/dev/null 2>&1
+            set uname_cmd $cmd
+            break
+        end
+    end
+
+    if test -n "$uname_cmd"
+        if test ($uname_cmd 2>/dev/null) = "Darwin"
+            echo "mac"
+        else
+            echo "linux"
+        end
+    else
+        echo "linux"  # fallback
+    end
+end
+
+# Função para verificar compatibilidade de comando
+function __susa_is_compatible
+    set -l category $argv[1]
+    set -l command $argv[2]
+    set -l susa_dir (__susa_get_dir)
+    set -l current_os (__susa_get_os)
+    set -l config_file ""
+
+    # Procura config.yaml
+    if test -f "$susa_dir/commands/$category/$command/config.yaml"
+        set config_file "$susa_dir/commands/$category/$command/config.yaml"
+    else if test -d "$susa_dir/plugins"
+        for plugin_dir in $susa_dir/plugins/*/
+            if test -f "$plugin_dir$category/$command/config.yaml"
+                set config_file "$plugin_dir$category/$command/config.yaml"
+                break
+            end
+        end
+    end
+
+    # Se não encontrou config, assume compatível
+    test -z "$config_file"; and return 0
+
+    # Encontra comandos com fallback
+    set -l grep_cmd ""
+    set -l sed_cmd ""
+    set -l tr_cmd ""
+    for cmd in grep /usr/bin/grep /bin/grep
+        if command -v $cmd >/dev/null 2>&1
+            set grep_cmd $cmd
+            break
+        end
+    end
+    for cmd in sed /usr/bin/sed /bin/sed
+        if command -v $cmd >/dev/null 2>&1
+            set sed_cmd $cmd
+            break
+        end
+    end
+    for cmd in tr /usr/bin/tr /bin/tr
+        if command -v $cmd >/dev/null 2>&1
+            set tr_cmd $cmd
+            break
+        end
+    end
+
+    # Se não tiver ferramentas, assume compatível
+    test -z "$grep_cmd"; and return 0
+
+    # Tenta formato multi-linha (os:\n  - mac\n  - linux)
+    set -l os_list ($grep_cmd -A5 '^os:' "$config_file" 2>/dev/null | $grep_cmd -E '^  - ' 2>/dev/null | $sed_cmd 's/^  - //' 2>/dev/null | $tr_cmd -d '"' 2>/dev/null)
+
+    # Se não encontrou em formato multi-linha, tenta formato inline (os: ["mac", "linux"])
+    if test -z "$os_list"
+        set os_list ($grep_cmd '^os:' "$config_file" 2>/dev/null | $sed_cmd 's/^os: *//' 2>/dev/null | $sed_cmd 's/\[//g; s/\]//g; s/,/ /g' 2>/dev/null | $tr_cmd -d '"' 2>/dev/null)
+    end
+
+    # Se não tem restrição, é compatível
+    test -z "$os_list"; and return 0
+
+    # Verifica se o OS atual está na lista
+    echo "$os_list" | $grep_cmd -qw "$current_os" 2>/dev/null
+end
+
 # Função para listar categorias
 function __susa_categories
     set -l susa_dir (__susa_get_dir)
@@ -322,6 +560,7 @@ function __susa_commands
     set -l susa_dir (__susa_get_dir)
     test -z "$susa_dir"; and return
 
+    set -l all_commands
     set -l commands
 
     # Lista de commands/categoria/
@@ -329,7 +568,7 @@ function __susa_commands
         for item in $susa_dir/commands/$category/*/
             set -l cmd (basename $item)
             if test -d $item; and test "$cmd" != "config.yaml"
-                set -a commands $cmd
+                set -a all_commands $cmd
             end
         end
     end
@@ -341,10 +580,17 @@ function __susa_commands
                 for item in $plugin_dir/$category/*/
                     set -l cmd (basename $item)
                     if test -d $item; and test "$cmd" != "config.yaml"
-                        set -a commands $cmd
+                        set -a all_commands $cmd
                     end
                 end
             end
+        end
+    end
+
+    # Filtra comandos compatíveis com o OS atual
+    for cmd in $all_commands
+        if __susa_is_compatible "$category" "$cmd"
+            set -a commands $cmd
         end
     end
 

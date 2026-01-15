@@ -69,6 +69,34 @@ source ~/.zshrc
 - ✅ Zsh
 - ✅ Fish
 
+## Filtragem Inteligente por OS
+
+O completion filtra automaticamente comandos baseado no sistema operacional:
+
+- **No Linux:** Mostra apenas comandos compatíveis com Linux
+- **No Mac:** Mostra apenas comandos compatíveis com macOS
+
+### Exemplo
+
+```bash
+# No Linux
+susa setup <TAB>
+# Mostra: tilix (e outros comandos Linux)
+# Oculta: iterm (exclusivo Mac)
+
+# No Mac
+susa setup <TAB>
+# Mostra: iterm (e outros comandos Mac)
+# Oculta: tilix (exclusivo Linux)
+```
+
+**Como funciona:**
+
+1. O completion verifica o arquivo `config.yaml` de cada comando
+2. Lê o campo `os: ["linux", "mac"]`
+3. Filtra comandos incompatíveis com o OS atual
+4. Exibe apenas sugestões relevantes
+
 ## Veja também
 
 - [susa self info](info.md) - Ver informações da instalação

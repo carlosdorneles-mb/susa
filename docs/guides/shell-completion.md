@@ -28,8 +28,13 @@ susa self completion --install
 Depois, recarregue seu shell:
 
 ```bash
-source ~/.zshrc    # Para Zsh
-source ~/.bashrc   # Para Bash
+# Para Zsh
+rm -f ~/.zcompdump*  # Limpa cache (recomendado)
+source ~/.zshrc
+
+# Para Bash
+source ~/.bashrc
+
 # Para Fish não é necessário recarregar, o completion é carregado automaticamente
 ```
 
@@ -162,11 +167,49 @@ plugins/
       app/       → Comando do plugin
 ```
 
-### 3. **Sugestões Inteligentes**
+### 3. **Filtragem por Sistema Operacional** 🆕
+
+O completion **filtra automaticamente** comandos baseado no OS:
+
+**Processo:**
+
+1. Detecta o OS atual (`linux` ou `mac`)
+2. Para cada comando, verifica o arquivo `config.yaml`
+3. Lê o campo `os: ["linux", "mac"]`
+4. Oculta comandos incompatíveis com o OS atual
+
+**Exemplo prático:**
+
+```yaml
+# commands/setup/iterm/config.yaml
+os: ["mac"]  # Apenas macOS
+```
+
+```yaml
+# commands/setup/tilix/config.yaml
+os: ["linux"]  # Apenas Linux
+```
+
+**Resultado:**
+
+```bash
+# No Linux
+susa setup <TAB>
+# ✅ Mostra: tilix, docker, podman, mise...
+# ❌ Oculta: iterm (exclusivo Mac)
+
+# No macOS
+susa setup <TAB>
+# ✅ Mostra: iterm, docker, podman, mise...
+# ❌ Oculta: tilix (exclusivo Linux)
+```
+
+### 4. **Sugestões Inteligentes**
 
 - Remove duplicatas automaticamente
 - Ordena alfabeticamente
 - Funciona em múltiplos níveis de subcategorias
+- Filtra comandos por compatibilidade de OS
 
 ---
 
@@ -216,6 +259,24 @@ Se não encontrar, certifique-se de que `~/.local/bin` está no PATH:
 echo $PATH | grep ".local/bin"
 ```
 
+### Comandos incompatíveis aparecem no completion
+
+**Sintoma:** Comandos específicos de outros sistemas operacionais aparecem (ex: iTerm no Linux, Tilix no macOS)
+
+**Causa:** Completion instalado de versão antiga que não suporta filtragem por OS
+
+**Solução:** Reinstale o completion:
+
+```bash
+susa self completion --uninstall
+susa self completion --install
+# Para Zsh, limpe o cache
+rm -f ~/.zcompdump*
+exec $SHELL
+```
+
+**Verificação:** No Linux, `susa setup <TAB>` NÃO deve mostrar `iterm`. No macOS, NÃO deve mostrar `tilix`.
+
 ---
 
 ## 📋 Shells Suportados
@@ -264,10 +325,31 @@ echo $PATH | grep ".local/bin"
 O script de completion:
 
 1. Detecta onde o Susa CLI está instalado
-2. Lista diretórios em `commands/` e `plugins/`
-3. Filtra apenas diretórios (ignora arquivos como `config.yaml`)
-4. Remove duplicatas
-5. Retorna sugestões ordenadas
+2. Detecta o sistema operacional atual (Linux ou macOS)
+3. Lista diretórios em `commands/` e `plugins/`
+4. Para cada comando, verifica compatibilidade de OS:
+   - Lê `config.yaml` do comando
+   - Verifica campo `os: [...]` (suporta formatos inline e multi-linha)
+   - Filtra comandos incompatíveis
+
+    **Formatos suportados de `os` em config.yaml:**
+
+    ```yaml
+    # Formato inline (compacto)
+    os: ["mac"]
+    os: ["linux", "mac"]
+
+    # Formato multi-linha (legível)
+    os:
+    - mac
+    - linux
+    ```
+
+    **⚠️ Nota importante:** Comandos sem `config.yaml` são sempre exibidos no completion, independente do sistema operacional. Isso é intencional para permitir comandos multiplataforma simples.
+
+5. Filtra apenas diretórios (ignora arquivos como `config.yaml`)
+6. Remove duplicatas
+7. Retorna sugestões ordenadas e compatíveis com o SO atual
 
 ---
 
@@ -322,6 +404,20 @@ susa <TAB>  # Mostra categorias do plugin também
 
 **Não!** O completion é dinâmico e detecta novos comandos automaticamente.
 
+### Preciso reinstalar após atualizar o Susa CLI?
+
+**Sim, recomendado!** Se a versão incluir melhorias no completion (como a filtragem por OS), reinstale para obter as atualizações:
+
+```bash
+susa self completion --uninstall
+susa self completion --install
+# Limpar cache do Zsh (se aplicável)
+rm -f ~/.zcompdump* 2>/dev/null || true
+exec $SHELL
+```
+
+**⚠️ Importante:** Versões antigas do completion podem não filtrar corretamente comandos por SO. Se você vê comandos incompatíveis (ex: iTerm no Linux), reinstale o completion.
+
 ### O completion funciona com plugins?
 
 **Sim!** O completion detecta automaticamente comandos de plugins instalados.
@@ -340,9 +436,30 @@ susa self completion zsh --install
 Reinstale para atualizar:
 
 ```bash
+susa self completion --uninstall
 susa self completion --install
 source ~/.zshrc  # ou ~/.bashrc
 ```
+
+### Como verificar se o filtro de OS está funcionando?
+
+**No Linux:**
+
+```bash
+susa setup <TAB>
+# ✅ Deve mostrar: docker, podman, tilix, mise, poetry, uv...
+# ❌ NÃO deve mostrar: iterm (exclusivo macOS)
+```
+
+**No macOS:**
+
+```bash
+susa setup <TAB>
+# ✅ Deve mostrar: docker, podman, iterm, mise, poetry, uv...
+# ❌ NÃO deve mostrar: tilix (exclusivo Linux)
+```
+
+Se comandos incompatíveis aparecerem, reinstale o completion.
 
 ---
 
