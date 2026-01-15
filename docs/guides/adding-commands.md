@@ -267,7 +267,7 @@ Para detalhes completos de todas as bibliotecas, veja [Referência de Biblioteca
 
 ## 🎯 Boas Práticas
 
-1. **Use as funções auxiliares do CLI**: 
+1. **Use as funções auxiliares do CLI**:
 2. **Funções de log**: Use `log_*` em vez de `echo` para mensagens
 3. **Função de ajuda**: Sempre implemente `show_help()` com `show_description` e `show_usage`
 4. **Tratamento de erros**: Use `set -euo pipefail` no início

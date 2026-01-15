@@ -177,7 +177,7 @@ Para rodar a documentação localmente:
 
 ```bash
 # Instalar dependências (apenas primeira vez)
-make install
+make install-dev
 
 # Iniciar servidor de documentação
 make doc
@@ -193,10 +193,7 @@ Para desenvolver com suporte de IDE completo (autocomplete, linting em tempo rea
 
 ```bash
 # Instalar ferramentas de desenvolvimento e dependências para documentação
-make install
-
-# Instalar Git hooks (pre-commit com shellcheck + shfmt)
-make install-hooks
+make install-dev
 
 # Configurar VS Code
 make setup-vscode
@@ -206,18 +203,25 @@ Após executar `setup-vscode`, reabra o VS Code e instale as extensões recomend
 
 ### Git Hooks
 
-O projeto inclui um **pre-commit hook** que executa automaticamente `shellcheck` e `shfmt` antes de cada commit:
+O projeto utiliza **pre-commit** do Python para executar verificações automaticamente antes de cada commit.
+
+Os hooks irão executar:
+
+- ✅ ShellCheck (verificação de qualidade do código)
+- ✅ shfmt (verificação de formatação)
+- ✅ yamllint (validação de arquivos YAML)
+- ✅ Verificações gerais (espaços em branco, fim de arquivo, etc.)
+- ❌ Bloquear commit se houver erros
+
+Para executar manualmente todos os hooks:
 
 ```bash
-# Instalar hook
-make install-hooks
+# Executar em todos os arquivos
+pre-commit run --all-files
+
+# Executar em arquivos staged
+pre-commit run
 ```
-
-O hook irá:
-
-- ✅ Verificar qualidade do código com ShellCheck
-- ✅ Verificar formatação com shfmt
-- ❌ Bloquear commit se houver erros
 
 Para corrigir problemas de formatação automaticamente: `make format`
 

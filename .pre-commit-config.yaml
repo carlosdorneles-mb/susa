@@ -1,0 +1,63 @@
+# Pre-commit hooks configuration
+# See https://pre-commit.com for more information
+
+repos:
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+        name: ShellCheck
+        args: ["-x", "--severity=warning"]
+        types: [shell]
+        exclude: ^(\.git|\.vscode|docs)/
+        stages: [pre-commit, manual]
+
+  - repo: https://github.com/scop/pre-commit-shfmt
+    rev: v3.9.0-1
+    hooks:
+      - id: shfmt
+        name: shfmt
+        args: ["-i", "4", "-ci", "-sr", "-d"]
+        types: [shell]
+        exclude: ^(\.git|\.vscode|docs)/
+        stages: [pre-commit, manual]
+
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+        name: yamllint
+        args: ["-c", ".yamllint"]
+        types: [yaml]
+        exclude: ^(\.git|\.vscode)/
+        stages: [pre-commit, manual]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        name: Trim trailing whitespace
+        exclude: ^(\.git|\.vscode)/
+        stages: [pre-commit, manual]
+      - id: end-of-file-fixer
+        name: Fix end of files
+        exclude: ^(\.git|\.vscode)/
+        stages: [pre-commit, manual]
+      - id: check-yaml
+        name: Check YAML syntax
+        exclude: ^(\.git|\.vscode)/
+        stages: [pre-commit, manual]
+      - id: check-added-large-files
+        name: Check for large files
+        args: ['--maxkb=500']
+        stages: [pre-commit, manual]
+      - id: check-case-conflict
+        name: Check for case conflicts
+        stages: [pre-commit, manual]
+      - id: check-merge-conflict
+        name: Check for merge conflicts
+        stages: [pre-commit, manual]
+      - id: mixed-line-ending
+        name: Check mixed line endings
+        args: ['--fix=lf']
+        stages: [pre-commit, manual]

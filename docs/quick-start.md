@@ -274,7 +274,7 @@ Agora que você tem o básico, explore mais:
 
 1. **Descoberta automática**: Comandos são descobertos da estrutura de diretórios
 2. **Campo `script`**: Determina se é comando (executável) ou categoria (navegável)
-3. **Use as funções auxiliares do CLI**: 
+3. **Use as funções auxiliares do CLI**:
 4. **Funções de log**: Use `log_*` em vez de `echo`
 5. **Teste com DEBUG**: `DEBUG=true susa comando` para ver logs detalhados
 

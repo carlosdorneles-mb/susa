@@ -26,18 +26,18 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
-      
+
       - name: Cache dependencies
         uses: actions/cache@v3
         with:
@@ -45,7 +45,7 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-      
+
       - name: Install MkDocs and dependencies
         run: |
           pip install --upgrade pip
@@ -55,13 +55,13 @@ jobs:
           pip install mkdocs-glightbox
           pip install mkdocs-panzoom-plugin
           pip install mkdocs-include-markdown-plugin
-      
+
       - name: Build documentation
         run: mkdocs build --strict
-      
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
-      
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
