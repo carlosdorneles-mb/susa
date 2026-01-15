@@ -32,30 +32,23 @@ show_help() {
 
 # Main function
 main() {
-    log_debug "=== Listando plugins instalados ==="
-
     log_output "${BOLD}Plugins Instalados${NC}"
     log_output ""
 
     REGISTRY_FILE="$PLUGINS_DIR/registry.yaml"
-    log_debug "Registry file: $REGISTRY_FILE"
 
     if [ ! -f "$REGISTRY_FILE" ]; then
-        log_debug "Registry file não existe"
         log_info "Nenhum plugin instalado"
         log_output ""
         log_output "Para instalar plugins, use: ${LIGHT_CYAN}susa self plugin add <url>${NC}"
         return 0
     fi
-    log_debug "Registry file encontrado"
 
     # Read plugins from registry using yq
-    log_debug "Lendo quantidade de plugins do registry"
     local plugin_count=$(yq eval '.plugins | length' "$REGISTRY_FILE" 2> /dev/null || echo 0)
     log_debug "Total de plugins no registry: $plugin_count"
 
     if [ "$plugin_count" -eq 0 ]; then
-        log_debug "Registry vazio"
         log_info "Nenhum plugin instalado"
         log_output ""
         log_output "Para instalar plugins, use: ${LIGHT_CYAN}susa self plugin add <url>${NC}"
@@ -63,12 +56,8 @@ main() {
     fi
 
     # Iterate through plugins in registry
-    log_debug "Iterando pelos plugins"
     for ((i = 0; i < plugin_count; i++)); do
-        log_debug "Processando plugin $((i + 1))/$plugin_count"
-
         local plugin_name=$(yq eval ".plugins[$i].name" "$REGISTRY_FILE" 2> /dev/null)
-        log_debug "Plugin name: $plugin_name"
 
         local source_url=$(yq eval ".plugins[$i].source" "$REGISTRY_FILE" 2> /dev/null)
         local version=$(yq eval ".plugins[$i].version" "$REGISTRY_FILE" 2> /dev/null)
@@ -79,39 +68,30 @@ main() {
 
         # Skip if plugin name is null
         if [ "$plugin_name" = "null" ]; then
-            log_debug "Plugin name é null, pulando"
             continue
         fi
 
         # If commands not in registry, count from directory (fallback)
         if [ "$cmd_count" = "null" ] || [ -z "$cmd_count" ]; then
-            log_debug "Comando count não no registry, contando do diretório"
             if [ -d "$PLUGINS_DIR/$plugin_name" ]; then
                 cmd_count=$(find "$PLUGINS_DIR/$plugin_name" -name "config.yaml" -type f | wc -l)
-                log_debug "Comandos contados: $cmd_count"
             else
                 cmd_count=0
-                log_debug "Diretório do plugin não existe"
             fi
         fi
 
         # If categories not in registry, get from directory (fallback)
         if [ "$categories" = "null" ] || [ -z "$categories" ]; then
-            log_debug "Categorias não no registry, obtendo do diretório"
             if [ -d "$PLUGINS_DIR/$plugin_name" ]; then
                 categories=$(get_plugin_categories "$PLUGINS_DIR/$plugin_name")
-                log_debug "Categorias: $categories"
             else
                 categories="${GRAY}(não disponível)${NC}"
-                log_debug "Diretório do plugin não existe"
             fi
         fi
 
         # Display plugin information
-        log_debug "Exibindo informações do plugin $plugin_name"
         if [ "$is_dev" = "true" ]; then
             log_output "${LIGHT_CYAN}📦 $plugin_name ${MAGENTA}[DEV]${NC}"
-            log_debug "Plugin é DEV"
         else
             log_output "${LIGHT_CYAN}📦 $plugin_name${NC}"
         fi
@@ -125,7 +105,6 @@ main() {
     done
 
     log_output "${GREEN}Total: $plugin_count plugin(s)${NC}"
-    log_debug "=== Listagem concluída ==="
 }
 
 # Parse arguments first, before running main
@@ -137,7 +116,6 @@ while [[ $# -gt 0 ]]; do
             ;;
         -v | --verbose)
             export DEBUG=1
-            log_debug "Modo verbose ativado"
             shift
             ;;
         -q | --quiet)

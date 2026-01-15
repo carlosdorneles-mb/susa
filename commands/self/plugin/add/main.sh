@@ -82,8 +82,6 @@ is_local_path() {
 validate_local_plugin() {
     local plugin_dir="$1"
 
-    log_debug "Validando estrutura do plugin local: $plugin_dir"
-
     # Expand ~ to home directory
     plugin_dir="${plugin_dir/#\~/$HOME}"
 
@@ -153,7 +151,6 @@ install_local_plugin() {
 
     # Count commands
     local cmd_count=$(count_plugin_commands "$validated_path")
-    log_debug "Total de comandos: $cmd_count"
 
     # Get categories
     local categories=$(get_plugin_categories "$validated_path")
@@ -184,7 +181,6 @@ install_local_plugin() {
     log_output ""
 
     # Update lock file
-    log_debug "Atualizando lock file"
     update_lock_file
 
     log_output ""
@@ -197,8 +193,6 @@ install_local_plugin() {
 # Check if plugin is already installed and show information
 check_plugin_already_installed() {
     local plugin_name="$1"
-
-    log_debug "Verificando se plugin '$plugin_name' já está instalado"
 
     # Check if plugin exists in plugins directory (installed via Git)
     local is_git_plugin=false
@@ -333,7 +327,6 @@ main() {
     local use_ssh="${2:-false}"
     local provider="${3:-github}"
 
-    log_debug "=== Iniciando instalação de plugin ==="
     log_debug "Plugin URL/Path: $plugin_url"
     log_debug "Use SSH: $use_ssh"
     log_debug "Provider: $provider"
@@ -375,7 +368,6 @@ main() {
     log_debug "Detectado URL Git"
 
     # Normalize URL (convert user/repo to full URL)
-    log_debug "Normalizando URL do plugin"
     plugin_url=$(normalize_git_url "$plugin_url" "$use_ssh" "$provider")
     log_debug "URL normalizada: $plugin_url"
 
@@ -395,11 +387,9 @@ main() {
     fi
 
     # Check if git is installed
-    log_debug "Verificando se Git está instalado"
     ensure_git_installed || exit 1
 
     # Validate repository access
-    log_debug "Validando acesso ao repositório"
     if ! validate_repo_access "$plugin_url"; then
         log_error "Não foi possível acessar o repositório"
         log_debug "Falha na validação de acesso ao repositório"
@@ -417,7 +407,6 @@ main() {
     log_debug "Acesso ao repositório validado com sucesso"
 
     # Create plugins directory if it doesn't exist
-    log_debug "Criando diretório de plugins se necessário: $PLUGINS_DIR"
     mkdir -p "$PLUGINS_DIR"
 
     # Clone the repository
@@ -425,29 +414,23 @@ main() {
     log_debug "Destino: $PLUGINS_DIR/$plugin_name"
     if ! clone_plugin "$plugin_url" "$PLUGINS_DIR/$plugin_name"; then
         log_error "Falha ao clonar o repositório"
-        log_debug "Removendo diretório parcial"
         rm -rf "${PLUGINS_DIR:?}/${plugin_name:?}"
         exit 1
     fi
     log_debug "Clone concluído com sucesso"
 
     # Detect plugin version
-    log_debug "Detectando versão do plugin"
     local plugin_version=$(detect_plugin_version "$PLUGINS_DIR/$plugin_name")
     log_debug "Versão detectada: $plugin_version"
 
     # Count installed commands and get categories
-    log_debug "Contando comandos do plugin"
     local cmd_count=$(count_plugin_commands "$PLUGINS_DIR/$plugin_name")
-    log_debug "Total de comandos: $cmd_count"
 
-    log_debug "Obtendo categorias do plugin"
     local categories=$(get_plugin_categories "$PLUGINS_DIR/$plugin_name")
     log_debug "Categorias: $categories"
 
     # Register in registry.yaml
     local registry_file="$PLUGINS_DIR/registry.yaml"
-    log_debug "Registry file: $registry_file"
     log_debug "Garantindo existência do registry"
     ensure_registry_exists "$registry_file"
 
@@ -458,9 +441,7 @@ main() {
     show_installation_success "$plugin_name" "$plugin_url" "$plugin_version" "$cmd_count"
 
     # Update lock file to make plugin commands available
-    log_debug "Atualizando lock file para disponibilizar comandos do plugin"
     update_lock_file
-    log_debug "=== Instalação concluída ==="
 
     log_output ""
     log_info "💡 Os comandos do plugin já estão disponíveis!"
@@ -478,7 +459,6 @@ while [[ $# -gt 0 ]]; do
             ;;
         -v | --verbose)
             export DEBUG=1
-            log_debug "Modo verbose ativado"
             shift
             ;;
         -q | --quiet)

@@ -106,13 +106,11 @@ detect_os_and_arch() {
             ;;
     esac
 
-    log_debug "SO: $os_name | Arquitetura: $arch" >&2
     log_output "${os_name}:${arch}"
 }
 
 # Check if Mise is already installed
 check_existing_installation() {
-    log_debug "Verificando instalação existente do Mise..."
 
     if ! command -v mise &> /dev/null; then
         log_debug "Mise não está instalado"
@@ -126,7 +124,6 @@ check_existing_installation() {
     mark_installed "mise" "$current_version"
 
     # Check for updates
-    log_debug "Obtendo última versão..."
     local latest_version=$(get_latest_mise_version)
     if [ $? -eq 0 ] && [ -n "$latest_version" ]; then
         # Remove 'v' prefix if present
@@ -185,7 +182,6 @@ download_mise_release() {
     local download_url="$1"
     local output_file="/tmp/mise.tar.gz"
 
-    log_debug "URL: $download_url" >&2
     log_info "Baixando Mise..." >&2
 
     curl -L --progress-bar \
@@ -216,7 +212,6 @@ extract_and_setup_binary() {
 
     # Create bin directory
     mkdir -p "$bin_dir"
-    log_debug "Diretório criado: $bin_dir"
 
     # Extract binary
     local temp_dir="/tmp/mise-extract-$$"
@@ -266,7 +261,6 @@ install_mise_release() {
     local bin_dir=$(get_local_bin_dir)
     local mise_bin="$bin_dir/mise"
 
-    log_debug "Obtendo última versão..."
     local mise_version=$(get_latest_mise_version)
     if [ $? -ne 0 ] || [ -z "$mise_version" ]; then
         return 1
@@ -315,7 +309,6 @@ install_mise() {
         local version=$(get_mise_version)
         log_success "Mise $version instalado com sucesso!"
         mark_installed "mise" "$version"
-        log_debug "Executável: $(which mise)"
         echo ""
         echo "Próximos passos:"
         log_output "  1. Reinicie o terminal ou execute: ${LIGHT_CYAN}source $shell_config${NC}"
@@ -339,10 +332,8 @@ update_mise() {
 
     local current_version=$(get_mise_version)
     log_info "Versão atual: $current_version"
-    log_debug "Executável: $(which mise)"
 
     # Get latest version
-    log_debug "Obtendo última versão..."
     local mise_version=$(get_latest_mise_version)
     if [ $? -ne 0 ] || [ -z "$mise_version" ]; then
         return 1
@@ -424,7 +415,6 @@ uninstall_mise() {
 
     local version=$(get_mise_version)
     log_debug "Versão a ser removida: $version"
-    log_debug "Executável: $(which mise)"
 
     # Confirm uninstallation
     echo ""
@@ -445,21 +435,17 @@ uninstall_mise() {
     # Remove Mise data directory
     local mise_data_dir="$HOME/.local/share/mise"
     if [ -d "$mise_data_dir" ]; then
-        log_debug "Removendo diretório de dados: $mise_data_dir"
         rm -rf "$mise_data_dir"
     fi
 
     local mise_config_dir="${MISE_CONFIG_DIR:-$HOME/.config/mise}"
     if [ -d "$mise_config_dir" ]; then
-        log_debug "Removendo diretório de configuração: $mise_config_dir"
         rm -rf "$mise_config_dir"
     fi
 
     # Remove shell configurations
     if [ -f "$shell_config" ] && is_mise_configured "$shell_config"; then
         local backup_file="${shell_config}.backup.$(date +%Y%m%d%H%M%S)"
-
-        log_debug "Removendo configurações de $shell_config..."
 
         # Create backup
         cp "$shell_config" "$backup_file"
@@ -475,12 +461,10 @@ uninstall_mise() {
     fi
 
     # Verify removal
-    log_debug "Verificando remoção..."
 
     if ! command -v mise &> /dev/null; then
         log_success "Mise desinstalado com sucesso!"
         mark_uninstalled "mise"
-        log_debug "Executável removido"
 
         echo ""
         log_info "Reinicie o terminal ou execute: source $shell_config"
@@ -495,12 +479,10 @@ uninstall_mise() {
     read -r cache_response
 
     if [[ "$cache_response" =~ ^[sS]$ ]]; then
-        log_debug "Removendo cache..."
 
         local cache_dir="$HOME/.cache/mise"
         if [ -d "$cache_dir" ]; then
             rm -rf "$cache_dir" 2> /dev/null || true
-            log_debug "Cache removido: $cache_dir"
         fi
 
         log_success "Cache removido"
@@ -522,7 +504,6 @@ main() {
                 ;;
             -v | --verbose)
                 export DEBUG=1
-                log_debug "Modo verbose ativado"
                 shift
                 ;;
             -q | --quiet)
@@ -546,7 +527,6 @@ main() {
     done
 
     # Execute action
-    log_debug "Ação selecionada: $action"
 
     case "$action" in
         install)

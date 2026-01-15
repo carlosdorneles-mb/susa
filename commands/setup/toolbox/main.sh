@@ -141,7 +141,6 @@ get_installed_version() {
 
 # Check if JetBrains Toolbox is already installed
 check_existing_installation() {
-    log_debug "Verificando instalação existente do JetBrains Toolbox..."
 
     if ! check_toolbox_installed; then
         log_debug "JetBrains Toolbox não está instalado"
@@ -155,7 +154,6 @@ check_existing_installation() {
     mark_installed "toolbox" "$current_version"
 
     # Check for updates
-    log_debug "Obtendo última versão..."
     local latest_version=$(get_latest_toolbox_version)
     if [ $? -eq 0 ] && [ -n "$latest_version" ]; then
         if [ "$current_version" != "$latest_version" ] && [ "$current_version" != "desconhecida" ]; then
@@ -186,8 +184,6 @@ install_toolbox_linux() {
     local temp_dir="/tmp/jetbrains-toolbox-$$"
     local install_dir=$(get_install_dir)
     local bin_dir=$(get_local_bin_dir)
-
-    log_debug "URL: $download_url"
 
     # Create temp directory
     mkdir -p "$temp_dir"
@@ -221,8 +217,6 @@ install_toolbox_linux() {
         rm -rf "$temp_dir"
         return 1
     fi
-
-    log_debug "Diretório extraído: $extracted_dir"
 
     # Create installation directory
     mkdir -p "$install_dir/bin"
@@ -286,8 +280,6 @@ install_toolbox_macos() {
     local temp_dir="/tmp/jetbrains-toolbox-$$"
     local install_dir=$(get_install_dir)
 
-    log_debug "URL: $download_url"
-
     # Create temp directory
     mkdir -p "$temp_dir"
 
@@ -346,8 +338,6 @@ create_desktop_entry() {
     local desktop_file="$HOME/.local/share/applications/jetbrains-toolbox.desktop"
     local icon_path="$HOME/.local/share/JetBrains/Toolbox/toolbox.svg"
 
-    log_debug "Criando atalho desktop..."
-
     mkdir -p "$(dirname "$desktop_file")"
     mkdir -p "$(dirname "$icon_path")"
 
@@ -380,21 +370,18 @@ install_toolbox() {
     log_info "Iniciando instalação do JetBrains Toolbox..."
 
     # Get latest version
-    log_debug "Obtendo última versão..."
     local toolbox_version=$(get_latest_toolbox_version)
     if [ $? -ne 0 ] || [ -z "$toolbox_version" ]; then
         return 1
     fi
 
     # Detect OS and architecture
-    log_debug "Detectando SO e arquitetura..."
     local os_arch=$(detect_os_and_arch)
     if [ $? -ne 0 ]; then
         return 1
     fi
 
     local os_name="${os_arch%:*}"
-    log_debug "SO: $os_name | Arquitetura: ${os_arch#*:}"
 
     log_info "Instalando JetBrains Toolbox $toolbox_version..."
 
@@ -446,7 +433,6 @@ update_toolbox() {
     log_debug "Localização: $(get_binary_location)"
 
     # Get latest version
-    log_debug "Obtendo última versão..."
     local latest_version=$(get_latest_toolbox_version)
     if [ $? -ne 0 ] || [ -z "$latest_version" ]; then
         return 1
@@ -473,7 +459,6 @@ update_toolbox() {
     sleep 5
 
     # Remove old installation
-    log_debug "Removendo versão anterior..."
     local binary_location=$(get_binary_location)
 
     if [ "$os_name" = "mac" ]; then
@@ -562,14 +547,12 @@ uninstall_toolbox() {
     local install_dir=$(get_install_dir)
     if [ -d "$install_dir" ]; then
         rm -rf "$install_dir"
-        log_debug "Diretório de instalação removido: $install_dir"
     fi
 
     # Verify removal
     if ! check_toolbox_installed; then
         log_success "JetBrains Toolbox desinstalado com sucesso!"
         mark_uninstalled "toolbox"
-        log_debug "Remoção verificada"
     else
         log_error "Falha ao desinstalar JetBrains Toolbox completamente"
         return 1
@@ -583,12 +566,7 @@ uninstall_toolbox() {
         log_info "Removendo dados das IDEs..."
 
         if [ "$os_name" = "darwin" ]; then
-            rm -rf "$HOME/Library/Application Support/JetBrains" 2> /dev/null || log_debug "Diretório não encontrado"
-            rm -rf "$HOME/Library/Caches/JetBrains" 2> /dev/null || log_debug "Cache não encontrado"
             rm -rf "$HOME/Library/Logs/JetBrains" 2> /dev/null || log_debug "Logs não encontrados"
-        else
-            rm -rf "$HOME/.local/share/JetBrains" 2> /dev/null || log_debug "Diretório não encontrado"
-            rm -rf "$HOME/.cache/JetBrains" 2> /dev/null || log_debug "Cache não encontrado"
         fi
 
         log_info "Dados removidos"
@@ -608,7 +586,6 @@ main() {
                 ;;
             -v | --verbose)
                 export DEBUG=1
-                log_debug "Modo verbose ativado"
                 shift
                 ;;
             -q | --quiet)
@@ -632,7 +609,6 @@ main() {
     done
 
     # Execute action
-    log_debug "Ação selecionada: $action"
 
     case "$action" in
         install)

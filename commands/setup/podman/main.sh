@@ -84,7 +84,6 @@ get_local_bin_dir() {
 
 # Check if Podman is already installed and ask about update
 check_existing_installation() {
-    log_debug "Verificando instalação existente do Podman..."
 
     if ! command -v podman &> /dev/null; then
         log_debug "Podman não está instalado"
@@ -98,7 +97,6 @@ check_existing_installation() {
     mark_installed "podman" "$current_version"
 
     # Check for updates
-    log_debug "Obtendo última versão..."
     local latest_version=$(get_latest_podman_version)
     if [ $? -eq 0 ] && [ -n "$latest_version" ]; then
         # Remove 'v' prefix if present
@@ -154,7 +152,6 @@ install_podman_linux() {
     log_info "Instalando Podman no Linux..."
 
     # Get latest version
-    log_debug "Obtendo última versão..."
     local podman_version=$(get_latest_podman_version)
     if [ $? -ne 0 ] || [ -z "$podman_version" ]; then
         return 1
@@ -179,7 +176,6 @@ install_podman_linux() {
     local output_file="/tmp/podman-remote.tar.gz"
 
     log_info "Baixando Podman ${podman_version}..."
-    log_debug "URL: $download_url"
 
     if ! curl -L --progress-bar \
         --connect-timeout 30 \
@@ -357,7 +353,6 @@ update_podman() {
     log_info "Versão atual: $current_version"
 
     # Get latest version
-    log_debug "Obtendo última versão..."
     local podman_version=$(get_latest_podman_version)
     if [ $? -ne 0 ] || [ -z "$podman_version" ]; then
         return 1
@@ -490,7 +485,6 @@ main() {
                 ;;
             -v | --verbose)
                 export DEBUG=1
-                log_debug "Modo verbose ativado"
                 shift
                 ;;
             -q | --quiet)
@@ -514,7 +508,6 @@ main() {
     done
 
     # Execute action
-    log_debug "Ação selecionada: $action"
 
     case "$action" in
         install)

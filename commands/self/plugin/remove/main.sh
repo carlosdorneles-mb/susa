@@ -34,17 +34,11 @@ main() {
     local PLUGIN_NAME="$1"
     local auto_confirm="${2:-false}"
 
-    log_debug "=== Iniciando remoção de plugin ==="
-    log_debug "Auto-confirm: $auto_confirm"
-    log_debug "Plugin: $PLUGIN_NAME"
-    log_debug "Diretório de plugins: $PLUGINS_DIR"
-
     local REGISTRY_FILE="$PLUGINS_DIR/registry.yaml"
     local is_dev_plugin=false
     local source_path=""
 
     # Check if plugin exists in registry (could be dev plugin)
-    log_debug "Verificando se plugin existe no registry"
     if [ -f "$REGISTRY_FILE" ]; then
         local plugin_count=$(yq eval ".plugins[] | select(.name == \"$PLUGIN_NAME\") | .name" "$REGISTRY_FILE" 2> /dev/null | wc -l)
         if [ "$plugin_count" -gt 0 ]; then
@@ -52,22 +46,19 @@ main() {
             if [ "$dev_flag" = "true" ]; then
                 is_dev_plugin=true
                 source_path=$(yq eval ".plugins[] | select(.name == \"$PLUGIN_NAME\") | .source" "$REGISTRY_FILE" 2> /dev/null | head -1)
-                log_debug "Plugin dev encontrado no registry com source: $source_path"
+                log_debug "Plugin dev com source: $source_path"
             fi
         fi
     fi
 
     # Check if the plugin exists in plugins directory or registry
     if [ "$is_dev_plugin" = false ]; then
-        log_debug "Verificando se plugin existe no diretório"
         if [ ! -d "$PLUGINS_DIR/$PLUGIN_NAME" ]; then
             log_error "Plugin '$PLUGIN_NAME' não encontrado"
-            log_debug "Diretório não existe: $PLUGINS_DIR/$PLUGIN_NAME"
             log_output ""
             log_output "Use ${LIGHT_CYAN}susa self plugin list${NC} para ver plugins instalados"
             exit 1
         fi
-        log_debug "Plugin encontrado em: $PLUGINS_DIR/$PLUGIN_NAME"
     fi
 
     # Confirm removal
@@ -82,7 +73,6 @@ main() {
     log_output ""
 
     # List commands that will be removed
-    log_debug "Contando comandos que serão removidos"
     local cmd_count=0
     if [ "$is_dev_plugin" = true ] && [ -d "$source_path" ]; then
         cmd_count=$(find "$source_path" -name "config.yaml" -type f 2> /dev/null | wc -l)
@@ -90,7 +80,6 @@ main() {
         cmd_count=$(find "$PLUGINS_DIR/$PLUGIN_NAME" -name "config.yaml" -type f | wc -l)
     fi
     log_output "Comandos que serão removidos: ${GRAY}$cmd_count${NC}"
-    log_debug "Total de comandos: $cmd_count"
     log_output ""
 
     if [ "$auto_confirm" = false ]; then
@@ -99,12 +88,8 @@ main() {
 
         if [[ ! $REPLY =~ ^[YySs]$ ]]; then
             log_info "Operação cancelada"
-            log_debug "Usuário cancelou a remoção"
             exit 0
         fi
-        log_debug "Usuário confirmou a remoção"
-    else
-        log_debug "Confirmação automática ativada (-y)"
     fi
 
     # Remove o plugin
@@ -113,34 +98,22 @@ main() {
     local removal_success=true
 
     if [ "$is_dev_plugin" = true ]; then
-        log_debug "Removendo plugin dev (apenas do registry)"
         # Dev plugins are only in registry, not in $PLUGINS_DIR
         # Just remove from registry
         if [ -f "$REGISTRY_FILE" ]; then
-            log_debug "Registry file: $REGISTRY_FILE"
             registry_remove_plugin "$REGISTRY_FILE" "$PLUGIN_NAME"
-            log_debug "Plugin dev removido do registry.yaml"
         else
             log_error "Registry file não existe"
             removal_success=false
         fi
     else
-        log_debug "Removendo diretório: $PLUGINS_DIR/$PLUGIN_NAME"
         if rm -rf "${PLUGINS_DIR:?}/${PLUGIN_NAME:?}"; then
-            log_debug "Diretório removido com sucesso"
-
             # Remove from registry too
-            log_debug "Removendo do registry"
             if [ -f "$REGISTRY_FILE" ]; then
-                log_debug "Registry file: $REGISTRY_FILE"
                 registry_remove_plugin "$REGISTRY_FILE" "$PLUGIN_NAME"
-                log_debug "Plugin removido do registry.yaml"
-            else
-                log_debug "Registry file não existe"
             fi
         else
             log_error "Falha ao remover o plugin"
-            log_debug "Erro ao executar rm -rf"
             removal_success=false
         fi
     fi
@@ -149,9 +122,7 @@ main() {
         log_success "Plugin '$PLUGIN_NAME' removido com sucesso!"
 
         # Update lock file
-        log_debug "Atualizando lock file"
         update_lock_file
-        log_debug "=== Remoção concluída ==="
 
         log_output ""
         log_info "💡 Execute 'susa --help' para ver as categorias atualizadas"
@@ -172,12 +143,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -y | --yes)
             auto_confirm=true
-            log_debug "Auto-confirm ativado"
             shift
             ;;
         -v | --verbose)
             export DEBUG=1
-            log_debug "Modo verbose ativado"
             shift
             ;;
         -q | --quiet)

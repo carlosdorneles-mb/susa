@@ -42,21 +42,13 @@ main() {
     local auto_confirm="${3:-false}"
     local REGISTRY_FILE="$PLUGINS_DIR/registry.yaml"
 
-    log_debug "=== Iniciando atualização de plugin ==="
-    log_debug "Plugin: $PLUGIN_NAME"
-    log_debug "Use SSH: $USE_SSH"
-    log_debug "Auto-confirm: $auto_confirm"
-    log_debug "Registry file: $REGISTRY_FILE"
-
     # Check if plugin exists in registry (could be dev plugin)
-    log_debug "Verificando se plugin existe no registry"
     if [ -f "$REGISTRY_FILE" ]; then
         local plugin_count=$(yq eval ".plugins[] | select(.name == \"$PLUGIN_NAME\") | .name" "$REGISTRY_FILE" 2> /dev/null | wc -l)
         if [ "$plugin_count" -gt 0 ]; then
             local dev_flag=$(yq eval ".plugins[] | select(.name == \"$PLUGIN_NAME\") | .dev" "$REGISTRY_FILE" 2> /dev/null | head -1)
             if [ "$dev_flag" = "true" ]; then
                 log_error "Plugin '$PLUGIN_NAME' está em modo desenvolvimento"
-                log_debug "Plugin dev não pode ser atualizado"
                 log_output ""
                 log_output "${YELLOW}Plugins em modo desenvolvimento não podem ser atualizados.${NC}"
                 log_output "As alterações no código já refletem imediatamente!"
@@ -71,55 +63,43 @@ main() {
     fi
 
     # Check if the plugin exists in plugins directory
-    log_debug "Verificando se plugin existe no diretório"
     if [ ! -d "$PLUGINS_DIR/$PLUGIN_NAME" ]; then
         log_error "Plugin '$PLUGIN_NAME' não encontrado"
-        log_debug "Diretório não existe: $PLUGINS_DIR/$PLUGIN_NAME"
         log_output ""
         log_output "Use ${LIGHT_CYAN}susa self plugin list${NC} para ver plugins instalados"
         exit 1
     fi
-    log_debug "Plugin encontrado em: $PLUGINS_DIR/$PLUGIN_NAME"
 
     # Check if registry exists
-    log_debug "Verificando se registry existe"
     if [ ! -f "$REGISTRY_FILE" ]; then
         log_error "Registry não encontrado. Não é possível determinar a origem do plugin."
-        log_debug "Registry file não existe: $REGISTRY_FILE"
         log_output ""
         log_output "O plugin não foi instalado via ${LIGHT_CYAN}susa self plugin add${NC}"
         exit 1
     fi
-    log_debug "Registry encontrado"
 
     # Gets the registry source URL
-    log_debug "Obtendo URL de origem do registry"
     local SOURCE_URL=$(registry_get_plugin_info "$REGISTRY_FILE" "$PLUGIN_NAME" "source")
     log_debug "Source URL: $SOURCE_URL"
 
     if [ -z "$SOURCE_URL" ] || [ "$SOURCE_URL" = "local" ]; then
         log_error "Plugin '$PLUGIN_NAME' não tem origem registrada ou é local"
-        log_debug "Source URL é vazia ou local"
         log_output ""
         log_output "Apenas plugins instalados via Git podem ser atualizados"
         exit 1
     fi
 
     # Check if git is installed
-    log_debug "Verificando se Git está instalado"
     ensure_git_installed || exit 1
 
     # Detect provider from source URL
-    log_debug "Detectando provider da URL de origem"
     local provider=$(detect_git_provider "$SOURCE_URL")
     log_debug "Provider detectado: $provider"
 
     # Normalize URL (apply SSH if forced or auto-detected)
-    log_debug "Normalizando URL"
     SOURCE_URL=$(normalize_git_url "$SOURCE_URL" "$USE_SSH" "$provider")
     log_debug "URL normalizada: $SOURCE_URL"
 
-    log_debug "Validando acesso ao repositório"
     if ! validate_repo_access "$SOURCE_URL"; then
         log_error "Não foi possível acessar o repositório"
         log_debug "Falha na validação de acesso"
@@ -148,56 +128,40 @@ main() {
 
         if [[ ! $REPLY =~ ^[YySs]$ ]]; then
             log_info "Operação cancelada"
-            log_debug "Usuário cancelou a atualização"
             exit 0
         fi
-        log_debug "Usuário confirmou a atualização"
-    else
-        log_debug "Confirmação automática ativada (-y)"
     fi
 
     # Create backup of current plugin
     local BACKUP_DIR="${PLUGINS_DIR}/.backup_${PLUGIN_NAME}_$(date +%s)"
-    log_debug "Diretório de backup: $BACKUP_DIR"
 
-    log_debug "Movendo $PLUGINS_DIR/$PLUGIN_NAME para $BACKUP_DIR"
     mv "$PLUGINS_DIR/$PLUGIN_NAME" "$BACKUP_DIR"
 
     # Clones the latest version
-    log_debug "Baixando versão mais recente de $SOURCE_URL..."
     log_debug "Clonando para: $PLUGINS_DIR/$PLUGIN_NAME"
     if clone_plugin "$SOURCE_URL" "$PLUGINS_DIR/$PLUGIN_NAME"; then
-        log_debug "Clone concluído com sucesso"
 
         # Detect new version
-        log_debug "Detectando versão do plugin"
         local NEW_VERSION=$(detect_plugin_version "$PLUGINS_DIR/$PLUGIN_NAME")
         log_debug "Nova versão: $NEW_VERSION"
 
         # Count commands and get categories
-        log_debug "Contando comandos"
         local cmd_count=$(count_plugin_commands "$PLUGINS_DIR/$PLUGIN_NAME")
-        log_debug "Total de comandos: $cmd_count"
 
-        log_debug "Obtendo categorias"
         local categories=$(get_plugin_categories "$PLUGINS_DIR/$PLUGIN_NAME")
         log_debug "Categorias: $categories"
 
         # Update registry (remove and add again with metadata)
-        log_debug "Atualizando registry"
         registry_remove_plugin "$REGISTRY_FILE" "$PLUGIN_NAME"
         registry_add_plugin "$REGISTRY_FILE" "$PLUGIN_NAME" "$SOURCE_URL" "$NEW_VERSION" "false" "$cmd_count" "$categories"
         log_debug "Registry atualizado"
 
         # Remove backup
-        log_debug "Removendo backup"
         rm -rf "$BACKUP_DIR"
         log_debug "Backup removido"
 
         # Update lock file if it exists
-        log_debug "Atualizando lock file"
         update_lock_file
-        log_debug "Lock file atualizado, obtendo informações do lock"
 
         # Get information from lock file
         local lock_version=$(get_plugin_info_from_lock "$PLUGIN_NAME" "version")
@@ -208,10 +172,6 @@ main() {
         local display_version="${lock_version:-$NEW_VERSION}"
         local display_commands="${lock_commands:-$cmd_count}"
         local display_categories="${lock_categories:-$categories}"
-
-        log_debug "Versão do lock: $display_version"
-        log_debug "Comandos do lock: $display_commands"
-        log_debug "Categorias do lock: $display_categories"
 
         log_success "Plugin '$PLUGIN_NAME' atualizado com sucesso!"
         log_output ""
@@ -226,13 +186,10 @@ main() {
         log_info "💡 Os comandos atualizados já estão disponíveis!"
     else
         log_error "Falha ao baixar atualização"
-        log_debug "Clone falhou"
 
         # Restore backup
         log_info "Restaurando versão anterior..."
-        log_debug "Restaurando de: $BACKUP_DIR"
         mv "$BACKUP_DIR" "$PLUGINS_DIR/$PLUGIN_NAME"
-        log_debug "Versão anterior restaurada"
 
         exit 1
     fi
@@ -251,12 +208,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -y | --yes)
             auto_confirm=true
-            log_debug "Auto-confirm ativado"
             shift
             ;;
         -v | --verbose)
             export DEBUG=1
-            log_debug "Modo verbose ativado"
             shift
             ;;
         -q | --quiet)

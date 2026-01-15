@@ -116,15 +116,12 @@ detect_os_and_arch() {
             ;;
     esac
 
-    log_debug "SO: $os_name | Arquitetura: $arch" >&2
     log_output "${os_name}:${arch}"
 }
 
 # Check if ASDF is already installed and ask about update
 check_existing_installation() {
     local asdf_dir="${ASDF_INSTALL_DIR:-$HOME/.asdf}"
-
-    log_debug "Verificando instalação existente do ASDF..."
 
     if [ ! -d "$asdf_dir" ] || [ ! -f "$asdf_dir/bin/asdf" ]; then
         log_debug "ASDF não está instalado"
@@ -138,7 +135,6 @@ check_existing_installation() {
     mark_installed "asdf" "$current_version"
 
     # Check for updates
-    log_debug "Obtendo última versão..."
     local latest_version=$(get_latest_asdf_version)
     if [ $? -eq 0 ] && [ -n "$latest_version" ]; then
         if [ "$current_version" != "$latest_version" ]; then
@@ -193,7 +189,6 @@ download_asdf_release() {
     local download_url="$1"
     local output_file="/tmp/asdf.tar.gz"
 
-    log_debug "URL: $download_url" >&2
     log_info "Baixando ASDF..." >&2
 
     curl -L --progress-bar \
@@ -265,7 +260,6 @@ setup_asdf_environment() {
 install_asdf_release() {
     local asdf_dir="${ASDF_INSTALL_DIR:-$HOME/.asdf}"
 
-    log_debug "Obtendo última versão..."
     local asdf_version=$(get_latest_asdf_version)
     if [ $? -ne 0 ] || [ -z "$asdf_version" ]; then
         return 1
@@ -343,7 +337,6 @@ update_asdf() {
     log_info "Versão atual: $current_version"
 
     # Get latest version
-    log_debug "Obtendo última versão..."
     local asdf_version=$(get_latest_asdf_version)
     if [ $? -ne 0 ] || [ -z "$asdf_version" ]; then
         return 1
@@ -442,7 +435,6 @@ uninstall_asdf() {
     # Remove ASDF directory
     if [ -d "$asdf_dir" ]; then
         rm -rf "$asdf_dir"
-        log_debug "Diretório removido: $asdf_dir"
     else
         log_debug "ASDF não está instalado em $asdf_dir"
     fi
@@ -450,8 +442,6 @@ uninstall_asdf() {
     # Remove shell configurations
     if [ -f "$shell_config" ] && is_asdf_configured "$shell_config"; then
         local backup_file="${shell_config}.backup.$(date +%Y%m%d%H%M%S)"
-
-        log_debug "Removendo configurações de $shell_config..."
 
         # Create backup
         cp "$shell_config" "$backup_file"
@@ -487,7 +477,6 @@ main() {
                 ;;
             -v | --verbose)
                 export DEBUG=1
-                log_debug "Modo verbose ativado"
                 shift
                 ;;
             -q | --quiet)
@@ -511,7 +500,6 @@ main() {
     done
 
     # Execute action
-    log_debug "Ação selecionada: $action"
 
     case "$action" in
         install)

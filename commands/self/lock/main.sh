@@ -404,7 +404,6 @@ EOF
     fi
 
     log_success "Arquivo susa.lock gerado com sucesso!"
-    log_debug "Localização: $lock_file"
 
     # Return to original directory
     cd "$original_dir" || true
@@ -426,7 +425,6 @@ main() {
                 ;;
             -v | --verbose)
                 export DEBUG=1
-                log_debug "Modo verbose ativado"
                 shift
                 ;;
             -q | --quiet)

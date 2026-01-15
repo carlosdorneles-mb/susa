@@ -49,7 +49,6 @@ get_latest_iterm_version() {
     fi
 
     # Try to get the latest version via Homebrew
-    log_debug "Obtendo versão via Homebrew..." >&2
     local latest_version=$(brew info --cask iterm2 2> /dev/null | grep -E "^iterm2:" | sed -E 's/^iterm2: ([^ ]+).*/\1/' | head -1)
 
     if [ -n "$latest_version" ]; then
@@ -85,7 +84,6 @@ get_iterm_version() {
 
 # Check if Homebrew is installed
 check_homebrew() {
-    log_debug "Verificando instalação do Homebrew..."
     if ! command -v brew &> /dev/null; then
         log_error "Homebrew não está instalado"
         return 1
@@ -96,7 +94,6 @@ check_homebrew() {
 
 # Check if iTerm2 is already installed
 check_existing_installation() {
-    log_debug "Verificando instalação existente do iTerm2..."
 
     if ! brew list --cask iterm2 &> /dev/null; then
         log_debug "iTerm2 não está instalado"
@@ -110,7 +107,6 @@ check_existing_installation() {
     mark_installed "iterm" "$current_version"
 
     # Check for updates
-    log_debug "Obtendo última versão..."
     local latest_version=$(get_latest_iterm_version)
     if [ $? -eq 0 ] && [ -n "$latest_version" ]; then
         if [ "$current_version" != "$latest_version" ]; then
@@ -152,7 +148,6 @@ install_iterm() {
     brew install --cask iterm2 2>&1 | while read -r line; do log_debug "brew: $line"; done
 
     # Verify installation
-    log_debug "Verificando instalação..."
     if [ -d "/Applications/iTerm.app" ]; then
         local version=$(get_iterm_version)
         log_success "iTerm2 $version instalado com sucesso!"
@@ -175,7 +170,6 @@ update_iterm() {
     fi
 
     # Check if iTerm2 is installed
-    log_debug "Verificando se iTerm2 está instalado..."
     if ! brew list --cask iterm2 &> /dev/null; then
         log_error "iTerm2 não está instalado"
         echo ""
@@ -188,7 +182,6 @@ update_iterm() {
     log_info "Versão atual: $current_version"
 
     # Get latest version
-    log_debug "Obtendo última versão..."
     local latest_version=$(get_latest_iterm_version)
     if [ $? -ne 0 ] || [ -z "$latest_version" ]; then
         log_warning "Não foi possível verificar a última versão. Continuando com atualização via Homebrew..."
@@ -225,7 +218,6 @@ uninstall_iterm() {
     fi
 
     # Check if iTerm2 is installed
-    log_debug "Verificando se iTerm2 está instalado..."
     if ! brew list --cask iterm2 &> /dev/null; then
         log_warning "iTerm2 não está instalado via Homebrew"
 
@@ -237,7 +229,6 @@ uninstall_iterm() {
             read -r response
 
             if [[ "$response" =~ ^[sS]$ ]]; then
-                log_debug "Removendo /Applications/iTerm.app"
                 rm -rf "/Applications/iTerm.app"
                 log_success "iTerm2 removido com sucesso"
                 return 0
@@ -270,7 +261,6 @@ uninstall_iterm() {
     brew uninstall --cask iterm2 2>&1 | while read -r line; do log_debug "brew: $line"; done
 
     # Verify removal
-    log_debug "Verificando remoção..."
     if [ ! -d "/Applications/iTerm.app" ]; then
         log_success "iTerm2 desinstalado com sucesso"
         mark_uninstalled "iterm"
@@ -285,7 +275,6 @@ uninstall_iterm() {
     read -r response
 
     if [[ "$response" =~ ^[sS]$ ]]; then
-        log_debug "Removendo preferências..."
         rm -rf "$HOME/Library/Preferences/com.googlecode.iterm2.plist" 2> /dev/null || true
         rm -rf "$HOME/Library/Application Support/iTerm2" 2> /dev/null || true
         rm -rf "$HOME/Library/Saved Application State/com.googlecode.iterm2.savedState" 2> /dev/null || true
@@ -316,7 +305,6 @@ main() {
                 ;;
             --verbose | -v)
                 export DEBUG=1
-                log_debug "Modo verbose ativado"
                 shift
                 ;;
             --quiet | -q)
@@ -332,7 +320,6 @@ main() {
     done
 
     # Verify it's macOS
-    log_debug "Verificando sistema operacional..."
     if [[ "$(uname -s)" != "Darwin" ]]; then
         log_error "iTerm2 só está disponível para macOS"
         exit 1
@@ -340,7 +327,6 @@ main() {
     log_debug "Sistema operacional: macOS $(sw_vers -productVersion)"
 
     # Execute action
-    log_debug "Ação selecionada: $action"
 
     case "$action" in
         install)

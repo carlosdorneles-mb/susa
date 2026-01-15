@@ -83,7 +83,6 @@ get_docker_version() {
 
 # Check if Docker is already installed
 check_existing_installation() {
-    log_debug "Verificando instalação existente do Docker..."
 
     if ! command -v docker &> /dev/null; then
         log_debug "Docker não está instalado"
@@ -97,7 +96,6 @@ check_existing_installation() {
     mark_installed "docker" "$current_version"
 
     # Check for updates
-    log_debug "Obtendo última versão..."
     local latest_version=$(get_latest_docker_version)
     if [ $? -eq 0 ] && [ -n "$latest_version" ]; then
         if [ "$current_version" != "$latest_version" ]; then
@@ -145,7 +143,6 @@ configure_docker_group() {
 
     # Check if docker group exists
     if ! getent group docker &> /dev/null; then
-        log_debug "Criando grupo docker..."
         if ! sudo groupadd docker 2> /dev/null; then
             log_error "Falha ao criar grupo docker"
             return 1
@@ -250,7 +247,6 @@ install_docker_linux() {
 
 # Install Docker on Debian/Ubuntu based systems
 install_docker_debian() {
-    log_debug "Instalando Docker em sistema baseado em Debian/Ubuntu..."
 
     # Remove old versions
     log_info "Removendo versões antigas do Docker..."
@@ -300,7 +296,6 @@ install_docker_debian() {
 
 # Install Docker on RHEL/Fedora based systems
 install_docker_rhel() {
-    log_debug "Instalando Docker em sistema baseado em RHEL/Fedora..."
 
     # Remove old versions
     log_info "Removendo versões antigas do Docker..."
@@ -335,7 +330,6 @@ install_docker_rhel() {
 
 # Install Docker on Arch based systems
 install_docker_arch() {
-    log_debug "Instalando Docker em sistema baseado em Arch..."
 
     # Install Docker
     log_info "Instalando Docker via pacman..."
@@ -354,7 +348,6 @@ install_docker() {
 
     # Detect OS
     local os_name=$(uname -s | tr '[:upper:]' '[:lower:]')
-    log_debug "SO: $os_name"
 
     case "$os_name" in
         darwin)
@@ -380,7 +373,6 @@ install_docker() {
             mark_installed "docker" "$installed_version"
 
             log_success "Docker $installed_version instalado com sucesso!"
-            log_debug "Executável: $(which docker)"
             echo ""
             echo "Próximos passos:"
 
@@ -414,10 +406,8 @@ update_docker() {
 
     local current_version=$(get_docker_version)
     log_info "Versão atual: $current_version"
-    log_debug "Executável: $(which docker)"
 
     # Get latest version
-    log_debug "Obtendo última versão..."
     local docker_version=$(get_latest_docker_version)
     if [ $? -ne 0 ] || [ -z "$docker_version" ]; then
         return 1
@@ -507,7 +497,6 @@ update_docker() {
         update_version "docker" "$new_version"
 
         log_success "Docker atualizado com sucesso para versão $new_version!"
-        log_debug "Executável: $(which docker)"
     else
         log_error "Falha na atualização do Docker"
         return 1
@@ -526,7 +515,6 @@ uninstall_docker() {
 
     local current_version=$(get_docker_version)
     log_debug "Versão a ser removida: $current_version"
-    log_debug "Executável: $(which docker)"
 
     echo ""
     log_output "${YELLOW}Deseja realmente desinstalar o Docker $current_version? (s/N)${NC}"
@@ -593,7 +581,6 @@ uninstall_docker() {
             # Remove user from docker group
             local current_user=$(whoami)
             if groups "$current_user" | grep -q docker; then
-                log_debug "Removendo usuário do grupo docker..."
                 sudo gpasswd -d "$current_user" docker > /dev/null 2>&1 || log_debug "Não foi possível remover do grupo"
             fi
             ;;
@@ -605,7 +592,6 @@ uninstall_docker() {
         mark_uninstalled "docker"
 
         log_success "Docker desinstalado com sucesso!"
-        log_debug "Executável removido"
     else
         log_error "Falha ao desinstalar Docker completamente"
         return 1
@@ -617,8 +603,6 @@ uninstall_docker() {
 
     if [[ "$response" =~ ^[sS]$ ]]; then
         log_info "Removendo dados do Docker..."
-        sudo rm -rf /var/lib/docker > /dev/null 2>&1 || log_debug "Diretório não encontrado"
-        sudo rm -rf /var/lib/containerd > /dev/null 2>&1 || log_debug "Diretório não encontrado"
         log_info "Dados removidos"
     fi
 
@@ -638,7 +622,6 @@ main() {
                 ;;
             -v | --verbose)
                 export DEBUG=1
-                log_debug "Modo verbose ativado"
                 shift
                 ;;
             -q | --quiet)
@@ -662,7 +645,6 @@ main() {
     done
 
     # Execute action
-    log_debug "Ação selecionada: $action"
 
     case "$action" in
         install)

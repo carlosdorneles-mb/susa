@@ -85,7 +85,6 @@ get_local_bin_dir() {
 
 # Check if UV is already installed
 check_existing_installation() {
-    log_debug "Verificando instalação existente do UV..."
 
     if ! command -v uv &> /dev/null; then
         log_debug "UV não está instalado"
@@ -99,7 +98,6 @@ check_existing_installation() {
     mark_installed "uv" "$current_version"
 
     # Check for updates
-    log_debug "Obtendo última versão..."
     local latest_version=$(get_latest_uv_version)
     if [ $? -eq 0 ] && [ -n "$latest_version" ]; then
         if [ "$current_version" != "$latest_version" ]; then
@@ -155,15 +153,12 @@ install_uv() {
     log_info "Iniciando instalação do UV..."
 
     local bin_dir=$(get_local_bin_dir)
-    log_debug "Diretório de instalação: $bin_dir"
 
     # Create bin directory if it doesn't exist
     mkdir -p "$bin_dir"
-    log_debug "Diretório criado/verificado: $bin_dir"
 
     # Download and install UV using official installer
     log_info "Baixando instalador do UV..."
-    log_debug "URL: ${UV_INSTALL_URL:-https://astral.sh/uv/install.sh}"
 
     local install_script="/tmp/uv-installer-$$.sh"
 
@@ -197,13 +192,11 @@ install_uv() {
     setup_uv_environment "$bin_dir"
 
     # Verify installation
-    log_debug "Verificando instalação..."
 
     if command -v uv &> /dev/null; then
         local version=$(get_uv_version)
         log_success "UV $version instalado com sucesso!"
         mark_installed "uv" "$version"
-        log_debug "Executável: $(which uv)"
 
         echo ""
         echo "Próximos passos:"
@@ -232,7 +225,6 @@ update_uv() {
     log_info "Atualizando UV..."
 
     # Check if UV is installed
-    log_debug "Verificando se UV está instalado..."
 
     if ! command -v uv &> /dev/null; then
         log_error "UV não está instalado"
@@ -243,11 +235,9 @@ update_uv() {
 
     local current_version=$(get_uv_version)
     log_info "Versão atual: $current_version"
-    log_debug "Executável: $(which uv)"
 
     # Update UV using self update command
     log_info "Executando atualização do UV..."
-    log_debug "Comando: uv self update"
 
     if uv self update 2>&1 | while read -r line; do log_debug "uv: $line"; done; then
         log_debug "Comando de atualização executado com sucesso"
@@ -257,7 +247,6 @@ update_uv() {
     fi
 
     # Verify update
-    log_debug "Verificando nova versão..."
 
     if command -v uv &> /dev/null; then
         local new_version=$(get_uv_version)
@@ -282,7 +271,6 @@ uninstall_uv() {
     log_info "Desinstalando UV..."
 
     # Check if UV is installed
-    log_debug "Verificando se UV está instalado..."
 
     if ! command -v uv &> /dev/null; then
         log_warning "UV não está instalado"
@@ -292,7 +280,6 @@ uninstall_uv() {
 
     local version=$(get_uv_version)
     log_debug "Versão a ser removida: $version"
-    log_debug "Executável: $(which uv)"
 
     # Confirm uninstallation
     echo ""
@@ -305,7 +292,6 @@ uninstall_uv() {
     fi
 
     local bin_dir=$(get_local_bin_dir)
-    log_debug "Diretório de instalação: $bin_dir"
 
     # Remove UV binary and related tools
     log_info "Removendo binários do UV..."
@@ -323,7 +309,6 @@ uninstall_uv() {
     # Remove UV data directory
     local uv_data_dir="$HOME/.local/share/uv"
     if [ -d "$uv_data_dir" ]; then
-        log_debug "Removendo diretório de dados: $uv_data_dir"
         rm -rf "$uv_data_dir"
     fi
 
@@ -337,12 +322,10 @@ uninstall_uv() {
     fi
 
     # Verify removal
-    log_debug "Verificando remoção..."
 
     if ! command -v uv &> /dev/null; then
         log_success "UV desinstalado com sucesso!"
         mark_uninstalled "uv"
-        log_debug "Executável removido"
 
         echo ""
         log_info "Reinicie o terminal ou execute: source $shell_config"
@@ -357,12 +340,10 @@ uninstall_uv() {
     read -r cache_response
 
     if [[ "$cache_response" =~ ^[sS]$ ]]; then
-        log_debug "Removendo cache..."
 
         local cache_dir="$HOME/.cache/uv"
         if [ -d "$cache_dir" ]; then
             rm -rf "$cache_dir" 2> /dev/null || true
-            log_debug "Cache removido: $cache_dir"
         fi
 
         log_success "Cache removido"
@@ -384,7 +365,6 @@ main() {
                 ;;
             -v | --verbose)
                 export DEBUG=1
-                log_debug "Modo verbose ativado"
                 shift
                 ;;
             -q | --quiet)
@@ -408,7 +388,6 @@ main() {
     done
 
     # Execute action
-    log_debug "Ação selecionada: $action"
 
     case "$action" in
         install)

@@ -82,7 +82,6 @@ get_tilix_version() {
 
 # Detect package manager
 detect_package_manager() {
-    log_debug "Detectando gerenciador de pacotes..."
 
     if command -v apt-get &> /dev/null; then
         echo "apt"
@@ -107,7 +106,6 @@ detect_package_manager() {
 
 # Check if Tilix is already installed
 check_existing_installation() {
-    log_debug "Verificando instalação existente do Tilix..."
 
     if ! command -v tilix &> /dev/null; then
         log_debug "Tilix não está instalado"
@@ -121,7 +119,6 @@ check_existing_installation() {
     mark_installed "tilix" "$current_version"
 
     # Check for updates
-    log_debug "Obtendo última versão..."
     local latest_version=$(get_latest_tilix_version)
     if [ $? -eq 0 ] && [ -n "$latest_version" ]; then
         if [ "$current_version" != "$latest_version" ]; then
@@ -218,15 +215,12 @@ install_tilix() {
     esac
 
     # Verify installation
-    log_debug "Verificando instalação..."
     if command -v tilix &> /dev/null; then
         local version=$(get_tilix_version)
         log_success "Tilix $version instalado com sucesso!"
         mark_installed "tilix" "$version"
-        log_debug "Executável: $(which tilix)"
 
         # Check for VTE configuration
-        log_debug "Verificando configuração VTE..."
         if [ -f /etc/profile.d/vte.sh ]; then
             log_debug "VTE config encontrado: /etc/profile.d/vte.sh"
             echo ""
@@ -249,7 +243,6 @@ update_tilix() {
     log_debug "Gerenciador de pacotes detectado: $pkg_manager"
 
     # Check if Tilix is installed
-    log_debug "Verificando se Tilix está instalado..."
     if ! command -v tilix &> /dev/null; then
         log_error "Tilix não está instalado"
         echo ""
@@ -331,7 +324,6 @@ uninstall_tilix() {
     log_debug "Gerenciador de pacotes detectado: $pkg_manager"
 
     # Check if Tilix is installed
-    log_debug "Verificando se Tilix está instalado..."
     if ! command -v tilix &> /dev/null; then
         log_warning "Tilix não está instalado via gerenciador de pacotes"
         log_info "Nada a fazer"
@@ -389,11 +381,9 @@ uninstall_tilix() {
     esac
 
     # Verify removal
-    log_debug "Verificando remoção..."
     if ! command -v tilix &> /dev/null; then
         log_success "Tilix desinstalado com sucesso"
         mark_uninstalled "tilix"
-        log_debug "Executável removido"
     else
         log_warning "Tilix removido do gerenciador de pacotes, mas executável ainda encontrado"
     fi
@@ -404,7 +394,6 @@ uninstall_tilix() {
     read -r config_response
 
     if [[ "$config_response" =~ ^[sS]$ ]]; then
-        log_debug "Removendo configurações de usuário..."
         rm -rf "$HOME/.config/tilix" 2> /dev/null || true
         rm -rf "$HOME/.local/share/tilix" 2> /dev/null || true
         dconf reset -f /com/gexperts/Tilix/ 2> /dev/null || true
@@ -435,7 +424,6 @@ main() {
                 ;;
             --verbose | -v)
                 export DEBUG=1
-                log_debug "Modo verbose ativado"
                 shift
                 ;;
             --quiet | -q)
@@ -451,7 +439,6 @@ main() {
     done
 
     # Verify it's Linux
-    log_debug "Verificando sistema operacional..."
     if [[ "$(uname -s)" != "Linux" ]]; then
         log_error "Tilix só está disponível para Linux"
         exit 1
@@ -459,7 +446,6 @@ main() {
     log_debug "Sistema operacional: Linux $(uname -r)"
 
     # Execute action
-    log_debug "Ação selecionada: $action"
 
     case "$action" in
         install)
