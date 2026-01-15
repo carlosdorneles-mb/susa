@@ -93,7 +93,7 @@ get_completion_status() {
             local search_pattern="site-functions"
             [[ "$shell_type" == "bash" ]] && search_pattern="bash-completion"
 
-            if [[ -f "$shell_config" ]] && grep -q "$search_pattern" "$shell_config" 2>/dev/null; then
+            if [[ -f "$shell_config" ]] && grep -q "$search_pattern" "$shell_config" 2> /dev/null; then
                 details="configurado em ~/.${shell_type}rc (reinicie o shell para carregar)"
             else
                 details="arquivo existe (pode ser necessário reiniciar o shell)"
@@ -121,10 +121,10 @@ is_completion_loaded() {
 
     case "$shell_type" in
         bash)
-            type _susa_completion &>/dev/null 2>&1 && return 0
+            type _susa_completion &> /dev/null 2>&1 && return 0
             ;;
         zsh)
-            type _susa &>/dev/null 2>&1 && return 0
+            type _susa &> /dev/null 2>&1 && return 0
             ;;
         *)
             return 1

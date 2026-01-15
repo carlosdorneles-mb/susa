@@ -42,7 +42,7 @@ show_help() {
 # Get latest Mise version from GitHub
 get_latest_mise_version() {
     # Try to get the latest version via GitHub API
-    local latest_version=$(curl -s --max-time ${MISE_API_MAX_TIME:-10} --connect-timeout ${MISE_API_CONNECT_TIMEOUT:-5} ${MISE_GITHUB_API_URL:-https://api.github.com/repos/jdx/mise/releases/latest} 2>/dev/null | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+    local latest_version=$(curl -s --max-time ${MISE_API_MAX_TIME:-10} --connect-timeout ${MISE_API_CONNECT_TIMEOUT:-5} ${MISE_GITHUB_API_URL:-https://api.github.com/repos/jdx/mise/releases/latest} 2> /dev/null | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
 
     if [ -n "$latest_version" ]; then
         log_debug "Versão obtida via API do GitHub: $latest_version" >&2
@@ -52,7 +52,7 @@ get_latest_mise_version() {
 
     # If it fails, try via git ls-remote with semantic version sorting
     log_debug "API do GitHub falhou, tentando via git ls-remote..." >&2
-    latest_version=$(timeout ${MISE_GIT_TIMEOUT:-5} git ls-remote --tags --refs ${MISE_GITHUB_REPO_URL:-https://github.com/jdx/mise.git} 2>/dev/null |
+    latest_version=$(timeout ${MISE_GIT_TIMEOUT:-5} git ls-remote --tags --refs ${MISE_GITHUB_REPO_URL:-https://github.com/jdx/mise.git} 2> /dev/null |
         grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+$' |
         sort -V |
         tail -1)
@@ -71,8 +71,8 @@ get_latest_mise_version() {
 
 # Get installed Mise version
 get_mise_version() {
-    if command -v mise &>/dev/null; then
-        mise --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida"
+    if command -v mise &> /dev/null; then
+        mise --version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida"
     else
         echo "desconhecida"
     fi
@@ -114,7 +114,7 @@ detect_os_and_arch() {
 check_existing_installation() {
     log_debug "Verificando instalação existente do Mise..."
 
-    if ! command -v mise &>/dev/null; then
+    if ! command -v mise &> /dev/null; then
         log_debug "Mise não está instalado"
         return 0
     fi
@@ -146,7 +146,7 @@ check_existing_installation() {
 # Check if Mise is already configured in shell
 is_mise_configured() {
     local shell_config="$1"
-    grep -q "mise activate" "$shell_config" 2>/dev/null
+    grep -q "mise activate" "$shell_config" 2> /dev/null
 }
 
 # Add Mise configuration to shell
@@ -158,10 +158,10 @@ add_mise_to_shell() {
         shell_type="zsh"
     fi
 
-    echo "" >>"$shell_config"
-    echo "# Mise (polyglot version manager)" >>"$shell_config"
-    echo "export PATH=\"$(get_local_bin_dir):\$PATH\"" >>"$shell_config"
-    echo "eval \"\$(mise activate $shell_type)\"" >>"$shell_config"
+    echo "" >> "$shell_config"
+    echo "# Mise (polyglot version manager)" >> "$shell_config"
+    echo "export PATH=\"$(get_local_bin_dir):\$PATH\"" >> "$shell_config"
+    echo "eval \"\$(mise activate $shell_type)\"" >> "$shell_config"
 }
 
 # Configure shell to use Mise
@@ -311,7 +311,7 @@ install_mise() {
     # Verify installation
     local shell_config=$(detect_shell_config)
 
-    if command -v mise &>/dev/null; then
+    if command -v mise &> /dev/null; then
         local version=$(get_mise_version)
         log_success "Mise $version instalado com sucesso!"
         mark_installed "mise" "$version"
@@ -332,7 +332,7 @@ update_mise() {
     log_info "Atualizando Mise..."
 
     # Check if Mise is installed
-    if ! command -v mise &>/dev/null; then
+    if ! command -v mise &> /dev/null; then
         log_error "Mise não está instalado. Use 'susa setup mise' para instalar."
         return 1
     fi
@@ -398,7 +398,7 @@ update_mise() {
     setup_mise_environment "$bin_dir"
 
     # Verify update
-    if command -v mise &>/dev/null; then
+    if command -v mise &> /dev/null; then
         local new_version=$(get_mise_version)
         log_success "Mise atualizado com sucesso para versão $new_version!"
         update_version "mise" "$new_version"
@@ -416,7 +416,7 @@ uninstall_mise() {
     log_info "Desinstalando Mise..."
 
     # Check if Mise is installed
-    if ! command -v mise &>/dev/null; then
+    if ! command -v mise &> /dev/null; then
         log_warning "Mise não está instalado"
         log_info "Nada a fazer"
         return 0
@@ -477,7 +477,7 @@ uninstall_mise() {
     # Verify removal
     log_debug "Verificando remoção..."
 
-    if ! command -v mise &>/dev/null; then
+    if ! command -v mise &> /dev/null; then
         log_success "Mise desinstalado com sucesso!"
         mark_uninstalled "mise"
         log_debug "Executável removido"
@@ -499,7 +499,7 @@ uninstall_mise() {
 
         local cache_dir="$HOME/.cache/mise"
         if [ -d "$cache_dir" ]; then
-            rm -rf "$cache_dir" 2>/dev/null || true
+            rm -rf "$cache_dir" 2> /dev/null || true
             log_debug "Cache removido: $cache_dir"
         fi
 

@@ -46,12 +46,12 @@ main() {
     # Check if plugin exists in registry (could be dev plugin)
     log_debug "Verificando se plugin existe no registry"
     if [ -f "$REGISTRY_FILE" ]; then
-        local plugin_count=$(yq eval ".plugins[] | select(.name == \"$PLUGIN_NAME\") | .name" "$REGISTRY_FILE" 2>/dev/null | wc -l)
+        local plugin_count=$(yq eval ".plugins[] | select(.name == \"$PLUGIN_NAME\") | .name" "$REGISTRY_FILE" 2> /dev/null | wc -l)
         if [ "$plugin_count" -gt 0 ]; then
-            local dev_flag=$(yq eval ".plugins[] | select(.name == \"$PLUGIN_NAME\") | .dev" "$REGISTRY_FILE" 2>/dev/null | head -1)
+            local dev_flag=$(yq eval ".plugins[] | select(.name == \"$PLUGIN_NAME\") | .dev" "$REGISTRY_FILE" 2> /dev/null | head -1)
             if [ "$dev_flag" = "true" ]; then
                 is_dev_plugin=true
-                source_path=$(yq eval ".plugins[] | select(.name == \"$PLUGIN_NAME\") | .source" "$REGISTRY_FILE" 2>/dev/null | head -1)
+                source_path=$(yq eval ".plugins[] | select(.name == \"$PLUGIN_NAME\") | .source" "$REGISTRY_FILE" 2> /dev/null | head -1)
                 log_debug "Plugin dev encontrado no registry com source: $source_path"
             fi
         fi
@@ -85,7 +85,7 @@ main() {
     log_debug "Contando comandos que serão removidos"
     local cmd_count=0
     if [ "$is_dev_plugin" = true ] && [ -d "$source_path" ]; then
-        cmd_count=$(find "$source_path" -name "config.yaml" -type f 2>/dev/null | wc -l)
+        cmd_count=$(find "$source_path" -name "config.yaml" -type f 2> /dev/null | wc -l)
     elif [ -d "$PLUGINS_DIR/$PLUGIN_NAME" ]; then
         cmd_count=$(find "$PLUGINS_DIR/$PLUGIN_NAME" -name "config.yaml" -type f | wc -l)
     fi

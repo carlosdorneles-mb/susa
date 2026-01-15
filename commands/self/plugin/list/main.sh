@@ -51,7 +51,7 @@ main() {
 
     # Read plugins from registry using yq
     log_debug "Lendo quantidade de plugins do registry"
-    local plugin_count=$(yq eval '.plugins | length' "$REGISTRY_FILE" 2>/dev/null || echo 0)
+    local plugin_count=$(yq eval '.plugins | length' "$REGISTRY_FILE" 2> /dev/null || echo 0)
     log_debug "Total de plugins no registry: $plugin_count"
 
     if [ "$plugin_count" -eq 0 ]; then
@@ -67,15 +67,15 @@ main() {
     for ((i = 0; i < plugin_count; i++)); do
         log_debug "Processando plugin $((i + 1))/$plugin_count"
 
-        local plugin_name=$(yq eval ".plugins[$i].name" "$REGISTRY_FILE" 2>/dev/null)
+        local plugin_name=$(yq eval ".plugins[$i].name" "$REGISTRY_FILE" 2> /dev/null)
         log_debug "Plugin name: $plugin_name"
 
-        local source_url=$(yq eval ".plugins[$i].source" "$REGISTRY_FILE" 2>/dev/null)
-        local version=$(yq eval ".plugins[$i].version" "$REGISTRY_FILE" 2>/dev/null)
-        local installed_at=$(yq eval ".plugins[$i].installed_at" "$REGISTRY_FILE" 2>/dev/null)
-        local is_dev=$(yq eval ".plugins[$i].dev" "$REGISTRY_FILE" 2>/dev/null)
-        local cmd_count=$(yq eval ".plugins[$i].commands" "$REGISTRY_FILE" 2>/dev/null)
-        local categories=$(yq eval ".plugins[$i].categories" "$REGISTRY_FILE" 2>/dev/null)
+        local source_url=$(yq eval ".plugins[$i].source" "$REGISTRY_FILE" 2> /dev/null)
+        local version=$(yq eval ".plugins[$i].version" "$REGISTRY_FILE" 2> /dev/null)
+        local installed_at=$(yq eval ".plugins[$i].installed_at" "$REGISTRY_FILE" 2> /dev/null)
+        local is_dev=$(yq eval ".plugins[$i].dev" "$REGISTRY_FILE" 2> /dev/null)
+        local cmd_count=$(yq eval ".plugins[$i].commands" "$REGISTRY_FILE" 2> /dev/null)
+        local categories=$(yq eval ".plugins[$i].categories" "$REGISTRY_FILE" 2> /dev/null)
 
         # Skip if plugin name is null
         if [ "$plugin_name" = "null" ]; then

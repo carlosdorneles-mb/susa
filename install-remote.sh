@@ -68,7 +68,7 @@ detect_os() {
 
 # Verify that the command exists
 command_exists() {
-    command -v "$1" &>/dev/null
+    command -v "$1" &> /dev/null
 }
 
 # Ensure git is installed

@@ -43,14 +43,14 @@ show_help() {
 # Get latest iTerm2 version
 get_latest_iterm_version() {
     # Check if Homebrew is available
-    if ! command -v brew &>/dev/null; then
+    if ! command -v brew &> /dev/null; then
         log_error "Homebrew não está instalado" >&2
         return 1
     fi
 
     # Try to get the latest version via Homebrew
     log_debug "Obtendo versão via Homebrew..." >&2
-    local latest_version=$(brew info --cask iterm2 2>/dev/null | grep -E "^iterm2:" | sed -E 's/^iterm2: ([^ ]+).*/\1/' | head -1)
+    local latest_version=$(brew info --cask iterm2 2> /dev/null | grep -E "^iterm2:" | sed -E 's/^iterm2: ([^ ]+).*/\1/' | head -1)
 
     if [ -n "$latest_version" ]; then
         log_debug "Versão obtida via Homebrew: $latest_version" >&2
@@ -60,7 +60,7 @@ get_latest_iterm_version() {
 
     # If Homebrew fails, try via GitHub API as fallback
     log_debug "Homebrew falhou, tentando via API do GitHub..." >&2
-    latest_version=$(curl -s --max-time 10 --connect-timeout 5 https://api.github.com/repos/gnachman/iTerm2/releases/latest 2>/dev/null | grep '"tag_name":' | sed -E 's/.*"v([0-9]+\.[0-9]+\.[0-9]+)".*/\1/')
+    latest_version=$(curl -s --max-time 10 --connect-timeout 5 https://api.github.com/repos/gnachman/iTerm2/releases/latest 2> /dev/null | grep '"tag_name":' | sed -E 's/.*"v([0-9]+\.[0-9]+\.[0-9]+)".*/\1/')
 
     if [ -n "$latest_version" ]; then
         log_debug "Versão obtida via API do GitHub: $latest_version" >&2
@@ -76,8 +76,8 @@ get_latest_iterm_version() {
 
 # Get installed iTerm2 version
 get_iterm_version() {
-    if brew list --cask iterm2 &>/dev/null; then
-        brew list --cask iterm2 --versions 2>/dev/null | awk '{print $2}' || echo "desconhecida"
+    if brew list --cask iterm2 &> /dev/null; then
+        brew list --cask iterm2 --versions 2> /dev/null | awk '{print $2}' || echo "desconhecida"
     else
         echo "desconhecida"
     fi
@@ -86,7 +86,7 @@ get_iterm_version() {
 # Check if Homebrew is installed
 check_homebrew() {
     log_debug "Verificando instalação do Homebrew..."
-    if ! command -v brew &>/dev/null; then
+    if ! command -v brew &> /dev/null; then
         log_error "Homebrew não está instalado"
         return 1
     fi
@@ -98,7 +98,7 @@ check_homebrew() {
 check_existing_installation() {
     log_debug "Verificando instalação existente do iTerm2..."
 
-    if ! brew list --cask iterm2 &>/dev/null; then
+    if ! brew list --cask iterm2 &> /dev/null; then
         log_debug "iTerm2 não está instalado"
         return 0
     fi
@@ -176,7 +176,7 @@ update_iterm() {
 
     # Check if iTerm2 is installed
     log_debug "Verificando se iTerm2 está instalado..."
-    if ! brew list --cask iterm2 &>/dev/null; then
+    if ! brew list --cask iterm2 &> /dev/null; then
         log_error "iTerm2 não está instalado"
         echo ""
         log_output "${YELLOW}Para instalar, execute:${NC}"
@@ -226,7 +226,7 @@ uninstall_iterm() {
 
     # Check if iTerm2 is installed
     log_debug "Verificando se iTerm2 está instalado..."
-    if ! brew list --cask iterm2 &>/dev/null; then
+    if ! brew list --cask iterm2 &> /dev/null; then
         log_warning "iTerm2 não está instalado via Homebrew"
 
         # Check if app exists manually
@@ -286,9 +286,9 @@ uninstall_iterm() {
 
     if [[ "$response" =~ ^[sS]$ ]]; then
         log_debug "Removendo preferências..."
-        rm -rf "$HOME/Library/Preferences/com.googlecode.iterm2.plist" 2>/dev/null || true
-        rm -rf "$HOME/Library/Application Support/iTerm2" 2>/dev/null || true
-        rm -rf "$HOME/Library/Saved Application State/com.googlecode.iterm2.savedState" 2>/dev/null || true
+        rm -rf "$HOME/Library/Preferences/com.googlecode.iterm2.plist" 2> /dev/null || true
+        rm -rf "$HOME/Library/Application Support/iTerm2" 2> /dev/null || true
+        rm -rf "$HOME/Library/Saved Application State/com.googlecode.iterm2.savedState" 2> /dev/null || true
         log_success "Preferências removidas"
     else
         log_info "Preferências mantidas"

@@ -40,7 +40,7 @@ show_help() {
 
 get_latest_toolbox_version() {
     # Try to get the latest version from JetBrains data service
-    local latest_version=$(curl -s --max-time ${TOOLBOX_API_MAX_TIME:-10} --connect-timeout ${TOOLBOX_API_CONNECT_TIMEOUT:-5} ${TOOLBOX_API_URL:-https://data.services.jetbrains.com/products/releases?code=TBA&latest=true&type=release} 2>/dev/null | grep -oP '"build"\s*:\s*"\K[^"]+' | head -1)
+    local latest_version=$(curl -s --max-time ${TOOLBOX_API_MAX_TIME:-10} --connect-timeout ${TOOLBOX_API_CONNECT_TIMEOUT:-5} ${TOOLBOX_API_URL:-https://data.services.jetbrains.com/products/releases?code=TBA&latest=true&type=release} 2> /dev/null | grep -oP '"build"\s*:\s*"\K[^"]+' | head -1)
 
     if [ -n "$latest_version" ]; then
         log_debug "Versão obtida via API JetBrains: $latest_version" >&2
@@ -207,7 +207,7 @@ install_toolbox_linux() {
 
     # Extract
     log_info "Extraindo JetBrains Toolbox..."
-    if ! tar -xzf "$temp_dir/toolbox.tar.gz" -C "$temp_dir" 2>/dev/null; then
+    if ! tar -xzf "$temp_dir/toolbox.tar.gz" -C "$temp_dir" 2> /dev/null; then
         log_error "Falha ao extrair JetBrains Toolbox"
         rm -rf "$temp_dir"
         return 1
@@ -249,7 +249,7 @@ install_toolbox_linux() {
     log_debug "Link simbólico criado: $bin_dir/jetbrains-toolbox -> $toolbox_binary"
 
     # Save version
-    echo "$version" >"$install_dir/.version"
+    echo "$version" > "$install_dir/.version"
 
     # Clean up
     rm -rf "$temp_dir"
@@ -257,10 +257,10 @@ install_toolbox_linux() {
     # Configure PATH if needed
     local shell_config=$(detect_shell_config)
     local local_bin=$(get_local_bin_dir)
-    if ! grep -q ".local/bin" "$shell_config" 2>/dev/null; then
-        echo "" >>"$shell_config"
-        echo "# Local binaries PATH" >>"$shell_config"
-        echo "export PATH=\"$local_bin:\$PATH\"" >>"$shell_config"
+    if ! grep -q ".local/bin" "$shell_config" 2> /dev/null; then
+        echo "" >> "$shell_config"
+        echo "# Local binaries PATH" >> "$shell_config"
+        echo "export PATH=\"$local_bin:\$PATH\"" >> "$shell_config"
         log_debug "PATH configurado em $shell_config"
     fi
 
@@ -271,7 +271,7 @@ install_toolbox_linux() {
     create_desktop_entry
 
     log_info "Iniciando JetBrains Toolbox..."
-    nohup "$bin_dir/jetbrains-toolbox" >/dev/null 2>&1 &
+    nohup "$bin_dir/jetbrains-toolbox" > /dev/null 2>&1 &
 
     return 0
 }
@@ -319,18 +319,18 @@ install_toolbox_macos() {
         cp -R "$mount_point/JetBrains Toolbox.app" /Applications/
     else
         log_error "Aplicativo não encontrado no DMG"
-        hdiutil detach "$mount_point" -quiet 2>/dev/null
+        hdiutil detach "$mount_point" -quiet 2> /dev/null
         rm -rf "$temp_dir"
         return 1
     fi
 
     # Unmount DMG
     log_debug "Desmontando DMG..."
-    hdiutil detach "$mount_point" -quiet 2>/dev/null || true
+    hdiutil detach "$mount_point" -quiet 2> /dev/null || true
 
     # Save version
     mkdir -p "$install_dir"
-    echo "$version" >"$install_dir/.version"
+    echo "$version" > "$install_dir/.version"
 
     # Clean up
     rm -rf "$temp_dir"
@@ -353,11 +353,11 @@ create_desktop_entry() {
 
     # Download icon if not exists
     if [ ! -f "$icon_path" ]; then
-        curl -s -o "$icon_path" "https://resources.jetbrains.com/storage/products/toolbox/img/meta/toolbox_logo_300x300.png" 2>/dev/null || log_debug "Falha ao baixar ícone"
+        curl -s -o "$icon_path" "https://resources.jetbrains.com/storage/products/toolbox/img/meta/toolbox_logo_300x300.png" 2> /dev/null || log_debug "Falha ao baixar ícone"
     fi
 
     local toolbox_bin=$(get_local_bin_dir)/jetbrains-toolbox
-    cat >"$desktop_file" <<EOF
+    cat > "$desktop_file" << EOF
 [Desktop Entry]
 Version=1.0
 Type=Application
@@ -532,9 +532,9 @@ uninstall_toolbox() {
     # Stop Toolbox if running
     log_debug "Encerrando JetBrains Toolbox..."
     if [ "$os_name" = "darwin" ]; then
-        osascript -e 'quit app "JetBrains Toolbox"' 2>/dev/null || true
+        osascript -e 'quit app "JetBrains Toolbox"' 2> /dev/null || true
     else
-        pkill -9 -f jetbrains-toolbox 2>/dev/null || true
+        pkill -9 -f jetbrains-toolbox 2> /dev/null || true
     fi
 
     # Remove binary/app
@@ -583,12 +583,12 @@ uninstall_toolbox() {
         log_info "Removendo dados das IDEs..."
 
         if [ "$os_name" = "darwin" ]; then
-            rm -rf "$HOME/Library/Application Support/JetBrains" 2>/dev/null || log_debug "Diretório não encontrado"
-            rm -rf "$HOME/Library/Caches/JetBrains" 2>/dev/null || log_debug "Cache não encontrado"
-            rm -rf "$HOME/Library/Logs/JetBrains" 2>/dev/null || log_debug "Logs não encontrados"
+            rm -rf "$HOME/Library/Application Support/JetBrains" 2> /dev/null || log_debug "Diretório não encontrado"
+            rm -rf "$HOME/Library/Caches/JetBrains" 2> /dev/null || log_debug "Cache não encontrado"
+            rm -rf "$HOME/Library/Logs/JetBrains" 2> /dev/null || log_debug "Logs não encontrados"
         else
-            rm -rf "$HOME/.local/share/JetBrains" 2>/dev/null || log_debug "Diretório não encontrado"
-            rm -rf "$HOME/.cache/JetBrains" 2>/dev/null || log_debug "Cache não encontrado"
+            rm -rf "$HOME/.local/share/JetBrains" 2> /dev/null || log_debug "Diretório não encontrado"
+            rm -rf "$HOME/.cache/JetBrains" 2> /dev/null || log_debug "Cache não encontrado"
         fi
 
         log_info "Dados removidos"

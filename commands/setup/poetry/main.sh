@@ -42,7 +42,7 @@ show_help() {
 # Get latest Poetry version
 get_latest_poetry_version() {
     # Try to get the latest version via GitHub API
-    local latest_version=$(curl -s --max-time 10 --connect-timeout 5 https://api.github.com/repos/python-poetry/poetry/releases/latest 2>/dev/null | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+    local latest_version=$(curl -s --max-time 10 --connect-timeout 5 https://api.github.com/repos/python-poetry/poetry/releases/latest 2> /dev/null | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
 
     if [ -n "$latest_version" ]; then
         log_debug "Versão obtida via API do GitHub: $latest_version" >&2
@@ -52,7 +52,7 @@ get_latest_poetry_version() {
 
     # If it fails, try via git ls-remote with semantic version sorting
     log_debug "API do GitHub falhou, tentando via git ls-remote..." >&2
-    latest_version=$(timeout 5 git ls-remote --tags --refs https://github.com/python-poetry/poetry.git 2>/dev/null |
+    latest_version=$(timeout 5 git ls-remote --tags --refs https://github.com/python-poetry/poetry.git 2> /dev/null |
         grep -oE '[0-9]+\.[0-9]+\.[0-9]+$' |
         sort -V |
         tail -1)
@@ -71,8 +71,8 @@ get_latest_poetry_version() {
 
 # Get installed Poetry version
 get_poetry_version() {
-    if command -v poetry &>/dev/null; then
-        poetry --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida"
+    if command -v poetry &> /dev/null; then
+        poetry --version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida"
     else
         echo "desconhecida"
     fi
@@ -87,7 +87,7 @@ get_poetry_home() {
 check_existing_installation() {
     log_debug "Verificando instalação existente do Poetry..."
 
-    if ! command -v poetry &>/dev/null; then
+    if ! command -v poetry &> /dev/null; then
         log_debug "Poetry não está instalado"
         return 0
     fi
@@ -122,17 +122,17 @@ configure_shell() {
     log_debug "Arquivo de configuração: $shell_config"
 
     # Check if Poetry is already configured
-    if grep -q "POETRY_HOME\|poetry/bin" "$shell_config" 2>/dev/null; then
+    if grep -q "POETRY_HOME\|poetry/bin" "$shell_config" 2> /dev/null; then
         log_debug "Poetry já configurado em $shell_config"
         return 0
     fi
 
     log_debug "Configurando $shell_config..."
 
-    echo "" >>"$shell_config"
-    echo "# Poetry (Python dependency manager)" >>"$shell_config"
-    echo "export POETRY_HOME=\"$poetry_home\"" >>"$shell_config"
-    echo "export PATH=\"\$POETRY_HOME/bin:\$PATH\"" >>"$shell_config"
+    echo "" >> "$shell_config"
+    echo "# Poetry (Python dependency manager)" >> "$shell_config"
+    echo "export POETRY_HOME=\"$poetry_home\"" >> "$shell_config"
+    echo "export PATH=\"\$POETRY_HOME/bin:\$PATH\"" >> "$shell_config"
 
     log_debug "Configuração adicionada ao shell"
 }
@@ -196,7 +196,7 @@ install_poetry() {
     # Verify installation
     log_debug "Verificando instalação..."
 
-    if command -v poetry &>/dev/null; then
+    if command -v poetry &> /dev/null; then
         local version=$(get_poetry_version)
 
         # Mark as installed in lock file
@@ -228,7 +228,7 @@ update_poetry() {
     # Check if Poetry is installed
     log_debug "Verificando se Poetry está instalado..."
 
-    if ! command -v poetry &>/dev/null; then
+    if ! command -v poetry &> /dev/null; then
         log_error "Poetry não está instalado"
         echo ""
         log_output "${YELLOW}Para instalar, execute:${NC} ${LIGHT_CYAN}susa setup poetry${NC}"
@@ -253,7 +253,7 @@ update_poetry() {
     # Verify update
     log_debug "Verificando nova versão..."
 
-    if command -v poetry &>/dev/null; then
+    if command -v poetry &> /dev/null; then
         local new_version=$(get_poetry_version)
 
         if [ "$current_version" = "$new_version" ]; then
@@ -280,7 +280,7 @@ uninstall_poetry() {
     # Check if Poetry is installed
     log_debug "Verificando se Poetry está instalado..."
 
-    if ! command -v poetry &>/dev/null; then
+    if ! command -v poetry &> /dev/null; then
         log_warning "Poetry não está instalado"
         log_info "Nada a fazer"
         return 0
@@ -337,7 +337,7 @@ uninstall_poetry() {
     # Remove shell configurations
     local shell_config=$(detect_shell_config)
 
-    if [ -f "$shell_config" ] && grep -q "POETRY_HOME\|poetry/bin" "$shell_config" 2>/dev/null; then
+    if [ -f "$shell_config" ] && grep -q "POETRY_HOME\|poetry/bin" "$shell_config" 2> /dev/null; then
         local backup_file="${shell_config}.backup.$(date +%Y%m%d%H%M%S)"
 
         log_debug "Removendo configurações de $shell_config..."
@@ -360,7 +360,7 @@ uninstall_poetry() {
     # Verify removal
     log_debug "Verificando remoção..."
 
-    if ! command -v poetry &>/dev/null; then
+    if ! command -v poetry &> /dev/null; then
         # Mark as uninstalled in lock file
         mark_uninstalled "poetry"
 
@@ -382,10 +382,10 @@ uninstall_poetry() {
     if [[ "$config_response" =~ ^[sS]$ ]]; then
         log_debug "Removendo cache e configurações..."
 
-        rm -rf "$HOME/.cache/pypoetry" 2>/dev/null || true
+        rm -rf "$HOME/.cache/pypoetry" 2> /dev/null || true
         log_debug "Cache removido: ~/.cache/pypoetry"
 
-        rm -rf "$HOME/.config/pypoetry" 2>/dev/null || true
+        rm -rf "$HOME/.config/pypoetry" 2> /dev/null || true
         log_debug "Configurações removidas: ~/.config/pypoetry"
 
         log_success "Cache e configurações removidos"

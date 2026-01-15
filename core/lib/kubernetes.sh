@@ -8,7 +8,7 @@ IFS=$'\n\t'
 # Usage:
 #   check_kubectl_installed "exit_on_error"
 check_kubectl_installed() {
-    if ! command -v kubectl &>/dev/null; then
+    if ! command -v kubectl &> /dev/null; then
         log_error "kubectl não está instalado. Por favor, instale o kubectl seguindo as instruções em: https://kubernetes.io/docs/tasks/tools/install-kubectl/"
         if [ "$1" == "exit_on_error" ]; then
             exit 1
@@ -25,7 +25,7 @@ check_namespace_exists() {
     local namespace=$1
     check_kubectl_installed "exit_on_error"
 
-    if ! kubectl get namespace "$namespace" &>/dev/null; then
+    if ! kubectl get namespace "$namespace" &> /dev/null; then
         if [ "$2" == "exit_on_error" ]; then
             log_error "O ambiente $namespace não existe. Verifique o nome do ambiente."
             exit 1

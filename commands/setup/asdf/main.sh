@@ -41,7 +41,7 @@ show_help() {
 
 get_latest_asdf_version() {
     # Try to get the latest version via GitHub API
-    local latest_version=$(curl -s --max-time ${ASDF_API_MAX_TIME:-10} --connect-timeout ${ASDF_API_CONNECT_TIMEOUT:-5} ${ASDF_GITHUB_API_URL:-https://api.github.com/repos/asdf-vm/asdf/releases/latest} 2>/dev/null | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+    local latest_version=$(curl -s --max-time ${ASDF_API_MAX_TIME:-10} --connect-timeout ${ASDF_API_CONNECT_TIMEOUT:-5} ${ASDF_GITHUB_API_URL:-https://api.github.com/repos/asdf-vm/asdf/releases/latest} 2> /dev/null | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
 
     if [ -n "$latest_version" ]; then
         log_debug "Versão obtida via API do GitHub: $latest_version" >&2
@@ -51,7 +51,7 @@ get_latest_asdf_version() {
 
     # If it fails, try via git ls-remote with semantic version sorting
     log_debug "API do GitHub falhou, tentando via git ls-remote..." >&2
-    latest_version=$(timeout ${ASDF_GIT_TIMEOUT:-5} git ls-remote --tags --refs ${ASDF_GITHUB_REPO_URL:-https://github.com/asdf-vm/asdf.git} 2>/dev/null |
+    latest_version=$(timeout ${ASDF_GIT_TIMEOUT:-5} git ls-remote --tags --refs ${ASDF_GITHUB_REPO_URL:-https://github.com/asdf-vm/asdf.git} 2> /dev/null |
         grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+$' |
         sort -V |
         tail -1)
@@ -73,9 +73,9 @@ get_asdf_version() {
     local asdf_dir="${1:-${ASDF_INSTALL_DIR:-$HOME/.asdf}}"
 
     if [ -f "$asdf_dir/bin/asdf" ]; then
-        "$asdf_dir/bin/asdf" --version 2>/dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' || echo "desconhecida"
-    elif command -v asdf &>/dev/null; then
-        asdf --version 2>/dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' || echo "desconhecida"
+        "$asdf_dir/bin/asdf" --version 2> /dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' || echo "desconhecida"
+    elif command -v asdf &> /dev/null; then
+        asdf --version 2> /dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' || echo "desconhecida"
     else
         echo "desconhecida"
     fi
@@ -156,7 +156,7 @@ check_existing_installation() {
 # Check if ASDF is already configured in shell
 is_asdf_configured() {
     local shell_config="$1"
-    grep -q "ASDF_DATA_DIR" "$shell_config" 2>/dev/null
+    grep -q "ASDF_DATA_DIR" "$shell_config" 2> /dev/null
 }
 
 # Add ASDF configuration to shell
@@ -164,11 +164,11 @@ add_asdf_to_shell() {
     local asdf_dir="$1"
     local shell_config="$2"
 
-    echo "" >>"$shell_config"
-    echo "# ASDF Version Manager" >>"$shell_config"
-    echo "export PATH=\"$(get_local_bin_dir):\$PATH\"" >>"$shell_config"
-    echo "export ASDF_DATA_DIR=\"$asdf_dir\"" >>"$shell_config"
-    echo "export PATH=\"\$ASDF_DATA_DIR/bin:\$ASDF_DATA_DIR/shims:\$PATH\"" >>"$shell_config"
+    echo "" >> "$shell_config"
+    echo "# ASDF Version Manager" >> "$shell_config"
+    echo "export PATH=\"$(get_local_bin_dir):\$PATH\"" >> "$shell_config"
+    echo "export ASDF_DATA_DIR=\"$asdf_dir\"" >> "$shell_config"
+    echo "export PATH=\"\$ASDF_DATA_DIR/bin:\$ASDF_DATA_DIR/shims:\$PATH\"" >> "$shell_config"
 }
 
 # Configure shell to use ASDF
@@ -312,7 +312,7 @@ install_asdf() {
     # Verify installation
     local shell_config=$(detect_shell_config)
 
-    if command -v asdf &>/dev/null; then
+    if command -v asdf &> /dev/null; then
         local version=$(get_asdf_version)
         log_success "ASDF instalado com sucesso!"
         mark_installed "asdf" "$version"
@@ -369,12 +369,12 @@ update_asdf() {
 
     if [ -d "$asdf_dir/plugins" ]; then
         log_debug "Fazendo backup dos plugins..."
-        cp -r "$asdf_dir/plugins" "$backup_dir/" 2>/dev/null || true
+        cp -r "$asdf_dir/plugins" "$backup_dir/" 2> /dev/null || true
     fi
 
     if [ -f "$HOME/.tool-versions" ]; then
         log_debug "Fazendo backup de .tool-versions..."
-        cp "$HOME/.tool-versions" "$backup_dir/" 2>/dev/null || true
+        cp "$HOME/.tool-versions" "$backup_dir/" 2> /dev/null || true
     fi
 
     # Remove old installation (plugins e versões de ferramentas serão preservados)
@@ -390,7 +390,7 @@ update_asdf() {
         # Restore backup on failure
         if [ -d "$backup_dir/plugins" ]; then
             mkdir -p "$asdf_dir"
-            cp -r "$backup_dir/plugins" "$asdf_dir/" 2>/dev/null || true
+            cp -r "$backup_dir/plugins" "$asdf_dir/" 2> /dev/null || true
         fi
         rm -rf "$backup_dir"
         return 1
@@ -406,12 +406,12 @@ update_asdf() {
     # Restore plugins
     if [ -d "$backup_dir/plugins" ]; then
         log_debug "Restaurando plugins..."
-        cp -r "$backup_dir/plugins" "$asdf_dir/" 2>/dev/null || true
+        cp -r "$backup_dir/plugins" "$asdf_dir/" 2> /dev/null || true
     fi
 
     if [ -f "$backup_dir/.tool-versions" ]; then
         log_debug "Restaurando .tool-versions..."
-        cp "$backup_dir/.tool-versions" "$HOME/" 2>/dev/null || true
+        cp "$backup_dir/.tool-versions" "$HOME/" 2> /dev/null || true
     fi
 
     # Cleanup backup
@@ -421,7 +421,7 @@ update_asdf() {
     setup_asdf_environment "$asdf_dir"
 
     # Verify update
-    if command -v asdf &>/dev/null; then
+    if command -v asdf &> /dev/null; then
         local new_version=$(get_asdf_version)
         log_success "ASDF atualizado com sucesso para versão $new_version!"
         update_version "asdf" "$new_version"

@@ -50,9 +50,9 @@ main() {
     # Check if plugin exists in registry (could be dev plugin)
     log_debug "Verificando se plugin existe no registry"
     if [ -f "$REGISTRY_FILE" ]; then
-        local plugin_count=$(yq eval ".plugins[] | select(.name == \"$PLUGIN_NAME\") | .name" "$REGISTRY_FILE" 2>/dev/null | wc -l)
+        local plugin_count=$(yq eval ".plugins[] | select(.name == \"$PLUGIN_NAME\") | .name" "$REGISTRY_FILE" 2> /dev/null | wc -l)
         if [ "$plugin_count" -gt 0 ]; then
-            local dev_flag=$(yq eval ".plugins[] | select(.name == \"$PLUGIN_NAME\") | .dev" "$REGISTRY_FILE" 2>/dev/null | head -1)
+            local dev_flag=$(yq eval ".plugins[] | select(.name == \"$PLUGIN_NAME\") | .dev" "$REGISTRY_FILE" 2> /dev/null | head -1)
             if [ "$dev_flag" = "true" ]; then
                 log_error "Plugin '$PLUGIN_NAME' está em modo desenvolvimento"
                 log_debug "Plugin dev não pode ser atualizado"
@@ -60,7 +60,7 @@ main() {
                 log_output "${YELLOW}Plugins em modo desenvolvimento não podem ser atualizados.${NC}"
                 log_output "As alterações no código já refletem imediatamente!"
                 log_output ""
-                local source_path=$(yq eval ".plugins[] | select(.name == \"$PLUGIN_NAME\") | .source" "$REGISTRY_FILE" 2>/dev/null | head -1)
+                local source_path=$(yq eval ".plugins[] | select(.name == \"$PLUGIN_NAME\") | .source" "$REGISTRY_FILE" 2> /dev/null | head -1)
                 if [ -n "$source_path" ]; then
                     log_output "${GRAY}Local do plugin: $source_path${NC}"
                 fi

@@ -70,7 +70,7 @@ get_latest_version() {
 
     # Try to obtain via GitHub API
     latest_version=$(curl -s --max-time 10 --connect-timeout 5 \
-        https://api.github.com/repos/duducp/susa/releases/latest 2>/dev/null |
+        https://api.github.com/repos/duducp/susa/releases/latest 2> /dev/null |
         grep '"tag_name":' | sed -E 's/.*"v?([^"]+)".*/\1/')
 
     if [[ -n "$latest_version" ]]; then
@@ -83,7 +83,7 @@ get_latest_version() {
 
     # If it fails, try to get the version of cli.yaml from the remote repository
     latest_version=$(curl -s --max-time 10 --connect-timeout 5 \
-        "https://raw.githubusercontent.com/duducp/susa/${REPO_BRANCH}/cli.yaml" 2>/dev/null |
+        "https://raw.githubusercontent.com/duducp/susa/${REPO_BRANCH}/cli.yaml" 2> /dev/null |
         grep 'version:' | head -1 | sed -E 's/.*version: *"?([^"]+)"?/\1/')
 
     if [[ -n "$latest_version" ]]; then
@@ -126,7 +126,7 @@ perform_update() {
     log_info "Baixando versão mais recente do repositório..."
     log_debug "Clonando de: $REPO_URL (branch: $REPO_BRANCH)"
 
-    if ! git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" susa-update 2>/dev/null; then
+    if ! git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" susa-update 2> /dev/null; then
         log_error "Falha ao baixar atualização do repositório"
         log_info "Verifique sua conexão com a internet e tente novamente"
         return 1
@@ -182,7 +182,7 @@ perform_update() {
     # Update lock file after successful update
     log_info "Atualizando arquivo de cache..."
     log_debug "Executando: $CORE_DIR/susa self lock"
-    if "$CORE_DIR/susa" self lock >/dev/null 2>&1; then
+    if "$CORE_DIR/susa" self lock > /dev/null 2>&1; then
         log_debug "Lock file atualizado com sucesso"
     else
         log_warning "Não foi possível atualizar o lock file. Execute 'susa self lock' manualmente."
@@ -216,7 +216,7 @@ main() {
     fi
 
     # Parse result (version|method)
-    IFS='|' read -r LATEST_VERSION METHOD <<<"$LATEST_VERSION_RESULT"
+    IFS='|' read -r LATEST_VERSION METHOD <<< "$LATEST_VERSION_RESULT"
 
     if [[ "$METHOD" == "api" ]]; then
         log_debug "Versão obtida via GitHub API: $LATEST_VERSION"

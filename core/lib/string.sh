@@ -68,7 +68,7 @@ parse_comma_separated() {
     for i in "${!arr_ref[@]}"; do
         if [[ "${arr_ref[$i]}" == *","* ]]; then
             local temp="${arr_ref[$i]}"
-            IFS=',' read -r -a split_arr <<<"$temp"
+            IFS=',' read -r -a split_arr <<< "$temp"
             arr_ref=("${arr_ref[@]:0:$i}" "${split_arr[@]}" "${arr_ref[@]:$((i + 1))}")
         fi
     done

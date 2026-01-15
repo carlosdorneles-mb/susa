@@ -11,4 +11,5 @@ rules:
   comments:
     min-spaces-from-content: 1
   truthy:
-    allowed-values: ['true', 'false', 'yes', 'no']
+    allowed-values: ['true', 'false', 'yes', 'no', 'on', 'off']
+    check-keys: false

@@ -23,7 +23,7 @@ registry_add_plugin() {
 
     # Create file if it doesn't exist
     if [ ! -f "$registry_file" ]; then
-        cat >"$registry_file" <<EOF
+        cat > "$registry_file" << EOF
 # Plugin Registry
 version: "1.0.0"
 
@@ -32,12 +32,12 @@ EOF
     fi
 
     # Check if plugin already exists
-    if grep -q "name: \"$plugin_name\"" "$registry_file" 2>/dev/null; then
+    if grep -q "name: \"$plugin_name\"" "$registry_file" 2> /dev/null; then
         return 1
     fi
 
     # Build plugin entry using yq
-    local plugin_index=$(yq eval '.plugins | length' "$registry_file" 2>/dev/null || echo 0)
+    local plugin_index=$(yq eval '.plugins | length' "$registry_file" 2> /dev/null || echo 0)
 
     # Add basic plugin info
     yq eval -i ".plugins[$plugin_index].name = \"$plugin_name\"" "$registry_file"
@@ -71,7 +71,7 @@ registry_remove_plugin() {
     fi
 
     # Use yq to remove the plugin entry
-    yq eval -i "del(.plugins[] | select(.name == \"$plugin_name\"))" "$registry_file" 2>/dev/null || return 1
+    yq eval -i "del(.plugins[] | select(.name == \"$plugin_name\"))" "$registry_file" 2> /dev/null || return 1
 
     return 0
 }
@@ -107,5 +107,5 @@ registry_get_plugin_info() {
     fi
 
     # Use yq to get the field value
-    yq eval ".plugins[] | select(.name == \"$plugin_name\") | .$field" "$registry_file" 2>/dev/null
+    yq eval ".plugins[] | select(.name == \"$plugin_name\") | .$field" "$registry_file" 2> /dev/null
 }

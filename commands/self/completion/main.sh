@@ -82,7 +82,7 @@ get_category_commands() {
 
 # Generate completion script for Bash
 generate_bash_completion() {
-    cat <<'BASH_COMPLETION_EOF'
+    cat << 'BASH_COMPLETION_EOF'
 # Susa CLI - Bash Completion
 # Gerado automaticamente por: susa self completion bash
 
@@ -194,7 +194,7 @@ BASH_COMPLETION_EOF
 
 # Generate script completion for Zsh
 generate_zsh_completion() {
-    cat <<'ZSH_COMPLETION_EOF'
+    cat << 'ZSH_COMPLETION_EOF'
 #compdef susa
 # Susa CLI - Zsh Completion
 # Gerado automaticamente por: susa self completion zsh
@@ -297,7 +297,7 @@ ZSH_COMPLETION_EOF
 
 # Generate completion script for Fish
 generate_fish_completion() {
-    cat <<'FISH_COMPLETION_EOF'
+    cat << 'FISH_COMPLETION_EOF'
 # Susa CLI - Fish Completion
 # Gerado automaticamente por: susa self completion fish
 
@@ -464,7 +464,7 @@ install_bash_completion() {
 
     # Generate and save the script
     log_debug "Gerando script de completion"
-    generate_bash_completion >"$completion_file"
+    generate_bash_completion > "$completion_file"
     chmod +x "$completion_file"
     log_debug "Script gerado e permissões configuradas"
 
@@ -502,17 +502,17 @@ install_zsh_completion() {
 
     # Generate and save the script
     log_debug "Gerando script de completion"
-    generate_zsh_completion >"$completion_file"
+    generate_zsh_completion > "$completion_file"
     chmod +x "$completion_file"
     log_debug "Script gerado e permissões configuradas"
 
     # Add to path if necessary
     if [ -f "$shell_config" ]; then
         if ! grep -q "fpath=.*$completion_dir" "$shell_config"; then
-            echo "" >>"$shell_config"
-            echo "# Susa CLI completion" >>"$shell_config"
-            echo "fpath=($completion_dir \$fpath)" >>"$shell_config"
-            echo "autoload -Uz compinit && compinit" >>"$shell_config"
+            echo "" >> "$shell_config"
+            echo "# Susa CLI completion" >> "$shell_config"
+            echo "fpath=($completion_dir \$fpath)" >> "$shell_config"
+            echo "autoload -Uz compinit && compinit" >> "$shell_config"
         fi
     fi
 
@@ -548,7 +548,7 @@ install_fish_completion() {
 
     # Generate and save the script
     log_debug "Gerando script de completion"
-    generate_fish_completion >"$completion_file"
+    generate_fish_completion > "$completion_file"
     chmod +x "$completion_file"
     log_debug "Script gerado e permissões configuradas"
 

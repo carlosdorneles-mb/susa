@@ -12,7 +12,7 @@ IFS=$'\n\t'
 #       echo "curl is installed"
 #   fi
 command_exists() {
-    command -v "$1" &>/dev/null
+    command -v "$1" &> /dev/null
 }
 
 # Check if multiple dependencies are installed
@@ -47,9 +47,9 @@ wait_for_apt_lock() {
     local max_wait=60
     local waited=0
 
-    while sudo fuser /var/lib/apt/lists/lock >/dev/null 2>&1 ||
-        sudo fuser /var/lib/dpkg/lock >/dev/null 2>&1 ||
-        sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
+    while sudo fuser /var/lib/apt/lists/lock > /dev/null 2>&1 ||
+        sudo fuser /var/lib/dpkg/lock > /dev/null 2>&1 ||
+        sudo fuser /var/lib/dpkg/lock-frontend > /dev/null 2>&1; do
 
         if [ $waited -eq 0 ]; then
             log_info "Aguardando outros processos apt finalizarem..."
@@ -71,26 +71,26 @@ wait_for_apt_lock() {
 
 # Ensure pip3 is installed. If not, try installing.
 ensure_pip3_installed() {
-    if command -v pip3 &>/dev/null; then
+    if command -v pip3 &> /dev/null; then
         return 0
     fi
 
     log_warning "pip3 não encontrado. Tentando instalar python3-pip..."
 
-    if command -v apt-get &>/dev/null; then
+    if command -v apt-get &> /dev/null; then
         wait_for_apt_lock || return 1
-        sudo apt-get update -qq >/dev/null 2>&1
-        sudo apt-get install -y python3-pip >/dev/null 2>&1
-    elif command -v dnf &>/dev/null; then
-        sudo dnf install -y python3-pip >/dev/null 2>&1
-    elif command -v yum &>/dev/null; then
-        sudo yum install -y python3-pip >/dev/null 2>&1
+        sudo apt-get update -qq > /dev/null 2>&1
+        sudo apt-get install -y python3-pip > /dev/null 2>&1
+    elif command -v dnf &> /dev/null; then
+        sudo dnf install -y python3-pip > /dev/null 2>&1
+    elif command -v yum &> /dev/null; then
+        sudo yum install -y python3-pip > /dev/null 2>&1
     else
         log_error "Gerenciador de pacotes não suportado para instalação do pip3"
         return 1
     fi
 
-    if ! command -v pip3 &>/dev/null; then
+    if ! command -v pip3 &> /dev/null; then
         log_error "Falha ao instalar o pip3. Instale manualmente."
         return 1
     fi
@@ -103,7 +103,7 @@ ensure_pip3_installed() {
 
 # Ensure curl is installed. If not, try installing.
 ensure_curl_installed() {
-    if command -v curl &>/dev/null; then
+    if command -v curl &> /dev/null; then
         return 0
     fi
 
@@ -114,14 +114,14 @@ ensure_curl_installed() {
             sudo apt-get update && sudo apt-get install -y curl
             ;;
         fedora)
-            if command -v dnf &>/dev/null; then
+            if command -v dnf &> /dev/null; then
                 sudo dnf install -y curl
             else
                 sudo yum install -y curl
             fi
             ;;
         macos)
-            if command -v brew &>/dev/null; then
+            if command -v brew &> /dev/null; then
                 brew install curl
             else
                 log_error "Homebrew não encontrado. Instale o Homebrew ou o curl manualmente: https://brew.sh/"
@@ -134,7 +134,7 @@ ensure_curl_installed() {
             ;;
     esac
 
-    if ! command -v curl &>/dev/null; then
+    if ! command -v curl &> /dev/null; then
         log_error "Falha ao instalar o curl. Instale manualmente."
         return 1
     fi
@@ -147,7 +147,7 @@ ensure_curl_installed() {
 
 # Make sure jq is installed. If not, try installing.
 ensure_jq_installed() {
-    if command -v jq &>/dev/null; then
+    if command -v jq &> /dev/null; then
         return 0
     fi
 
@@ -158,14 +158,14 @@ ensure_jq_installed() {
             sudo apt-get update && sudo apt-get install -y jq
             ;;
         fedora)
-            if command -v dnf &>/dev/null; then
+            if command -v dnf &> /dev/null; then
                 sudo dnf install -y jq
             else
                 sudo yum install -y jq
             fi
             ;;
         macos)
-            if command -v brew &>/dev/null; then
+            if command -v brew &> /dev/null; then
                 brew install jq
             else
                 log_error "Homebrew não encontrado. Instale o Homebrew ou o jq manualmente: https://brew.sh/"
@@ -178,7 +178,7 @@ ensure_jq_installed() {
             ;;
     esac
 
-    if ! command -v jq &>/dev/null; then
+    if ! command -v jq &> /dev/null; then
         log_error "Falha ao instalar o jq. Instale manualmente."
         return 1
     fi
@@ -190,7 +190,7 @@ ensure_jq_installed() {
 # --- YQ Helper Function ---
 
 ensure_yq_installed() {
-    if command -v yq &>/dev/null; then
+    if command -v yq &> /dev/null; then
         return 0
     fi
 
@@ -250,7 +250,7 @@ ensure_yq_installed() {
 
 # Checks if fzf is installed. If not, install the latest version from GitHub.
 ensure_fzf_installed() {
-    if command -v fzf &>/dev/null; then
+    if command -v fzf &> /dev/null; then
         return 0
     fi
 

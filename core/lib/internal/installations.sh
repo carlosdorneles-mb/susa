@@ -34,13 +34,13 @@ mark_installed() {
     local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
     # Check if installations section exists
-    if ! yq eval '.installations' "$lock_file" &>/dev/null || [ "$(yq eval '.installations' "$lock_file")" = "null" ]; then
+    if ! yq eval '.installations' "$lock_file" &> /dev/null || [ "$(yq eval '.installations' "$lock_file")" = "null" ]; then
         # Create installations section
         yq eval -i '.installations = []' "$lock_file"
     fi
 
     # Check if software already tracked
-    local exists=$(yq eval ".installations[] | select(.name == \"$software_name\") | .name" "$lock_file" 2>/dev/null)
+    local exists=$(yq eval ".installations[] | select(.name == \"$software_name\") | .name" "$lock_file" 2> /dev/null)
 
     if [ -n "$exists" ] && [ "$exists" != "null" ]; then
         # Update existing entry
@@ -66,7 +66,7 @@ mark_uninstalled() {
     fi
 
     # Check if software is tracked
-    local exists=$(yq eval ".installations[] | select(.name == \"$software_name\") | .name" "$lock_file" 2>/dev/null)
+    local exists=$(yq eval ".installations[] | select(.name == \"$software_name\") | .name" "$lock_file" 2> /dev/null)
 
     if [ -n "$exists" ] && [ "$exists" != "null" ]; then
         # Mark as uninstalled and clear version
@@ -92,7 +92,7 @@ update_version() {
     local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
     # Check if software is tracked
-    local exists=$(yq eval ".installations[] | select(.name == \"$software_name\") | .name" "$lock_file" 2>/dev/null)
+    local exists=$(yq eval ".installations[] | select(.name == \"$software_name\") | .name" "$lock_file" 2> /dev/null)
 
     if [ -n "$exists" ] && [ "$exists" != "null" ]; then
         yq eval -i "(.installations[] | select(.name == \"$software_name\") | .version) = \"$version\"" "$lock_file"
@@ -113,7 +113,7 @@ is_installed() {
         return 1
     fi
 
-    local installed=$(yq eval ".installations[] | select(.name == \"$software_name\") | .installed" "$lock_file" 2>/dev/null)
+    local installed=$(yq eval ".installations[] | select(.name == \"$software_name\") | .installed" "$lock_file" 2> /dev/null)
 
     if [ "$installed" = "true" ]; then
         return 0
@@ -132,7 +132,7 @@ get_installed_version() {
         return 1
     fi
 
-    local version=$(yq eval ".installations[] | select(.name == \"$software_name\") | .version" "$lock_file" 2>/dev/null)
+    local version=$(yq eval ".installations[] | select(.name == \"$software_name\") | .version" "$lock_file" 2> /dev/null)
 
     if [ -n "$version" ] && [ "$version" != "null" ]; then
         echo "$version"
@@ -152,7 +152,7 @@ get_installation_info() {
         return 1
     fi
 
-    yq eval ".installations[] | select(.name == \"$software_name\")" "$lock_file" 2>/dev/null
+    yq eval ".installations[] | select(.name == \"$software_name\")" "$lock_file" 2> /dev/null
     return 0
 }
 
@@ -165,7 +165,7 @@ list_installed() {
         return 1
     fi
 
-    yq eval '.installations[] | select(.installed == true) | .name' "$lock_file" 2>/dev/null
+    yq eval '.installations[] | select(.installed == true) | .name' "$lock_file" 2> /dev/null
     return 0
 }
 
@@ -193,35 +193,35 @@ check_software_installed() {
 
     case "$software_name" in
         docker)
-            command -v docker &>/dev/null
+            command -v docker &> /dev/null
             ;;
         podman)
-            command -v podman &>/dev/null
+            command -v podman &> /dev/null
             ;;
         mise)
-            command -v mise &>/dev/null
+            command -v mise &> /dev/null
             ;;
         asdf)
             [ -d "$HOME/.asdf" ] && [ -f "$HOME/.asdf/bin/asdf" ]
             ;;
         poetry)
-            command -v poetry &>/dev/null
+            command -v poetry &> /dev/null
             ;;
         uv)
-            command -v uv &>/dev/null
+            command -v uv &> /dev/null
             ;;
         tilix)
-            command -v tilix &>/dev/null || ([ "$(uname)" = "Linux" ] && dpkg -l | grep -q tilix)
+            command -v tilix &> /dev/null || ([ "$(uname)" = "Linux" ] && dpkg -l | grep -q tilix)
             ;;
         iterm)
             [ "$(uname)" = "Darwin" ] && [ -d "/Applications/iTerm.app" ]
             ;;
         toolbox | jetbrains-toolbox)
-            command -v jetbrains-toolbox &>/dev/null || [ -f "$HOME/.local/bin/jetbrains-toolbox" ]
+            command -v jetbrains-toolbox &> /dev/null || [ -f "$HOME/.local/bin/jetbrains-toolbox" ]
             ;;
         *)
             # Try generic command check
-            command -v "$software_name" &>/dev/null
+            command -v "$software_name" &> /dev/null
             ;;
     esac
 }
@@ -233,45 +233,45 @@ get_software_version() {
 
     case "$software_name" in
         docker)
-            if command -v docker &>/dev/null; then
-                docker --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown"
+            if command -v docker &> /dev/null; then
+                docker --version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown"
             fi
             ;;
         podman)
-            if command -v podman &>/dev/null; then
-                podman --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown"
+            if command -v podman &> /dev/null; then
+                podman --version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown"
             fi
             ;;
         mise)
-            if command -v mise &>/dev/null; then
-                mise --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown"
+            if command -v mise &> /dev/null; then
+                mise --version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown"
             fi
             ;;
         asdf)
             if [ -f "$HOME/.asdf/bin/asdf" ]; then
-                "$HOME/.asdf/bin/asdf" --version 2>/dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown"
+                "$HOME/.asdf/bin/asdf" --version 2> /dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown"
             fi
             ;;
         poetry)
-            if command -v poetry &>/dev/null; then
-                poetry --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown"
+            if command -v poetry &> /dev/null; then
+                poetry --version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown"
             fi
             ;;
         uv)
-            if command -v uv &>/dev/null; then
-                uv --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown"
+            if command -v uv &> /dev/null; then
+                uv --version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown"
             fi
             ;;
         tilix)
-            if command -v tilix &>/dev/null; then
-                tilix --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown"
+            if command -v tilix &> /dev/null; then
+                tilix --version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown"
             fi
             ;;
         toolbox | jetbrains-toolbox)
-            if command -v jetbrains-toolbox &>/dev/null; then
-                jetbrains-toolbox --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown"
+            if command -v jetbrains-toolbox &> /dev/null; then
+                jetbrains-toolbox --version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown"
             elif [ -f "$HOME/.local/bin/jetbrains-toolbox" ]; then
-                "$HOME/.local/bin/jetbrains-toolbox" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown"
+                "$HOME/.local/bin/jetbrains-toolbox" --version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown"
             fi
             ;;
         *)
@@ -327,20 +327,20 @@ sync_installations() {
                 log_success "Sincronizado: $software_name ($version)"
 
                 # Track synced count in temp file
-                echo "1" >>"$temp_add_file"
+                echo "1" >> "$temp_add_file"
             else
                 log_debug "$software_name já está no lock file"
             fi
         else
             log_debug "$software_name não está instalado"
         fi
-    done <<<"$commands_output"
+    done <<< "$commands_output"
 
     # Second pass: Check for removed installations (lock → system)
     log_debug "Verificando instalações removidas..."
 
     # Get list of software marked as installed in lock file
-    local installed_in_lock=$(yq eval '.installations[] | select(.installed == true) | .name' "$lock_file" 2>/dev/null)
+    local installed_in_lock=$(yq eval '.installations[] | select(.installed == true) | .name' "$lock_file" 2> /dev/null)
 
     if [ -n "$installed_in_lock" ]; then
         while IFS= read -r software_name; do
@@ -355,19 +355,19 @@ sync_installations() {
                 log_warning "Removido do lock: $software_name (não está mais instalado)"
 
                 # Track removed count in temp file
-                echo "1" >>"$temp_remove_file"
+                echo "1" >> "$temp_remove_file"
             fi
-        done <<<"$installed_in_lock"
+        done <<< "$installed_in_lock"
     fi
 
     # Count changes from temp files
     if [ -f "$temp_add_file" ]; then
-        synced_count=$(wc -l <"$temp_add_file")
+        synced_count=$(wc -l < "$temp_add_file")
         rm -f "$temp_add_file"
     fi
 
     if [ -f "$temp_remove_file" ]; then
-        removed_count=$(wc -l <"$temp_remove_file")
+        removed_count=$(wc -l < "$temp_remove_file")
         rm -f "$temp_remove_file"
     fi
 

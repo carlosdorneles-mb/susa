@@ -10,7 +10,7 @@ IFS=$'\n\t'
 
 # Checks if git is installed
 ensure_git_installed() {
-    if ! command -v git &>/dev/null; then
+    if ! command -v git &> /dev/null; then
         log_error "Git not found. Install git first."
         return 1
     fi
@@ -92,13 +92,13 @@ detect_plugin_version() {
 # Counts commands from a plugin
 count_plugin_commands() {
     local plugin_dir="$1"
-    find "$plugin_dir" -type f -name "main.sh" 2>/dev/null | wc -l | xargs
+    find "$plugin_dir" -type f -name "main.sh" 2> /dev/null | wc -l | xargs
 }
 
 # Gets plugin categories (first-level directories excluding .git)
 get_plugin_categories() {
     local plugin_dir="$1"
-    find "$plugin_dir" -mindepth 1 -maxdepth 1 -type d ! -name ".git" -exec basename {} \; 2>/dev/null | sort | paste -sd "," -
+    find "$plugin_dir" -mindepth 1 -maxdepth 1 -type d ! -name ".git" -exec basename {} \; 2> /dev/null | sort | paste -sd "," -
 }
 
 # Updates the lock file (creates if doesn't exist)
@@ -106,7 +106,7 @@ update_lock_file() {
     log_info "Atualizando arquivo susa.lock..."
     log_debug "Executando: $CORE_DIR/susa self lock"
 
-    if "$CORE_DIR/susa" self lock >/dev/null 2>&1; then
+    if "$CORE_DIR/susa" self lock > /dev/null 2>&1; then
         log_debug "Lock file atualizado com sucesso"
     else
         log_warning "Não foi possível atualizar o susa.lock. Execute 'susa self lock' manualmente."
@@ -121,7 +121,7 @@ validate_repo_access() {
     log_debug "Validando acesso ao repositório..."
 
     # Use git ls-remote to check if we can access the repo
-    if git ls-remote "$url" HEAD &>/dev/null; then
+    if git ls-remote "$url" HEAD &> /dev/null; then
         return 0
     else
         return 1

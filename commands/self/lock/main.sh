@@ -73,18 +73,18 @@ scan_category_dir() {
 
         # Check if it's a command (has entrypoint field in config.yaml)
         if [ -f "$item_dir/config.yaml" ]; then
-            local script_name=$(yq eval '.entrypoint' "$item_dir/config.yaml" 2>/dev/null)
+            local script_name=$(yq eval '.entrypoint' "$item_dir/config.yaml" 2> /dev/null)
 
             if [ -n "$script_name" ] && [ "$script_name" != "null" ] && [ -f "$item_dir/$script_name" ]; then
                 # It's a command
                 echo "COMMAND|$category_path|$item_name|$source"
 
                 # Read additional metadata
-                local description=$(yq eval '.description' "$item_dir/config.yaml" 2>/dev/null)
-                local script=$(yq eval '.entrypoint' "$item_dir/config.yaml" 2>/dev/null)
-                local os=$(yq eval '.os' "$item_dir/config.yaml" 2>/dev/null)
-                local sudo=$(yq eval '.sudo' "$item_dir/config.yaml" 2>/dev/null)
-                local group=$(yq eval '.group' "$item_dir/config.yaml" 2>/dev/null)
+                local description=$(yq eval '.description' "$item_dir/config.yaml" 2> /dev/null)
+                local script=$(yq eval '.entrypoint' "$item_dir/config.yaml" 2> /dev/null)
+                local os=$(yq eval '.os' "$item_dir/config.yaml" 2> /dev/null)
+                local sudo=$(yq eval '.sudo' "$item_dir/config.yaml" 2> /dev/null)
+                local group=$(yq eval '.group' "$item_dir/config.yaml" 2> /dev/null)
 
                 # Always output entrypoint (use default if not specified)
                 if [ -z "$script" ] || [ "$script" = "null" ]; then
@@ -121,7 +121,7 @@ scan_all_structure() {
 
             # Read category info
             if [ -f "$cat_dir/config.yaml" ]; then
-                local cat_desc=$(yq eval '.description' "$cat_dir/config.yaml" 2>/dev/null)
+                local cat_desc=$(yq eval '.description' "$cat_dir/config.yaml" 2> /dev/null)
                 echo "CATEGORY|$cat_name|$cat_desc|commands"
             else
                 echo "CATEGORY|$cat_name||commands"
@@ -150,7 +150,7 @@ scan_all_structure() {
 
                 # Read category info
                 if [ -f "$cat_dir/config.yaml" ]; then
-                    local cat_desc=$(yq eval '.description' "$cat_dir/config.yaml" 2>/dev/null)
+                    local cat_desc=$(yq eval '.description' "$cat_dir/config.yaml" 2> /dev/null)
                     echo "CATEGORY|$cat_name|$cat_desc|$plugin_name"
                 else
                     echo "CATEGORY|$cat_name||$plugin_name"
@@ -166,7 +166,7 @@ scan_all_structure() {
     local registry_file="$cli_dir/plugins/registry.yaml"
     if [ -f "$registry_file" ]; then
         # Get dev plugins (source is a local path and dev=true)
-        local dev_plugins=$(yq eval '.plugins[] | select(.dev == true) | .name + "|" + .source' "$registry_file" 2>/dev/null)
+        local dev_plugins=$(yq eval '.plugins[] | select(.dev == true) | .name + "|" + .source' "$registry_file" 2> /dev/null)
 
         while IFS='|' read -r plugin_name plugin_source; do
             [ -z "$plugin_name" ] && continue
@@ -183,7 +183,7 @@ scan_all_structure() {
 
                 # Read category info
                 if [ -f "$cat_dir/config.yaml" ]; then
-                    local cat_desc=$(yq eval '.description' "$cat_dir/config.yaml" 2>/dev/null)
+                    local cat_desc=$(yq eval '.description' "$cat_dir/config.yaml" 2> /dev/null)
                     echo "CATEGORY|$cat_name|$cat_desc|$plugin_name"
                 else
                     echo "CATEGORY|$cat_name||$plugin_name"
@@ -192,7 +192,7 @@ scan_all_structure() {
                 # Scan category structure - mark as dev
                 scan_category_dir "$plugin_source" "$cat_name" "$plugin_name###DEV"
             done
-        done <<<"$dev_plugins"
+        done <<< "$dev_plugins"
     fi
 }
 
@@ -203,11 +203,11 @@ generate_lock_file() {
     local temp_installations="/tmp/susa_installations_backup_$$"
 
     # Backup existing installations section if lock file exists
-    if [ -f "$lock_file" ] && yq eval '.installations' "$lock_file" &>/dev/null; then
-        local has_installations=$(yq eval '.installations | length' "$lock_file" 2>/dev/null)
+    if [ -f "$lock_file" ] && yq eval '.installations' "$lock_file" &> /dev/null; then
+        local has_installations=$(yq eval '.installations | length' "$lock_file" 2> /dev/null)
         if [ "$has_installations" != "0" ] && [ "$has_installations" != "null" ]; then
             log_debug "Fazendo backup da seção de instalações..."
-            yq eval '.installations' "$lock_file" >"$temp_installations" 2>/dev/null
+            yq eval '.installations' "$lock_file" > "$temp_installations" 2> /dev/null
         fi
     fi
 
@@ -224,7 +224,7 @@ generate_lock_file() {
     log_info "Gerando arquivo susa.lock..."
 
     # Create lock file header
-    cat >"$lock_file" <<EOF
+    cat > "$lock_file" << EOF
 # Susa Lock File
 # This file contains the discovered commands and categories structure
 # Generated at: $timestamp
@@ -247,15 +247,15 @@ EOF
             local cat_source="$field3"
 
             # Add category to lock file
-            echo "  - name: \"$cat_name\"" >>"$lock_file"
-            [ -n "$cat_desc" ] && echo "    description: \"$cat_desc\"" >>"$lock_file"
-            echo "    source: \"$cat_source\"" >>"$lock_file"
+            echo "  - name: \"$cat_name\"" >> "$lock_file"
+            [ -n "$cat_desc" ] && echo "    description: \"$cat_desc\"" >> "$lock_file"
+            echo "    source: \"$cat_source\"" >> "$lock_file"
         fi
-    done <<<"$scan_output"
+    done <<< "$scan_output"
 
     # Add commands section
-    echo "" >>"$lock_file"
-    echo "commands:" >>"$lock_file"
+    echo "" >> "$lock_file"
+    echo "commands:" >> "$lock_file"
 
     # Second pass: process commands with buffering
     local buffer=""
@@ -265,14 +265,14 @@ EOF
         if [ "$type" = "COMMAND" ]; then
             # If we have a buffer, write it out with plugin info if needed
             if [ -n "$buffer" ]; then
-                echo "$buffer" >>"$lock_file"
+                echo "$buffer" >> "$lock_file"
                 if [ "$current_source" != "commands" ]; then
                     # Add dev flag if it's a dev plugin
                     if [ "$is_dev_plugin" = true ]; then
-                        echo "    dev: true" >>"$lock_file"
+                        echo "    dev: true" >> "$lock_file"
                     fi
-                    echo "    plugin:" >>"$lock_file"
-                    echo "      name: \"$current_source\"" >>"$lock_file"
+                    echo "    plugin:" >> "$lock_file"
+                    echo "      name: \"$current_source\"" >> "$lock_file"
 
                     # Add source path for all plugins
                     local registry_file="$CLI_DIR/plugins/registry.yaml"
@@ -280,14 +280,14 @@ EOF
 
                     if [ "$is_dev_plugin" = true ]; then
                         # For dev plugins, get source from registry
-                        plugin_source=$(yq eval ".plugins[] | select(.name == \"$current_source\" and .dev == true) | .source" "$registry_file" 2>/dev/null | head -1)
+                        plugin_source=$(yq eval ".plugins[] | select(.name == \"$current_source\" and .dev == true) | .source" "$registry_file" 2> /dev/null | head -1)
                     else
                         # For installed plugins, use plugins directory
                         plugin_source="$CLI_DIR/plugins/$current_source"
                     fi
 
                     if [ -n "$plugin_source" ] && [ "$plugin_source" != "null" ]; then
-                        echo "      source: \"$plugin_source\"" >>"$lock_file"
+                        echo "      source: \"$plugin_source\"" >> "$lock_file"
                     fi
                 fi
             fi
@@ -326,18 +326,18 @@ EOF
                 fi
             fi
         fi
-    done <<<"$scan_output"
+    done <<< "$scan_output"
 
     # Write last buffered command
     if [ -n "$buffer" ]; then
-        echo "$buffer" >>"$lock_file"
+        echo "$buffer" >> "$lock_file"
         if [ "$current_source" != "commands" ]; then
             # Add dev flag if it's a dev plugin
             if [ "$is_dev_plugin" = true ]; then
-                echo "    dev: true" >>"$lock_file"
+                echo "    dev: true" >> "$lock_file"
             fi
-            echo "    plugin:" >>"$lock_file"
-            echo "      name: \"$current_source\"" >>"$lock_file"
+            echo "    plugin:" >> "$lock_file"
+            echo "      name: \"$current_source\"" >> "$lock_file"
 
             # Add source path for all plugins
             local registry_file="$CLI_DIR/plugins/registry.yaml"
@@ -345,14 +345,14 @@ EOF
 
             if [ "$is_dev_plugin" = true ]; then
                 # For dev plugins, get source from registry
-                plugin_source=$(yq eval ".plugins[] | select(.name == \"$current_source\" and .dev == true) | .source" "$registry_file" 2>/dev/null | head -1)
+                plugin_source=$(yq eval ".plugins[] | select(.name == \"$current_source\" and .dev == true) | .source" "$registry_file" 2> /dev/null | head -1)
             else
                 # For installed plugins, use plugins directory
                 plugin_source="$CLI_DIR/plugins/$current_source"
             fi
 
             if [ -n "$plugin_source" ] && [ "$plugin_source" != "null" ]; then
-                echo "      source: \"$plugin_source\"" >>"$lock_file"
+                echo "      source: \"$plugin_source\"" >> "$lock_file"
             fi
         fi
     fi
@@ -360,10 +360,10 @@ EOF
     # Restore installations section if it was backed up
     if [ -f "$temp_installations" ]; then
         log_debug "Restaurando seção de instalações..."
-        echo "" >>"$lock_file"
-        echo "installations:" >>"$lock_file"
+        echo "" >> "$lock_file"
+        echo "installations:" >> "$lock_file"
         # Indent the installations content
-        sed 's/^/  /' "$temp_installations" >>"$lock_file"
+        sed 's/^/  /' "$temp_installations" >> "$lock_file"
         rm -f "$temp_installations"
     fi
 

@@ -12,40 +12,40 @@ on:
   workflow_dispatch:
 
 jobs:
-  quality-check:
-    name: Quality Check (ShellCheck + shfmt)
+  pre-commit:
+    name: Pre-commit Checks
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          go-version: '1.21'
+          python-version: '3.x'
 
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y shellcheck
-          go install mvdan.cc/sh/v3/cmd/shfmt@latest
+          sudo apt-get install -y shellcheck shfmt
+
+      - name: Install pre-commit
+        run: pip install pre-commit
 
       - name: Show versions
         run: |
+          echo "Python version:"
+          python --version
+          echo ""
           echo "ShellCheck version:"
           shellcheck --version
           echo ""
           echo "shfmt version:"
           shfmt -version
+          echo ""
+          echo "pre-commit version:"
+          pre-commit --version
 
-      - name: Run quality checks
-        run: make lint
-
-      - name: Check trailing whitespaces
-        run: |
-          if git grep -n '[[:space:]]$' -- '*.sh' ':!*.md'; then
-            echo "❌ Encontrados espaços em branco no final de linhas"
-            exit 1
-          fi
-          echo "✅ Nenhum espaço em branco trailing encontrado"
+      - name: Run pre-commit on all files
+        run: pre-commit run --all-files --show-diff-on-failure

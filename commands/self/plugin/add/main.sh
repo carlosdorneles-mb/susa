@@ -106,7 +106,7 @@ validate_local_plugin() {
     fi
 
     # Check if it has plugin structure (at least one category with config.yaml)
-    local found_configs=$(find "$plugin_dir" -mindepth 2 -maxdepth 2 -type f -name "config.yaml" 2>/dev/null | head -1)
+    local found_configs=$(find "$plugin_dir" -mindepth 2 -maxdepth 2 -type f -name "config.yaml" 2> /dev/null | head -1)
 
     if [ -z "$found_configs" ]; then
         log_error "Estrutura de plugin inválida"
@@ -212,10 +212,10 @@ check_plugin_already_installed() {
     local is_dev=false
 
     if [ -f "$registry_file" ]; then
-        local plugin_count=$(yq eval ".plugins[] | select(.name == \"$plugin_name\") | .name" "$registry_file" 2>/dev/null | wc -l)
+        local plugin_count=$(yq eval ".plugins[] | select(.name == \"$plugin_name\") | .name" "$registry_file" 2> /dev/null | wc -l)
         if [ "$plugin_count" -gt 0 ]; then
             in_registry=true
-            local dev_flag=$(yq eval ".plugins[] | select(.name == \"$plugin_name\") | .dev" "$registry_file" 2>/dev/null | head -1)
+            local dev_flag=$(yq eval ".plugins[] | select(.name == \"$plugin_name\") | .dev" "$registry_file" 2> /dev/null | head -1)
             if [ "$dev_flag" = "true" ]; then
                 is_dev=true
             fi
@@ -229,12 +229,13 @@ check_plugin_already_installed() {
     fi
 
     log_warning "Plugin '$plugin_name' já está instalado"
+
     log_output ""
+    log_output "Detalhes do plugin:"
 
     if [ "$is_dev" = true ]; then
-        log_output "Detalhes do plugin:"
         log_output "  ${YELLOW}Modo: desenvolvimento${NC}"
-        local source_path=$(yq eval ".plugins[] | select(.name == \"$plugin_name\") | .source" "$registry_file" 2>/dev/null | head -1)
+        local source_path=$(yq eval ".plugins[] | select(.name == \"$plugin_name\") | .source" "$registry_file" 2> /dev/null | head -1)
         if [ -n "$source_path" ]; then
             log_output "  ${GRAY}Local do plugin: $source_path${NC}"
         fi
@@ -281,7 +282,7 @@ ensure_registry_exists() {
     fi
 
     log_debug "Creating registry.yaml file"
-    cat >"$registry_file" <<'EOF'
+    cat > "$registry_file" << 'EOF'
 # Plugin Registry
 # This file keeps track of all installed plugins
 
@@ -347,7 +348,7 @@ main() {
 
         # Convert relative paths to absolute
         if [[ ! "$abs_path" =~ ^/ ]]; then
-            abs_path="$(cd "$abs_path" 2>/dev/null && pwd)" || {
+            abs_path="$(cd "$abs_path" 2> /dev/null && pwd)" || {
                 log_error "Diretório não encontrado: $plugin_url"
                 exit 1
             }
@@ -389,7 +390,6 @@ main() {
     log_output ""
 
     # Check if plugin is already installed
-    log_debug "Verificando se plugin já está instalado"
     if check_plugin_already_installed "$plugin_name"; then
         exit 0
     fi

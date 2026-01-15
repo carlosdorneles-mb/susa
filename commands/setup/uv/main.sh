@@ -42,7 +42,7 @@ show_help() {
 # Get latest UV version
 get_latest_uv_version() {
     # Try to get the latest version via GitHub API
-    local latest_version=$(curl -s --max-time 10 --connect-timeout 5 https://api.github.com/repos/astral-sh/uv/releases/latest 2>/dev/null | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+    local latest_version=$(curl -s --max-time 10 --connect-timeout 5 https://api.github.com/repos/astral-sh/uv/releases/latest 2> /dev/null | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
 
     if [ -n "$latest_version" ]; then
         log_debug "Versão obtida via API do GitHub: $latest_version" >&2
@@ -52,7 +52,7 @@ get_latest_uv_version() {
 
     # If it fails, try via git ls-remote with semantic version sorting
     log_debug "API do GitHub falhou, tentando via git ls-remote..." >&2
-    latest_version=$(timeout 5 git ls-remote --tags --refs https://github.com/astral-sh/uv.git 2>/dev/null |
+    latest_version=$(timeout 5 git ls-remote --tags --refs https://github.com/astral-sh/uv.git 2> /dev/null |
         grep -oE '[0-9]+\.[0-9]+\.[0-9]+$' |
         sort -V |
         tail -1)
@@ -71,8 +71,8 @@ get_latest_uv_version() {
 
 # Get installed UV version
 get_uv_version() {
-    if command -v uv &>/dev/null; then
-        uv --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida"
+    if command -v uv &> /dev/null; then
+        uv --version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida"
     else
         echo "desconhecida"
     fi
@@ -87,7 +87,7 @@ get_local_bin_dir() {
 check_existing_installation() {
     log_debug "Verificando instalação existente do UV..."
 
-    if ! command -v uv &>/dev/null; then
+    if ! command -v uv &> /dev/null; then
         log_debug "UV não está instalado"
         return 0
     fi
@@ -122,16 +122,16 @@ configure_shell() {
     log_debug "Arquivo de configuração: $shell_config"
 
     # Check if .local/bin is already in PATH
-    if grep -q ".local/bin" "$shell_config" 2>/dev/null; then
+    if grep -q ".local/bin" "$shell_config" 2> /dev/null; then
         log_debug ".local/bin já configurado em $shell_config"
         return 0
     fi
 
     log_debug "Configurando $shell_config..."
 
-    echo "" >>"$shell_config"
-    echo "# Local binaries PATH" >>"$shell_config"
-    echo "export PATH=\"$(get_local_bin_dir):\$PATH\"" >>"$shell_config"
+    echo "" >> "$shell_config"
+    echo "# Local binaries PATH" >> "$shell_config"
+    echo "export PATH=\"$(get_local_bin_dir):\$PATH\"" >> "$shell_config"
 
     log_debug "Configuração adicionada ao shell"
 }
@@ -199,7 +199,7 @@ install_uv() {
     # Verify installation
     log_debug "Verificando instalação..."
 
-    if command -v uv &>/dev/null; then
+    if command -v uv &> /dev/null; then
         local version=$(get_uv_version)
         log_success "UV $version instalado com sucesso!"
         mark_installed "uv" "$version"
@@ -234,7 +234,7 @@ update_uv() {
     # Check if UV is installed
     log_debug "Verificando se UV está instalado..."
 
-    if ! command -v uv &>/dev/null; then
+    if ! command -v uv &> /dev/null; then
         log_error "UV não está instalado"
         echo ""
         log_output "${YELLOW}Para instalar, execute:${NC} ${LIGHT_CYAN}susa setup uv${NC}"
@@ -259,7 +259,7 @@ update_uv() {
     # Verify update
     log_debug "Verificando nova versão..."
 
-    if command -v uv &>/dev/null; then
+    if command -v uv &> /dev/null; then
         local new_version=$(get_uv_version)
 
         if [ "$current_version" = "$new_version" ]; then
@@ -284,7 +284,7 @@ uninstall_uv() {
     # Check if UV is installed
     log_debug "Verificando se UV está instalado..."
 
-    if ! command -v uv &>/dev/null; then
+    if ! command -v uv &> /dev/null; then
         log_warning "UV não está instalado"
         log_info "Nada a fazer"
         return 0
@@ -339,7 +339,7 @@ uninstall_uv() {
     # Verify removal
     log_debug "Verificando remoção..."
 
-    if ! command -v uv &>/dev/null; then
+    if ! command -v uv &> /dev/null; then
         log_success "UV desinstalado com sucesso!"
         mark_uninstalled "uv"
         log_debug "Executável removido"
@@ -361,7 +361,7 @@ uninstall_uv() {
 
         local cache_dir="$HOME/.cache/uv"
         if [ -d "$cache_dir" ]; then
-            rm -rf "$cache_dir" 2>/dev/null || true
+            rm -rf "$cache_dir" 2> /dev/null || true
             log_debug "Cache removido: $cache_dir"
         fi
 

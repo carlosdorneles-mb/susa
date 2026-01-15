@@ -25,7 +25,7 @@ fi
 
 # Check if CLI is already installed
 if [ -L "$INSTALL_DIR/$CLI_NAME" ] || [ -f "$INSTALL_DIR/$CLI_NAME" ]; then
-    INSTALLED_PATH=$(readlink -f "$INSTALL_DIR/$CLI_NAME" 2>/dev/null || echo "$INSTALL_DIR/$CLI_NAME")
+    INSTALLED_PATH=$(readlink -f "$INSTALL_DIR/$CLI_NAME" 2> /dev/null || echo "$INSTALL_DIR/$CLI_NAME")
 
     # Check if it's pointing to a different directory (not this installation)
     if [[ "$INSTALLED_PATH" != "$CLI_SOURCE_DIR/core/$CLI_NAME" ]]; then
@@ -78,17 +78,17 @@ configure_shell() {
 
     if [ -f "$shell_config" ]; then
         # Backup existing file
-        cp "$shell_config" "${shell_config}.backup.$(date +%Y%m%d_%H%M%S)" 2>/dev/null || true
+        cp "$shell_config" "${shell_config}.backup.$(date +%Y%m%d_%H%M%S)" 2> /dev/null || true
     fi
 
     # Check if PATH is already configured
-    if grep -q "# Susa CLI" "$shell_config" 2>/dev/null; then
+    if grep -q "# Susa CLI" "$shell_config" 2> /dev/null; then
         echo "  ✓ $shell_name já configurado"
         return 0
     fi
 
     # Add PATH configuration
-    cat >>"$shell_config" <<'EOF'
+    cat >> "$shell_config" << 'EOF'
 
 # Path Bin
 export PATH="$HOME/.local/bin:$PATH"
@@ -101,7 +101,7 @@ shells_configured=0
 shells_not_found=()
 
 # Bash configuration
-if command -v bash &>/dev/null; then
+if command -v bash &> /dev/null; then
     if [[ "$OSTYPE" == "darwin"* ]]; then
         # macOS: Configure both .bashrc and .bash_profile
         configure_shell "Bash (.bashrc)" "$HOME/.bashrc"
@@ -109,8 +109,8 @@ if command -v bash &>/dev/null; then
 
         # Ensure .bash_profile sources .bashrc
         if [ -f "$HOME/.bash_profile" ]; then
-            if ! grep -q "source.*bashrc" "$HOME/.bash_profile" 2>/dev/null; then
-                cat >>"$HOME/.bash_profile" <<'EOF'
+            if ! grep -q "source.*bashrc" "$HOME/.bash_profile" 2> /dev/null; then
+                cat >> "$HOME/.bash_profile" << 'EOF'
 
 # Source .bashrc if it exists
 if [ -f "$HOME/.bashrc" ]; then
@@ -129,7 +129,7 @@ else
 fi
 
 # Zsh configuration
-if command -v zsh &>/dev/null; then
+if command -v zsh &> /dev/null; then
     configure_shell "Zsh" "$HOME/.zshrc"
     shells_configured=$((shells_configured + 1))
 else

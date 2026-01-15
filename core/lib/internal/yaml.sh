@@ -39,7 +39,7 @@ get_categories_from_lock() {
         return 1
     fi
 
-    yq eval '.categories[].name' "$lock_file" 2>/dev/null
+    yq eval '.categories[].name' "$lock_file" 2> /dev/null
 }
 
 # Get category info from lock file
@@ -53,7 +53,7 @@ get_category_info_from_lock() {
         return 1
     fi
 
-    yq eval ".categories[] | select(.name == \"$category\") | .$field" "$lock_file" 2>/dev/null
+    yq eval ".categories[] | select(.name == \"$category\") | .$field" "$lock_file" 2> /dev/null
 }
 
 # Get commands from a category from lock file
@@ -67,7 +67,7 @@ get_category_commands_from_lock() {
     fi
 
     # Get commands that match the exact category path
-    yq eval ".commands[] | select(.category == \"$category\") | .name" "$lock_file" 2>/dev/null
+    yq eval ".commands[] | select(.category == \"$category\") | .name" "$lock_file" 2> /dev/null
 }
 
 # Get subcategories from a category from lock file
@@ -82,7 +82,7 @@ get_category_subcategories_from_lock() {
 
     # Find all commands that start with "category/"
     # Extract the next level subcategory name
-    local subcats=$(yq eval ".commands[].category" "$lock_file" 2>/dev/null |
+    local subcats=$(yq eval ".commands[].category" "$lock_file" 2> /dev/null |
         grep "^${category}/" |
         sed "s|^${category}/||" |
         cut -d'/' -f1 |
@@ -103,7 +103,7 @@ get_command_info_from_lock() {
         return 1
     fi
 
-    yq eval ".commands[] | select(.category == \"$category\" and .name == \"$command\") | .$field" "$lock_file" 2>/dev/null
+    yq eval ".commands[] | select(.category == \"$category\" and .name == \"$command\") | .$field" "$lock_file" 2> /dev/null
 }
 
 # Check if command is compatible with current OS from lock file
@@ -120,7 +120,7 @@ is_command_compatible_from_lock() {
         local config_file="$command_dir/config.yaml"
 
         if [ -f "$config_file" ]; then
-            local supported_os=$(yq eval '.os[]' "$config_file" 2>/dev/null)
+            local supported_os=$(yq eval '.os[]' "$config_file" 2> /dev/null)
 
             # If there's no OS restriction, it's compatible
             if [ -z "$supported_os" ]; then
@@ -140,7 +140,7 @@ is_command_compatible_from_lock() {
     fi
 
     # Get the OS array for this command
-    local supported_os=$(yq eval ".commands[] | select(.category == \"$category\" and .name == \"$command\") | .os[]" "$lock_file" 2>/dev/null)
+    local supported_os=$(yq eval ".commands[] | select(.category == \"$category\" and .name == \"$command\") | .os[]" "$lock_file" 2> /dev/null)
 
     # If there's no OS restriction, it's compatible
     if [ -z "$supported_os" ]; then
@@ -166,7 +166,7 @@ get_yaml_field() {
         return 1
     fi
 
-    yq eval ".$field" "$yaml_file" 2>/dev/null
+    yq eval ".$field" "$yaml_file" 2> /dev/null
 }
 
 # Get all categories from lock file only
@@ -263,7 +263,7 @@ get_command_config_field() {
         return 1
     fi
 
-    local value=$(yq eval ".$field" "$config_file" 2>/dev/null)
+    local value=$(yq eval ".$field" "$config_file" 2> /dev/null)
 
     # If it's an array or list, convert to compatible format
     if echo "$value" | grep -q '^\['; then
@@ -283,7 +283,7 @@ find_command_config() {
     # First check if it's a plugin command in lock (has source)
     if has_valid_lock_file; then
         local lock_file="$cli_dir/susa.lock"
-        local plugin_source=$(yq eval ".commands[] | select(.category == \"$category\" and .name == \"$command_id\" and .plugin != null) | .plugin.source" "$lock_file" 2>/dev/null | head -1)
+        local plugin_source=$(yq eval ".commands[] | select(.category == \"$category\" and .name == \"$command_id\" and .plugin != null) | .plugin.source" "$lock_file" 2> /dev/null | head -1)
 
         if [ -n "$plugin_source" ] && [ "$plugin_source" != "null" ]; then
             local config_path="$plugin_source/$category/$command_id/config.yaml"
@@ -332,7 +332,7 @@ is_plugin_command() {
         local cli_dir="${CLI_DIR:-$(dirname "$GLOBAL_CONFIG_FILE")}"
         local lock_file="$cli_dir/susa.lock"
 
-        local plugin_name=$(yq eval ".commands[] | select(.category == \"$category\" and .name == \"$command_id\") | .plugin.name" "$lock_file" 2>/dev/null)
+        local plugin_name=$(yq eval ".commands[] | select(.category == \"$category\" and .name == \"$command_id\") | .plugin.name" "$lock_file" 2> /dev/null)
 
         if [ -n "$plugin_name" ] && [ "$plugin_name" != "null" ]; then
             return 0
@@ -359,7 +359,7 @@ is_dev_plugin_command() {
         local cli_dir="${CLI_DIR:-$(dirname "$GLOBAL_CONFIG_FILE")}"
         local lock_file="$cli_dir/susa.lock"
 
-        local is_dev=$(yq eval ".commands[] | select(.category == \"$category\" and .name == \"$command_id\") | .dev" "$lock_file" 2>/dev/null)
+        local is_dev=$(yq eval ".commands[] | select(.category == \"$category\" and .name == \"$command_id\") | .dev" "$lock_file" 2> /dev/null)
 
         if [ "$is_dev" = "true" ]; then
             return 0
@@ -391,7 +391,7 @@ get_command_info() {
     local config_file="$command_dir/config.yaml"
 
     if [ -f "$config_file" ]; then
-        local value=$(yq eval ".$field" "$config_file" 2>/dev/null)
+        local value=$(yq eval ".$field" "$config_file" 2> /dev/null)
         if [ -n "$value" ] && [ "$value" != "null" ]; then
             echo "$value"
             return 0
@@ -526,7 +526,7 @@ load_env_files() {
                     export "$key=$value"
                 fi
             fi
-        done <"$env_file"
+        done < "$env_file"
     done
 }
 
@@ -542,11 +542,11 @@ load_command_envs() {
     local config_dir="$(dirname "$config_file")"
 
     # Load environment variables from .env files first (lowest priority)
-    if yq eval '.env_files' "$config_file" 2>/dev/null | grep -q .; then
+    if yq eval '.env_files' "$config_file" 2> /dev/null | grep -q .; then
         local env_files=()
         while IFS= read -r env_file; do
             [ -n "$env_file" ] && env_files+=("$env_file")
-        done < <(yq eval '.env_files[]' "$config_file" 2>/dev/null)
+        done < <(yq eval '.env_files[]' "$config_file" 2> /dev/null)
 
         if [ ${#env_files[@]} -gt 0 ]; then
             load_env_files "$config_dir" "${env_files[@]}"
@@ -554,7 +554,7 @@ load_command_envs() {
     fi
 
     # Load environment variables from envs section (higher priority than .env files)
-    if yq eval '.envs' "$config_file" 2>/dev/null | grep -q .; then
+    if yq eval '.envs' "$config_file" 2> /dev/null | grep -q .; then
         # Get all env keys and values, export them
         while IFS='=' read -r key value; do
             if [ -n "$key" ] && [ -n "$value" ]; then
@@ -565,6 +565,6 @@ load_command_envs() {
                     export "$key=$value"
                 fi
             fi
-        done < <(yq eval '.envs | to_entries | .[] | .key + "=" + .value' "$config_file" 2>/dev/null)
+        done < <(yq eval '.envs | to_entries | .[] | .key + "=" + .value' "$config_file" 2> /dev/null)
     fi
 }

@@ -41,7 +41,7 @@ show_help() {
 
 get_latest_podman_version() {
     # Try to get the latest version via GitHub API
-    local latest_version=$(curl -s --max-time ${PODMAN_API_MAX_TIME:-10} --connect-timeout ${PODMAN_API_CONNECT_TIMEOUT:-5} ${PODMAN_GITHUB_API_URL:-https://api.github.com/repos/containers/podman/releases/latest} 2>/dev/null | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+    local latest_version=$(curl -s --max-time ${PODMAN_API_MAX_TIME:-10} --connect-timeout ${PODMAN_API_CONNECT_TIMEOUT:-5} ${PODMAN_GITHUB_API_URL:-https://api.github.com/repos/containers/podman/releases/latest} 2> /dev/null | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
 
     if [ -n "$latest_version" ]; then
         log_debug "Versão obtida via API do GitHub: $latest_version" >&2
@@ -51,7 +51,7 @@ get_latest_podman_version() {
 
     # If it fails, try via git ls-remote with semantic version sorting
     log_debug "API do GitHub falhou, tentando via git ls-remote..." >&2
-    latest_version=$(timeout ${PODMAN_GIT_TIMEOUT:-5} git ls-remote --tags --refs ${PODMAN_GITHUB_REPO_URL:-https://github.com/containers/podman.git} 2>/dev/null |
+    latest_version=$(timeout ${PODMAN_GIT_TIMEOUT:-5} git ls-remote --tags --refs ${PODMAN_GITHUB_REPO_URL:-https://github.com/containers/podman.git} 2> /dev/null |
         grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+$' |
         sort -V |
         tail -1)
@@ -70,8 +70,8 @@ get_latest_podman_version() {
 
 # Get installed Podman version
 get_podman_version() {
-    if command -v podman &>/dev/null; then
-        podman --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida"
+    if command -v podman &> /dev/null; then
+        podman --version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida"
     else
         echo "desconhecida"
     fi
@@ -86,7 +86,7 @@ get_local_bin_dir() {
 check_existing_installation() {
     log_debug "Verificando instalação existente do Podman..."
 
-    if ! command -v podman &>/dev/null; then
+    if ! command -v podman &> /dev/null; then
         log_debug "Podman não está instalado"
         return 0
     fi
@@ -120,14 +120,14 @@ install_podman_macos() {
     log_info "Instalando Podman no macOS..."
 
     # Check if Homebrew is installed
-    if ! command -v brew &>/dev/null; then
+    if ! command -v brew &> /dev/null; then
         log_error "Homebrew não está instalado. Instale-o primeiro:"
         log_output "  /bin/bash -c \"\$(curl -fsSL ${PODMAN_HOMEBREW_INSTALL_URL:-https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh})\""
         return 1
     fi
 
     # Install or upgrade Podman
-    if brew list podman &>/dev/null; then
+    if brew list podman &> /dev/null; then
         log_info "Atualizando Podman via Homebrew..."
         brew upgrade podman || true
     else
@@ -136,14 +136,14 @@ install_podman_macos() {
     fi
 
     # Install podman-compose if not present
-    if ! brew list podman-compose &>/dev/null 2>&1; then
+    if ! brew list podman-compose &> /dev/null 2>&1; then
         log_info "Instalando podman-compose..."
         brew install podman-compose || log_debug "podman-compose não disponível via brew"
     fi
 
     # Initialize podman machine
     log_info "Inicializando máquina virtual do Podman..."
-    podman machine init 2>/dev/null || log_debug "Máquina virtual já existe"
+    podman machine init 2> /dev/null || log_debug "Máquina virtual já existe"
     podman machine start || log_debug "Máquina virtual já está rodando"
 
     return 0
@@ -197,7 +197,7 @@ install_podman_linux() {
     local temp_dir="/tmp/podman-extract-$$"
     mkdir -p "$temp_dir"
 
-    if ! tar -xzf "$output_file" -C "$temp_dir" 2>/dev/null; then
+    if ! tar -xzf "$output_file" -C "$temp_dir" 2> /dev/null; then
         log_error "Falha ao extrair Podman"
         rm -rf "$temp_dir" "$output_file"
         return 1
@@ -238,10 +238,10 @@ install_podman_linux() {
 
     # Configure PATH if needed
     local shell_config=$(detect_shell_config)
-    if ! grep -q ".local/bin" "$shell_config" 2>/dev/null; then
-        echo "" >>"$shell_config"
-        echo "# Local binaries PATH" >>"$shell_config"
-        echo "export PATH=\"$(get_local_bin_dir):\$PATH\"" >>"$shell_config"
+    if ! grep -q ".local/bin" "$shell_config" 2> /dev/null; then
+        echo "" >> "$shell_config"
+        echo "# Local binaries PATH" >> "$shell_config"
+        echo "export PATH=\"$(get_local_bin_dir):\$PATH\"" >> "$shell_config"
         log_debug "PATH configurado em $shell_config"
     fi
 
@@ -254,18 +254,18 @@ install_podman_linux() {
     local compose_installed=false
 
     # Try to install via package manager first
-    if command -v apt-get &>/dev/null; then
-        if sudo apt-get install -y podman-compose >/dev/null 2>&1; then
+    if command -v apt-get &> /dev/null; then
+        if sudo apt-get install -y podman-compose > /dev/null 2>&1; then
             log_debug "podman-compose instalado via apt-get"
             compose_installed=true
         fi
-    elif command -v dnf &>/dev/null; then
-        if sudo dnf install -y podman-compose >/dev/null 2>&1; then
+    elif command -v dnf &> /dev/null; then
+        if sudo dnf install -y podman-compose > /dev/null 2>&1; then
             log_debug "podman-compose instalado via dnf"
             compose_installed=true
         fi
-    elif command -v yum &>/dev/null; then
-        if sudo yum install -y podman-compose >/dev/null 2>&1; then
+    elif command -v yum &> /dev/null; then
+        if sudo yum install -y podman-compose > /dev/null 2>&1; then
             log_debug "podman-compose instalado via yum"
             compose_installed=true
         fi
@@ -278,11 +278,11 @@ install_podman_linux() {
         # Ensure pip3 is installed
         ensure_pip3_installed || return 1
 
-        pip3 install --user podman-compose >/dev/null 2>&1 || log_debug "Não foi possível instalar podman-compose"
+        pip3 install --user podman-compose > /dev/null 2>&1 || log_debug "Não foi possível instalar podman-compose"
     fi
 
     # Verify installation
-    if ! command -v podman &>/dev/null; then
+    if ! command -v podman &> /dev/null; then
         log_error "Falha na instalação do Podman"
         return 1
     fi
@@ -318,7 +318,7 @@ install_podman() {
 
     if [ $install_result -eq 0 ]; then
         # Verify installation
-        if command -v podman &>/dev/null; then
+        if command -v podman &> /dev/null; then
             local installed_version=$(get_podman_version)
             log_success "Podman $installed_version instalado com sucesso!"
             mark_installed "podman" "$installed_version"
@@ -348,7 +348,7 @@ update_podman() {
     log_info "Atualizando Podman..."
 
     # Check if Podman is installed
-    if ! command -v podman &>/dev/null; then
+    if ! command -v podman &> /dev/null; then
         log_error "Podman não está instalado. Use 'susa setup podman' para instalar."
         return 1
     fi
@@ -376,7 +376,7 @@ update_podman() {
 
     case "$os_name" in
         darwin)
-            if ! command -v brew &>/dev/null; then
+            if ! command -v brew &> /dev/null; then
                 log_error "Homebrew não está instalado"
                 return 1
             fi
@@ -388,7 +388,7 @@ update_podman() {
             }
 
             # Update podman-compose if installed
-            if brew list podman-compose &>/dev/null 2>&1; then
+            if brew list podman-compose &> /dev/null 2>&1; then
                 log_info "Atualizando podman-compose..."
                 brew upgrade podman-compose || log_debug "podman-compose já está atualizado"
             fi
@@ -412,7 +412,7 @@ update_podman() {
     esac
 
     # Verify update
-    if command -v podman &>/dev/null; then
+    if command -v podman &> /dev/null; then
         local new_version=$(get_podman_version)
         log_success "Podman atualizado com sucesso para versão $new_version!"
         update_version "podman" "$new_version"
@@ -431,17 +431,17 @@ uninstall_podman() {
     case "$os_name" in
         darwin)
             # Stop and remove podman machine
-            if command -v podman &>/dev/null; then
+            if command -v podman &> /dev/null; then
                 log_info "Parando máquina virtual do Podman..."
-                podman machine stop 2>/dev/null || true
-                podman machine rm -f 2>/dev/null || true
+                podman machine stop 2> /dev/null || true
+                podman machine rm -f 2> /dev/null || true
             fi
 
             # Uninstall via Homebrew
-            if command -v brew &>/dev/null; then
+            if command -v brew &> /dev/null; then
                 log_info "Removendo Podman via Homebrew..."
-                brew uninstall podman 2>/dev/null || log_debug "Podman não instalado via Homebrew"
-                brew uninstall podman-compose 2>/dev/null || log_debug "podman-compose não instalado"
+                brew uninstall podman 2> /dev/null || log_debug "Podman não instalado via Homebrew"
+                brew uninstall podman-compose 2> /dev/null || log_debug "podman-compose não instalado"
             fi
             ;;
         linux)
@@ -458,17 +458,17 @@ uninstall_podman() {
             log_info "Removendo podman-compose..."
 
             # Try to remove via package manager first
-            if command -v apt-get &>/dev/null; then
-                sudo apt-get remove -y podman-compose >/dev/null 2>&1 || log_debug "podman-compose não instalado via apt-get"
-            elif command -v dnf &>/dev/null; then
-                sudo dnf remove -y podman-compose >/dev/null 2>&1 || log_debug "podman-compose não instalado via dnf"
-            elif command -v yum &>/dev/null; then
-                sudo yum remove -y podman-compose >/dev/null 2>&1 || log_debug "podman-compose não instalado via yum"
+            if command -v apt-get &> /dev/null; then
+                sudo apt-get remove -y podman-compose > /dev/null 2>&1 || log_debug "podman-compose não instalado via apt-get"
+            elif command -v dnf &> /dev/null; then
+                sudo dnf remove -y podman-compose > /dev/null 2>&1 || log_debug "podman-compose não instalado via dnf"
+            elif command -v yum &> /dev/null; then
+                sudo yum remove -y podman-compose > /dev/null 2>&1 || log_debug "podman-compose não instalado via yum"
             fi
 
             # Also try to remove from pip
-            if command -v pip3 &>/dev/null; then
-                pip3 uninstall -y podman-compose >/dev/null 2>&1 || log_debug "podman-compose não instalado via pip"
+            if command -v pip3 &> /dev/null; then
+                pip3 uninstall -y podman-compose > /dev/null 2>&1 || log_debug "podman-compose não instalado via pip"
             fi
             ;;
     esac

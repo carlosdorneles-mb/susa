@@ -44,7 +44,7 @@ show_help() {
 # Get latest Tilix version
 get_latest_tilix_version() {
     # Try to get the latest version via GitHub API
-    local latest_version=$(curl -s --max-time ${TILIX_API_MAX_TIME:-10} --connect-timeout ${TILIX_API_CONNECT_TIMEOUT:-5} ${TILIX_GITHUB_API_URL:-https://api.github.com/repos/gnunn1/tilix/releases/latest} 2>/dev/null | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+    local latest_version=$(curl -s --max-time ${TILIX_API_MAX_TIME:-10} --connect-timeout ${TILIX_API_CONNECT_TIMEOUT:-5} ${TILIX_GITHUB_API_URL:-https://api.github.com/repos/gnunn1/tilix/releases/latest} 2> /dev/null | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
 
     if [ -n "$latest_version" ]; then
         log_debug "Versão obtida via API do GitHub: $latest_version" >&2
@@ -54,7 +54,7 @@ get_latest_tilix_version() {
 
     # If it fails, try via git ls-remote with semantic version sorting
     log_debug "API do GitHub falhou, tentando via git ls-remote..." >&2
-    latest_version=$(timeout ${TILIX_GIT_TIMEOUT:-5} git ls-remote --tags --refs ${TILIX_GITHUB_REPO_URL:-https://github.com/gnunn1/tilix.git} 2>/dev/null |
+    latest_version=$(timeout ${TILIX_GIT_TIMEOUT:-5} git ls-remote --tags --refs ${TILIX_GITHUB_REPO_URL:-https://github.com/gnunn1/tilix.git} 2> /dev/null |
         grep -oE '[0-9]+\.[0-9]+\.[0-9]+$' |
         sort -V |
         tail -1)
@@ -73,8 +73,8 @@ get_latest_tilix_version() {
 
 # Get installed Tilix version
 get_tilix_version() {
-    if command -v tilix &>/dev/null; then
-        tilix --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida"
+    if command -v tilix &> /dev/null; then
+        tilix --version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida"
     else
         echo "desconhecida"
     fi
@@ -84,19 +84,19 @@ get_tilix_version() {
 detect_package_manager() {
     log_debug "Detectando gerenciador de pacotes..."
 
-    if command -v apt-get &>/dev/null; then
+    if command -v apt-get &> /dev/null; then
         echo "apt"
         log_debug "Gerenciador de pacotes: apt (Debian/Ubuntu)"
-    elif command -v dnf &>/dev/null; then
+    elif command -v dnf &> /dev/null; then
         echo "dnf"
         log_debug "Gerenciador de pacotes: dnf (Fedora)"
-    elif command -v yum &>/dev/null; then
+    elif command -v yum &> /dev/null; then
         echo "yum"
         log_debug "Gerenciador de pacotes: yum (RHEL/CentOS)"
-    elif command -v pacman &>/dev/null; then
+    elif command -v pacman &> /dev/null; then
         echo "pacman"
         log_debug "Gerenciador de pacotes: pacman (Arch Linux)"
-    elif command -v zypper &>/dev/null; then
+    elif command -v zypper &> /dev/null; then
         echo "zypper"
         log_debug "Gerenciador de pacotes: zypper (openSUSE)"
     else
@@ -109,7 +109,7 @@ detect_package_manager() {
 check_existing_installation() {
     log_debug "Verificando instalação existente do Tilix..."
 
-    if ! command -v tilix &>/dev/null; then
+    if ! command -v tilix &> /dev/null; then
         log_debug "Tilix não está instalado"
         return 0
     fi
@@ -140,30 +140,6 @@ check_existing_installation() {
 install_tilix() {
     if ! check_existing_installation; then
         exit 0
-    fi
-
-    # Check if Tilix is already installed
-    if command -v tilix &>/dev/null; then
-        local current_version=$(get_tilix_version)
-        log_info "Tilix $current_version já está instalado."
-
-        # Mark as installed in lock file
-        mark_installed "tilix" "$current_version"
-
-        log_debug "Obtendo última versão..."
-        local latest_version=$(get_latest_tilix_version)
-        if [ $? -ne 0 ] || [ -z "$latest_version" ]; then
-            log_warning "Não foi possível verificar se há atualizações disponíveis"
-            return 0
-        fi
-
-        if [ "$current_version" != "$latest_version" ]; then
-            echo ""
-            log_output "${YELLOW}Uma versão mais recente está disponível ($latest_version).${NC}"
-            log_output "Para atualizar, execute: ${LIGHT_CYAN}susa setup tilix --update${NC}"
-        fi
-
-        return 0
     fi
 
     log_info "Iniciando instalação do Tilix..."
@@ -243,7 +219,7 @@ install_tilix() {
 
     # Verify installation
     log_debug "Verificando instalação..."
-    if command -v tilix &>/dev/null; then
+    if command -v tilix &> /dev/null; then
         local version=$(get_tilix_version)
         log_success "Tilix $version instalado com sucesso!"
         mark_installed "tilix" "$version"
@@ -274,7 +250,7 @@ update_tilix() {
 
     # Check if Tilix is installed
     log_debug "Verificando se Tilix está instalado..."
-    if ! command -v tilix &>/dev/null; then
+    if ! command -v tilix &> /dev/null; then
         log_error "Tilix não está instalado"
         echo ""
         log_output "${YELLOW}Para instalar, execute:${NC}"
@@ -356,7 +332,7 @@ uninstall_tilix() {
 
     # Check if Tilix is installed
     log_debug "Verificando se Tilix está instalado..."
-    if ! command -v tilix &>/dev/null; then
+    if ! command -v tilix &> /dev/null; then
         log_warning "Tilix não está instalado via gerenciador de pacotes"
         log_info "Nada a fazer"
         return 0
@@ -414,7 +390,7 @@ uninstall_tilix() {
 
     # Verify removal
     log_debug "Verificando remoção..."
-    if ! command -v tilix &>/dev/null; then
+    if ! command -v tilix &> /dev/null; then
         log_success "Tilix desinstalado com sucesso"
         mark_uninstalled "tilix"
         log_debug "Executável removido"
@@ -429,9 +405,9 @@ uninstall_tilix() {
 
     if [[ "$config_response" =~ ^[sS]$ ]]; then
         log_debug "Removendo configurações de usuário..."
-        rm -rf "$HOME/.config/tilix" 2>/dev/null || true
-        rm -rf "$HOME/.local/share/tilix" 2>/dev/null || true
-        dconf reset -f /com/gexperts/Tilix/ 2>/dev/null || true
+        rm -rf "$HOME/.config/tilix" 2> /dev/null || true
+        rm -rf "$HOME/.local/share/tilix" 2> /dev/null || true
+        dconf reset -f /com/gexperts/Tilix/ 2> /dev/null || true
         log_success "Configurações removidas"
     else
         log_info "Configurações mantidas em ~/.config/tilix"

@@ -72,7 +72,7 @@ validate_or_create_lock_file() {
     log_info "Gerando arquivo de cache para otimizar o desempenho..."
 
     # Call the lock command bypassing the check to prevent infinite loop
-    if ! SUSA_SKIP_LOCK_CHECK=1 "$CORE_DIR/susa" self lock >/dev/null 2>&1; then
+    if ! SUSA_SKIP_LOCK_CHECK=1 "$CORE_DIR/susa" self lock > /dev/null 2>&1; then
         log_error "Erro ao gerar arquivo de cache"
         exit 1
     fi
@@ -84,7 +84,7 @@ validate_or_create_lock_file() {
 # Display CLI logo with version
 show_logo() {
     local version=$(show_number_version)
-    cat <<LOGO
+    cat << LOGO
    _____
   / ____|
  | (___  _   _ ___  __ _
@@ -146,12 +146,12 @@ print_command_line() {
     # Add installed indicator for setup commands
     if [ "$category" = "setup" ]; then
         # Source installations library if not already loaded
-        if ! declare -f is_installed &>/dev/null; then
-            source "$LIB_DIR/internal/installations.sh" 2>/dev/null || true
+        if ! declare -f is_installed &> /dev/null; then
+            source "$LIB_DIR/internal/installations.sh" 2> /dev/null || true
         fi
 
         # Check if software is installed
-        if declare -f is_installed &>/dev/null && is_installed "$cmd" 2>/dev/null; then
+        if declare -f is_installed &> /dev/null && is_installed "$cmd" 2> /dev/null; then
             indicators="${indicators} ${GREEN}✓${NC}"
         fi
     fi
@@ -234,7 +234,7 @@ list_grouped_commands() {
                 print_command_line "$category" "$cmd" "$cmd_desc"
             fi
         done
-    done <<<"$groups"
+    done <<< "$groups"
 
     [ "$has_compatible_commands" = "true" ] && return 0 || return 1
 }
@@ -342,7 +342,7 @@ check_and_show_command_help() {
     for arg in "$@"; do
         if [ "$arg" = "--help" ] || [ "$arg" = "-h" ]; then
             # Check if show_help function exists without executing the script
-            if grep -q "^show_help()" "$script_path" 2>/dev/null; then
+            if grep -q "^show_help()" "$script_path" 2> /dev/null; then
                 export SUSA_SHOW_HELP_CALLED=true
                 source "$script_path"
                 show_help
@@ -371,7 +371,7 @@ execute_command() {
     local plugin_source=""
     if has_valid_lock_file; then
         local lock_file="$CLI_DIR/susa.lock"
-        plugin_source=$(yq eval ".commands[] | select(.category == \"$category\" and .name == \"$command\" and .plugin != null) | .plugin.source" "$lock_file" 2>/dev/null | head -1)
+        plugin_source=$(yq eval ".commands[] | select(.category == \"$category\" and .name == \"$command\" and .plugin != null) | .plugin.source" "$lock_file" 2> /dev/null | head -1)
     fi
 
     # Build script path - use plugin source if available
