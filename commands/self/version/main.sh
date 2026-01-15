@@ -20,7 +20,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         *)
             log_error "Argumento inválido: $1"
-            echo ""
+            log_output ""
             show_version
             exit 1
             ;;

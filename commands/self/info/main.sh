@@ -9,30 +9,30 @@ source "$LIB_DIR/internal/args.sh"
 # Help function
 show_help() {
     show_description
-    echo ""
+    log_output ""
     show_usage --no-options
-    echo ""
-    echo -e "${LIGHT_GREEN}Descrição:${NC}"
-    echo "  Exibe informações detalhadas sobre a instalação da CLI Susa,"
-    echo "  incluindo versão, caminhos, status de completação e dependências."
-    echo ""
-    echo -e "${LIGHT_GREEN}Opções:${NC}"
-    echo "  -v, --verbose     Modo verbose (debug)"
-    echo "  -h, --help        Exibe esta mensagem de ajuda"
-    echo ""
-    echo -e "${LIGHT_GREEN}Informações Exibidas:${NC}"
-    echo "  • Nome e versão da CLI"
-    echo "  • Diretório de instalação"
-    echo "  • Localização do link simbólico do executável"
-    echo "  • Ambiente de shell atual"
-    echo "  • Status de completação do shell"
-    echo "  • Detalhes do sistema operacional"
-    echo "  • Status das dependências necessárias"
-    echo ""
-    echo -e "${LIGHT_GREEN}Exemplos:${NC}"
-    echo "  susa self info                # Exibe todas as informações da CLI"
-    echo "  susa self info --help         # Exibe esta ajuda"
-    echo ""
+    log_output ""
+    log_output "${LIGHT_GREEN}Descrição:${NC}"
+    log_output "  Exibe informações detalhadas sobre a instalação da CLI Susa,"
+    log_output "  incluindo versão, caminhos, status de completação e dependências."
+    log_output ""
+    log_output "${LIGHT_GREEN}Opções:${NC}"
+    log_output "  -v, --verbose     Modo verbose (debug)"
+    log_output "  -h, --help        Exibe esta mensagem de ajuda"
+    log_output ""
+    log_output "${LIGHT_GREEN}Informações Exibidas:${NC}"
+    log_output "  • Nome e versão da CLI"
+    log_output "  • Diretório de instalação"
+    log_output "  • Localização do link simbólico do executável"
+    log_output "  • Ambiente de shell atual"
+    log_output "  • Status de completação do shell"
+    log_output "  • Detalhes do sistema operacional"
+    log_output "  • Status das dependências necessárias"
+    log_output ""
+    log_output "${LIGHT_GREEN}Exemplos:${NC}"
+    log_output "  susa self info                # Exibe todas as informações da CLI"
+    log_output "  susa self info --help         # Exibe esta ajuda"
+    log_output ""
 }
 
 # Main function
@@ -75,25 +75,25 @@ main() {
     fi
 
     # Display information
-    echo -e "${CYAN}╔═════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║${NC}           ${BOLD}Informações de Instalação${NC}             ${CYAN}║${NC}"
-    echo -e "${CYAN}╚═════════════════════════════════════════════════╝${NC}"
-    echo ""
+    log_output "${CYAN}╔═════════════════════════════════════════════════╗${NC}"
+    log_output "${CYAN}║${NC}           ${BOLD}Informações de Instalação${NC}             ${CYAN}║${NC}"
+    log_output "${CYAN}╚═════════════════════════════════════════════════╝${NC}"
+    log_output ""
 
     # Infos
-    echo -e "  ${BOLD}📦 Nome:${NC}             ${GREEN}$(get_yaml_field "$GLOBAL_CONFIG_FILE" "name")${NC}"
-    echo -e "  ${BOLD}🏷️  Versão:${NC}           ${GREEN}$(show_number_version)${NC}"
-    echo -e "  ${BOLD}📂 Instalação:${NC}       ${YELLOW}$CLI_DIR${NC}"
-    echo -e "  ${BOLD}🔗 Executável:${NC}       ${YELLOW}$SYMLINK_PATH${NC}"
-    echo -e "  ${BOLD}🐚 Shell atual:${NC}      ${CYAN}$CURRENT_SHELL${NC}"
+    log_output "  ${BOLD}📦 Nome:${NC}             ${GREEN}$(get_yaml_field "$GLOBAL_CONFIG_FILE" "name")${NC}"
+    log_output "  ${BOLD}🏷️  Versão:${NC}           ${GREEN}$(show_number_version)${NC}"
+    log_output "  ${BOLD}📂 Instalação:${NC}       ${YELLOW}$CLI_DIR${NC}"
+    log_output "  ${BOLD}🔗 Executável:${NC}       ${YELLOW}$SYMLINK_PATH${NC}"
+    log_output "  ${BOLD}🐚 Shell atual:${NC}      ${CYAN}$CURRENT_SHELL${NC}"
 
     # Display completion status
     if [[ "$COMPLETION_INSTALLED" == "Installed" ]]; then
-        echo -e "  ${BOLD}✨ Autocompletar:${NC}    ${GREEN}Sim${NC} - $COMPLETION_DETAILS"
+        log_output "  ${BOLD}✨ Autocompletar:${NC}    ${GREEN}Sim${NC} - $COMPLETION_DETAILS"
     elif [[ "$COMPLETION_INSTALLED" == "Not installed" ]]; then
-        echo -e "  ${BOLD}✨ Autocompletar:${NC}    ${RED}Não${NC} - $COMPLETION_DETAILS"
+        log_output "  ${BOLD}✨ Autocompletar:${NC}    ${RED}Não${NC} - $COMPLETION_DETAILS"
     else
-        echo -e "  ${BOLD}✨ Autocompletar:${NC}    ${YELLOW}$COMPLETION_INSTALLED${NC} - $COMPLETION_DETAILS"
+        log_output "  ${BOLD}✨ Autocompletar:${NC}    ${YELLOW}$COMPLETION_INSTALLED${NC} - $COMPLETION_DETAILS"
     fi
 }
 
@@ -111,7 +111,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         *)
             log_error "Argumento inválido: $1"
-            echo ""
+            log_output ""
             show_help
             exit 1
             ;;

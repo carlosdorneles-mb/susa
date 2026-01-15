@@ -10,27 +10,27 @@ source "$LIB_DIR/internal/args.sh"
 # Help function
 show_help() {
     show_description
-    echo ""
+    log_output ""
     show_usage "<plugin-name> [opções]"
-    echo ""
-    echo -e "${LIGHT_GREEN}Descrição:${NC}"
-    echo "  Baixa novamente o plugin da origem registrada e"
-    echo "  substitui a instalação atual pela versão mais recente."
-    echo "  Suporta GitHub, GitLab e Bitbucket."
-    echo ""
-    echo -e "${LIGHT_GREEN}Opções:${NC}"
-    echo "  -v, --verbose     Modo verbose (debug)"
-    echo "  -q, --quiet       Modo silencioso (mínimo de output)"
-    echo "  --ssh         Força uso de SSH (recomendado para repos privados)"
-    echo "  -h, --help    Mostra esta mensagem de ajuda"
-    echo ""
-    echo -e "${LIGHT_GREEN}Exemplos:${NC}"
-    echo "  susa self plugin update backup-tools           # Atualiza o plugin"
-    echo "  susa self plugin update private-plugin --ssh   # Força SSH"
-    echo "  susa self plugin update --help                 # Exibe esta ajuda"
-    echo ""
-    echo -e "${GRAY}Nota: O provedor Git é detectado automaticamente da URL registrada.${NC}"
-    echo ""
+    log_output ""
+    log_output "${LIGHT_GREEN}Descrição:${NC}"
+    log_output "  Baixa novamente o plugin da origem registrada e"
+    log_output "  substitui a instalação atual pela versão mais recente."
+    log_output "  Suporta GitHub, GitLab e Bitbucket."
+    log_output ""
+    log_output "${LIGHT_GREEN}Opções:${NC}"
+    log_output "  -v, --verbose     Modo verbose (debug)"
+    log_output "  -q, --quiet       Modo silencioso (mínimo de output)"
+    log_output "  --ssh         Força uso de SSH (recomendado para repos privados)"
+    log_output "  -h, --help    Mostra esta mensagem de ajuda"
+    log_output ""
+    log_output "${LIGHT_GREEN}Exemplos:${NC}"
+    log_output "  susa self plugin update backup-tools           # Atualiza o plugin"
+    log_output "  susa self plugin update private-plugin --ssh   # Força SSH"
+    log_output "  susa self plugin update --help                 # Exibe esta ajuda"
+    log_output ""
+    log_output "${GRAY}Nota: O provedor Git é detectado automaticamente da URL registrada.${NC}"
+    log_output ""
 }
 
 # Main function
@@ -44,13 +44,35 @@ main() {
     log_debug "Use SSH: $USE_SSH"
     log_debug "Registry file: $REGISTRY_FILE"
 
-    # Check if the plugin exists
-    log_debug "Verificando se plugin existe"
+    # Check if plugin exists in registry (could be dev plugin)
+    log_debug "Verificando se plugin existe no registry"
+    if [ -f "$REGISTRY_FILE" ]; then
+        local plugin_count=$(yq eval ".plugins[] | select(.name == \"$PLUGIN_NAME\") | .name" "$REGISTRY_FILE" 2>/dev/null | wc -l)
+        if [ "$plugin_count" -gt 0 ]; then
+            local dev_flag=$(yq eval ".plugins[] | select(.name == \"$PLUGIN_NAME\") | .dev" "$REGISTRY_FILE" 2>/dev/null | head -1)
+            if [ "$dev_flag" = "true" ]; then
+                log_error "Plugin '$PLUGIN_NAME' está em modo desenvolvimento"
+                log_debug "Plugin dev não pode ser atualizado"
+                log_output ""
+                log_output "${YELLOW}Plugins em modo desenvolvimento não podem ser atualizados.${NC}"
+                log_output "As alterações no código já refletem imediatamente!"
+                log_output ""
+                local source_path=$(yq eval ".plugins[] | select(.name == \"$PLUGIN_NAME\") | .source" "$REGISTRY_FILE" 2>/dev/null | head -1)
+                if [ -n "$source_path" ]; then
+                    log_output "${GRAY}Local do plugin: $source_path${NC}"
+                fi
+                exit 1
+            fi
+        fi
+    fi
+
+    # Check if the plugin exists in plugins directory
+    log_debug "Verificando se plugin existe no diretório"
     if [ ! -d "$PLUGINS_DIR/$PLUGIN_NAME" ]; then
         log_error "Plugin '$PLUGIN_NAME' não encontrado"
         log_debug "Diretório não existe: $PLUGINS_DIR/$PLUGIN_NAME"
-        echo ""
-        echo -e "Use ${LIGHT_CYAN}susa self plugin list${NC} para ver plugins instalados"
+        log_output ""
+        log_output "Use ${LIGHT_CYAN}susa self plugin list${NC} para ver plugins instalados"
         exit 1
     fi
     log_debug "Plugin encontrado em: $PLUGINS_DIR/$PLUGIN_NAME"
@@ -60,8 +82,8 @@ main() {
     if [ ! -f "$REGISTRY_FILE" ]; then
         log_error "Registry não encontrado. Não é possível determinar a origem do plugin."
         log_debug "Registry file não existe: $REGISTRY_FILE"
-        echo ""
-        echo -e "O plugin não foi instalado via ${LIGHT_CYAN}susa self plugin add${NC}"
+        log_output ""
+        log_output "O plugin não foi instalado via ${LIGHT_CYAN}susa self plugin add${NC}"
         exit 1
     fi
     log_debug "Registry encontrado"
@@ -74,8 +96,8 @@ main() {
     if [ -z "$SOURCE_URL" ] || [ "$SOURCE_URL" = "local" ]; then
         log_error "Plugin '$PLUGIN_NAME' não tem origem registrada ou é local"
         log_debug "Source URL é vazia ou local"
-        echo ""
-        echo -e "Apenas plugins instalados via Git podem ser atualizados"
+        log_output ""
+        log_output "Apenas plugins instalados via Git podem ser atualizados"
         exit 1
     fi
 
@@ -97,29 +119,29 @@ main() {
     if ! validate_repo_access "$SOURCE_URL"; then
         log_error "Não foi possível acessar o repositório"
         log_debug "Falha na validação de acesso"
-        echo ""
-        echo -e "${LIGHT_YELLOW}Possíveis causas:${NC}"
-        echo -e "  • Repositório foi removido ou renomeado"
-        echo -e "  • Você perdeu acesso ao repositório privado"
-        echo -e "  • Credenciais Git não estão mais válidas"
-        echo ""
-        echo -e "${LIGHT_YELLOW}Soluções:${NC}"
-        echo -e "  • Verifique se o repositório ainda existe"
-        echo -e "  • Use --ssh se for repositório privado"
-        echo -e "  • Reconfigure suas credenciais Git"
+        log_output ""
+        log_output "${LIGHT_YELLOW}Possíveis causas:${NC}"
+        log_output "  • Repositório foi removido ou renomeado"
+        log_output "  • Você perdeu acesso ao repositório privado"
+        log_output "  • Credenciais Git não estão mais válidas"
+        log_output ""
+        log_output "${LIGHT_YELLOW}Soluções:${NC}"
+        log_output "  • Verifique se o repositório ainda existe"
+        log_output "  • Use --ssh se for repositório privado"
+        log_output "  • Reconfigure suas credenciais Git"
         exit 1
     fi
     log_debug "Acesso ao repositório validado"
 
     log_info "Atualizando plugin: $PLUGIN_NAME"
-    echo -e "  ${GRAY}Origem: $SOURCE_URL${NC}"
-    echo ""
+    log_output "  ${GRAY}Origem: $SOURCE_URL${NC}"
+    log_output ""
 
     # Confirm update
-    read -p "Deseja continuar? (s/N): " -n 1 -r
+    read -p "Deseja continuar? (y/N): " -n 1 -r
     echo ""
 
-    if [[ ! $REPLY =~ ^[Ss]$ ]]; then
+    if [[ ! $REPLY =~ ^[YySs]$ ]]; then
         log_info "Operação cancelada"
         log_debug "Usuário cancelou a atualização"
         exit 0
@@ -166,20 +188,23 @@ main() {
         rm -rf "$BACKUP_DIR"
         log_debug "Backup removido"
 
-        echo ""
+        log_output ""
         log_success "Plugin '$PLUGIN_NAME' atualizado com sucesso!"
-        echo -e "  ${GRAY}Nova versão: $NEW_VERSION${NC}"
-        echo -e "  ${GRAY}Comandos: $cmd_count${NC}"
+        log_output ""
+        log_output "Detalhes da atualização:"
+        log_output "  ${GRAY}Nova versão: $NEW_VERSION${NC}"
+        log_output "  ${GRAY}Comandos: $cmd_count${NC}"
         if [ -n "$categories" ]; then
-            echo -e "  ${GRAY}Categorias: $categories${NC}"
+            log_output "  ${GRAY}Categorias: $categories${NC}"
         fi
+        log_output ""
 
         # Update lock file if it exists
         log_debug "Atualizando lock file"
         update_lock_file
         log_debug "=== Atualização concluída ==="
 
-        echo ""
+        log_output ""
         log_info "💡 Os comandos atualizados já estão disponíveis!"
     else
         log_error "Falha ao baixar atualização"

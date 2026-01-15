@@ -21,35 +21,35 @@ trap cleanup EXIT # Execute cleanup on script exit
 # Help function
 show_help() {
     show_description
-    echo ""
+    log_output ""
     show_usage "[options]"
-    echo ""
-    echo -e "${LIGHT_GREEN}Descrição:${NC}"
-    echo "  Atualiza o Susa CLI para a versão mais recente disponível no repositório."
-    echo "  Verifica se há atualizações e, se disponível, baixa e instala a nova versão."
-    echo ""
-    echo -e "${LIGHT_GREEN}Opções:${NC}"
-    echo "  -v, --verbose     Modo verbose (debug)"
-    echo "  -q, --quiet       Modo silencioso (mínimo de output)"
-    echo "  -h, --help        Exibe esta mensagem de ajuda"
-    echo ""
-    echo -e "${LIGHT_GREEN}Como funciona:${NC}"
-    echo "  • Compara a versão atual com a versão mais recente no GitHub"
-    echo "  • Preserva plugins instalados e configurações personalizadas"
-    echo "  • Baixa a nova versão em diretório temporário"
-    echo "  • Atualiza os arquivos mantendo o registry de plugins"
-    echo "  • Remove arquivos temporários automaticamente"
-    echo ""
-    echo -e "${LIGHT_GREEN}Variáveis de ambiente:${NC}"
-    echo "  CLI_REPO_URL      URL do repositório (padrão: github.com/duducp/susa)"
-    echo "  CLI_REPO_BRANCH   Branch a usar (padrão: main)"
-    echo "  DEBUG             Ativa logs de debug (true, 1, on)"
-    echo ""
-    echo -e "${LIGHT_GREEN}Exemplos:${NC}"
-    echo "  susa self update              # Verifica e atualiza se houver nova versão"
-    echo "  DEBUG=true susa self update   # Atualiza com logs de debug"
-    echo "  susa self update --help       # Exibe esta ajuda"
-    echo ""
+    log_output ""
+    log_output "${LIGHT_GREEN}Descrição:${NC}"
+    log_output "  Atualiza o Susa CLI para a versão mais recente disponível no repositório."
+    log_output "  Verifica se há atualizações e, se disponível, baixa e instala a nova versão."
+    log_output ""
+    log_output "${LIGHT_GREEN}Opções:${NC}"
+    log_output "  -v, --verbose     Modo verbose (debug)"
+    log_output "  -q, --quiet       Modo silencioso (mínimo de output)"
+    log_output "  -h, --help        Exibe esta mensagem de ajuda"
+    log_output ""
+    log_output "${LIGHT_GREEN}Como funciona:${NC}"
+    log_output "  • Compara a versão atual com a versão mais recente no GitHub"
+    log_output "  • Preserva plugins instalados e configurações personalizadas"
+    log_output "  • Baixa a nova versão em diretório temporário"
+    log_output "  • Atualiza os arquivos mantendo o registry de plugins"
+    log_output "  • Remove arquivos temporários automaticamente"
+    log_output ""
+    log_output "${LIGHT_GREEN}Variáveis de ambiente:${NC}"
+    log_output "  CLI_REPO_URL      URL do repositório (padrão: github.com/duducp/susa)"
+    log_output "  CLI_REPO_BRANCH   Branch a usar (padrão: main)"
+    log_output "  DEBUG             Ativa logs de debug (true, 1, on)"
+    log_output ""
+    log_output "${LIGHT_GREEN}Exemplos:${NC}"
+    log_output "  susa self update              # Verifica e atualiza se houver nova versão"
+    log_output "  DEBUG=true susa self update   # Atualiza com logs de debug"
+    log_output "  susa self update --help       # Exibe esta ajuda"
+    log_output ""
 }
 
 # Function to get the current version
@@ -226,14 +226,14 @@ main() {
     # Compare versions
     log_debug "Comparando versões: $CURRENT_VERSION vs $LATEST_VERSION"
     if version_greater_than "$CURRENT_VERSION" "$LATEST_VERSION"; then
-        echo ""
+        log_output ""
         log_success "Nova atualização disponível! ($CURRENT_VERSION → $LATEST_VERSION)"
-        echo ""
+        log_output ""
 
         # Ask if you want to update
         if [ -t 0 ]; then
             read -p "Deseja atualizar agora? (s/N): " -n 1 -r
-            echo ""
+            log_output ""
 
             if [[ ! $REPLY =~ ^[SsYy]$ ]]; then
                 log_info "Atualização cancelada pelo usuário"
@@ -241,20 +241,20 @@ main() {
             fi
         fi
 
-        echo ""
+        log_output ""
 
         # Run update
         if perform_update; then
-            echo ""
+            log_output ""
             log_success "✓ Susa CLI atualizado para versão $LATEST_VERSION!"
-            echo ""
+            log_output ""
             log_info "Execute 'susa self version' para confirmar a versão"
         else
             log_error "Falha ao atualizar o Susa CLI"
             exit 1
         fi
     else
-        echo ""
+        log_output ""
         log_success "✓ Você já está usando a versão mais recente!"
     fi
 }
@@ -277,7 +277,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         *)
             log_error "Argumento inválido: $1"
-            echo ""
+            log_output ""
             show_help
             exit 1
             ;;

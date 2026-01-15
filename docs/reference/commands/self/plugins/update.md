@@ -67,12 +67,45 @@ O backup é **automaticamente restaurado** se algo der errado:
 
 ## Plugins que não podem ser atualizados
 
+### Plugins Manuais (Sem Git)
+
 Plugins instalados **manualmente** (sem Git) não têm origem registrada:
 
 ```text
 ✗ Plugin 'local-plugin' não tem origem registrada ou é local
 
 Apenas plugins instalados via Git podem ser atualizados
+```
+
+### Plugins em Modo Desenvolvimento
+
+Plugins instalados com caminho local (modo dev) **não precisam** ser atualizados, pois as alterações no código já refletem automaticamente:
+
+```text
+✗ Plugin 'meu-plugin' está em modo desenvolvimento
+
+Plugins em modo desenvolvimento não podem ser atualizados.
+As alterações no código já refletem imediatamente!
+
+Local do plugin: /home/usuario/projetos/meu-plugin
+```
+
+**Por quê?**
+
+Plugins dev apontam para o diretório local. Qualquer alteração nos arquivos é refletida instantaneamente sem necessidade de atualização.
+
+**Como funciona?**
+
+```bash
+# Plugin instalado em modo dev
+cd ~/projetos/meu-plugin
+susa self plugin add .
+
+# Editar código
+vim tools/hello/main.sh
+
+# Testar - mudanças já estão ativas!
+susa tools hello
 ```
 
 ## Confirmação obrigatória

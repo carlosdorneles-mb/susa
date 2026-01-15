@@ -12,30 +12,30 @@ source "$LIB_DIR/internal/args.sh"
 # Help function
 show_help() {
     show_description
-    echo ""
+    log_output ""
     show_usage "[options]"
-    echo ""
-    echo -e "${LIGHT_GREEN}Descrição:${NC}"
-    echo "  Lista todos os plugins instalados no Susa CLI,"
-    echo "  incluindo origem, versão, comandos e categorias."
-    echo ""
-    echo -e "${LIGHT_GREEN}Opções:${NC}"
-    echo "  -v, --verbose     Modo verbose (debug)"
-    echo "  -q, --quiet       Modo silencioso (mínimo de output)"
-    echo "  -h, --help        Exibe esta mensagem de ajuda"
-    echo ""
-    echo -e "${LIGHT_GREEN}Exemplos:${NC}"
-    echo "  susa self plugin list         # Lista todos os plugins"
-    echo "  susa self plugin list --help  # Exibe esta ajuda"
-    echo ""
+    log_output ""
+    log_output "${LIGHT_GREEN}Descrição:${NC}"
+    log_output "  Lista todos os plugins instalados no Susa CLI,"
+    log_output "  incluindo origem, versão, comandos e categorias."
+    log_output ""
+    log_output "${LIGHT_GREEN}Opções:${NC}"
+    log_output "  -v, --verbose     Modo verbose (debug)"
+    log_output "  -q, --quiet       Modo silencioso (mínimo de output)"
+    log_output "  -h, --help        Exibe esta mensagem de ajuda"
+    log_output ""
+    log_output "${LIGHT_GREEN}Exemplos:${NC}"
+    log_output "  susa self plugin list         # Lista todos os plugins"
+    log_output "  susa self plugin list --help  # Exibe esta ajuda"
+    log_output ""
 }
 
 # Main function
 main() {
     log_debug "=== Listando plugins instalados ==="
 
-    echo -e "${BOLD}Plugins Instalados${NC}"
-    echo ""
+    log_output "${BOLD}Plugins Instalados${NC}"
+    log_output ""
 
     REGISTRY_FILE="$PLUGINS_DIR/registry.yaml"
     log_debug "Registry file: $REGISTRY_FILE"
@@ -43,8 +43,8 @@ main() {
     if [ ! -f "$REGISTRY_FILE" ]; then
         log_debug "Registry file não existe"
         log_info "Nenhum plugin instalado"
-        echo ""
-        echo -e "Para instalar plugins, use: ${LIGHT_CYAN}susa self plugin add <url>${NC}"
+        log_output ""
+        log_output "Para instalar plugins, use: ${LIGHT_CYAN}susa self plugin add <url>${NC}"
         return 0
     fi
     log_debug "Registry file encontrado"
@@ -57,8 +57,8 @@ main() {
     if [ "$plugin_count" -eq 0 ]; then
         log_debug "Registry vazio"
         log_info "Nenhum plugin instalado"
-        echo ""
-        echo -e "Para instalar plugins, use: ${LIGHT_CYAN}susa self plugin add <url>${NC}"
+        log_output ""
+        log_output "Para instalar plugins, use: ${LIGHT_CYAN}susa self plugin add <url>${NC}"
         return 0
     fi
 
@@ -110,21 +110,21 @@ main() {
         # Display plugin information
         log_debug "Exibindo informações do plugin $plugin_name"
         if [ "$is_dev" = "true" ]; then
-            echo -e "${LIGHT_CYAN}📦 $plugin_name ${MAGENTA}[DEV]${NC}"
+            log_output "${LIGHT_CYAN}📦 $plugin_name ${MAGENTA}[DEV]${NC}"
             log_debug "Plugin é DEV"
         else
-            echo -e "${LIGHT_CYAN}📦 $plugin_name${NC}"
+            log_output "${LIGHT_CYAN}📦 $plugin_name${NC}"
         fi
 
-        [ "$source_url" != "null" ] && echo -e "   Origem: ${GRAY}$source_url${NC}"
-        [ "$version" != "null" ] && echo -e "   Versão: ${GRAY}$version${NC}"
-        echo -e "   Comandos: ${GRAY}$cmd_count${NC}"
-        [ -n "$categories" ] && echo -e "   Categorias: ${GRAY}$categories${NC}"
-        [ "$installed_at" != "null" ] && echo -e "   Instalado: ${GRAY}$installed_at${NC}"
-        echo ""
+        [ "$source_url" != "null" ] && log_output "   Origem: ${GRAY}$source_url${NC}"
+        [ "$version" != "null" ] && log_output "   Versão: ${GRAY}$version${NC}"
+        log_output "   Comandos: ${GRAY}$cmd_count${NC}"
+        [ -n "$categories" ] && log_output "   Categorias: ${GRAY}$categories${NC}"
+        [ "$installed_at" != "null" ] && log_output "   Instalado: ${GRAY}$installed_at${NC}"
+        log_output ""
     done
 
-    echo -e "${GREEN}Total: $plugin_count plugin(s)${NC}"
+    log_output "${GREEN}Total: $plugin_count plugin(s)${NC}"
     log_debug "=== Listagem concluída ==="
 }
 
@@ -146,7 +146,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         *)
             log_error "Argumento inválido: $1"
-            echo ""
+            log_output ""
             show_help
             exit 1
             ;;

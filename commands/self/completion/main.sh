@@ -8,38 +8,38 @@ source "$LIB_DIR/internal/completion.sh"
 # Help function
 show_help() {
     show_description
-    echo ""
+    log_output ""
     show_usage "[shell] [options]"
-    echo ""
-    echo -e "${LIGHT_GREEN}Description:${NC}"
-    echo "  Gera e instala scripts de autocompletar (tab completion) para seu shell."
-    echo "  O autocompletar sugere categorias, comandos e subcategorias automaticamente."
-    echo ""
-    echo -e "${LIGHT_GREEN}Shells suportados:${NC}"
-    echo "  bash              Gera completion para Bash"
-    echo "  zsh               Gera completion para Zsh"
-    echo "  fish              Gera completion para Fish"
-    echo ""
-    echo -e "${LIGHT_GREEN}Options:${NC}"
-    echo "  -v, --verbose     Modo verbose (debug)"
-    echo "  -q, --quiet       Modo silencioso (mínimo de output)"
-    echo "  -h, --help        Mostra esta mensagem de ajuda"
-    echo "  -i, --install     Instala o completion no shell atual"
-    echo "  --uninstall       Remove o completion do shell"
-    echo "  -p, --print       Apenas imprime o script (não instala)"
-    echo ""
-    echo -e "${LIGHT_GREEN}Examples:${NC}"
-    echo "  susa self completion bash --install       # Instala completion para bash"
-    echo "  susa self completion zsh --install        # Instala completion para zsh"
-    echo "  susa self completion fish --install       # Instala completion para fish"
-    echo "  susa self completion bash --print         # Mostra o script bash"
-    echo "  susa self completion --uninstall          # Remove completion"
-    echo ""
-    echo -e "${LIGHT_GREEN}Post-installation:${NC}"
-    echo "  Após a instalação, reinicie o terminal ou execute:"
-    echo "    source ~/.bashrc   (para Bash)"
-    echo "    source ~/.zshrc    (para Zsh)"
-    echo "    (Fish carrega automaticamente)"
+    log_output ""
+    log_output "${LIGHT_GREEN}Description:${NC}"
+    log_output "  Gera e instala scripts de autocompletar (tab completion) para seu shell."
+    log_output "  O autocompletar sugere categorias, comandos e subcategorias automaticamente."
+    log_output ""
+    log_output "${LIGHT_GREEN}Shells suportados:${NC}"
+    log_output "  bash              Gera completion para Bash"
+    log_output "  zsh               Gera completion para Zsh"
+    log_output "  fish              Gera completion para Fish"
+    log_output ""
+    log_output "${LIGHT_GREEN}Options:${NC}"
+    log_output "  -v, --verbose     Modo verbose (debug)"
+    log_output "  -q, --quiet       Modo silencioso (mínimo de output)"
+    log_output "  -h, --help        Mostra esta mensagem de ajuda"
+    log_output "  -i, --install     Instala o completion no shell atual"
+    log_output "  --uninstall       Remove o completion do shell"
+    log_output "  -p, --print       Apenas imprime o script (não instala)"
+    log_output ""
+    log_output "${LIGHT_GREEN}Examples:${NC}"
+    log_output "  susa self completion bash --install       # Instala completion para bash"
+    log_output "  susa self completion zsh --install        # Instala completion para zsh"
+    log_output "  susa self completion fish --install       # Instala completion para fish"
+    log_output "  susa self completion bash --print         # Mostra o script bash"
+    log_output "  susa self completion --uninstall          # Remove completion"
+    log_output ""
+    log_output "${LIGHT_GREEN}Post-installation:${NC}"
+    log_output "  Após a instalação, reinicie o terminal ou execute:"
+    log_output "    source ~/.bashrc   (para Bash)"
+    log_output "    source ~/.zshrc    (para Zsh)"
+    log_output "    (Fish carrega automaticamente)"
 }
 
 # Discover available categories dynamically
@@ -446,7 +446,7 @@ install_bash_completion() {
     if is_completion_installed "bash"; then
         log_warning "Autocompletar para Bash já está instalado"
         local completion_file=$(get_completion_file_path "bash")
-        echo -e "${LIGHT_YELLOW}Para reinstalar, primeiro desinstale: ${LIGHT_CYAN}susa self completion --uninstall${NC}"
+        log_output "${LIGHT_YELLOW}Para reinstalar, primeiro desinstale: ${LIGHT_CYAN}susa self completion --uninstall${NC}"
         return 1
     fi
 
@@ -469,10 +469,10 @@ install_bash_completion() {
     log_debug "Script gerado e permissões configuradas"
 
     log_success "Autocompletar instalado em: $completion_file"
-    echo ""
-    echo -e "${LIGHT_YELLOW}Próximos passos:${NC}"
-    echo -e "  1. Reinicie o terminal ou execute: ${LIGHT_CYAN}source $shell_config${NC}"
-    echo -e "  2. Teste: ${LIGHT_CYAN}susa <TAB><TAB>${NC}"
+    log_output ""
+    log_output "${LIGHT_YELLOW}Próximos passos:${NC}"
+    log_output "  1. Reinicie o terminal ou execute: ${LIGHT_CYAN}source $shell_config${NC}"
+    log_output "  2. Teste: ${LIGHT_CYAN}susa <TAB><TAB>${NC}"
 }
 
 # Install completion for Zsh
@@ -484,7 +484,7 @@ install_zsh_completion() {
     if is_completion_installed "zsh"; then
         log_warning "Autocompletar para Zsh já está instalado"
         local completion_file=$(get_completion_file_path "zsh")
-        echo -e "${LIGHT_YELLOW}Para reinstalar, primeiro desinstale: ${LIGHT_CYAN}susa self completion --uninstall${NC}"
+        log_output "${LIGHT_YELLOW}Para reinstalar, primeiro desinstale: ${LIGHT_CYAN}susa self completion --uninstall${NC}"
         return 1
     fi
 
@@ -517,10 +517,10 @@ install_zsh_completion() {
     fi
 
     log_success "Autocompletar instalado em: $completion_file"
-    echo ""
-    echo -e "${LIGHT_YELLOW}Próximos passos:${NC}"
-    echo -e "  1. Reinicie o terminal ou execute: ${LIGHT_CYAN}source $shell_config${NC}"
-    echo -e "  2. Teste: ${LIGHT_CYAN}susa <TAB>${NC}"
+    log_output ""
+    log_output "${LIGHT_YELLOW}Próximos passos:${NC}"
+    log_output "  1. Reinicie o terminal ou execute: ${LIGHT_CYAN}source $shell_config${NC}"
+    log_output "  2. Teste: ${LIGHT_CYAN}susa <TAB>${NC}"
 }
 
 # Install completion for Fish
@@ -532,7 +532,7 @@ install_fish_completion() {
     if is_completion_installed "fish"; then
         log_warning "Autocompletar para Fish já está instalado"
         local completion_file=$(get_completion_file_path "fish")
-        echo -e "${LIGHT_YELLOW}Para reinstalar, primeiro desinstale: ${LIGHT_CYAN}susa self completion --uninstall${NC}"
+        log_output "${LIGHT_YELLOW}Para reinstalar, primeiro desinstale: ${LIGHT_CYAN}susa self completion --uninstall${NC}"
         return 1
     fi
 
@@ -553,10 +553,10 @@ install_fish_completion() {
     log_debug "Script gerado e permissões configuradas"
 
     log_success "Autocompletar instalado em: $completion_file"
-    echo ""
-    echo -e "${LIGHT_YELLOW}Próximos passos:${NC}"
-    echo -e "  1. O Fish carrega automaticamente os completions"
-    echo -e "  2. Abra um novo terminal ou execute: ${LIGHT_CYAN}fish${NC}"
+    log_output ""
+    log_output "${LIGHT_YELLOW}Próximos passos:${NC}"
+    log_output "  1. O Fish carrega automaticamente os completions"
+    log_output "  2. Abra um novo terminal ou execute: ${LIGHT_CYAN}fish${NC}"
     log_debug "Procurando completions instalados"
 
     local removed=false
@@ -596,8 +596,8 @@ install_fish_completion() {
 
     if [ "$removed" = true ]; then
         log_success "Autocompletar removido com sucesso!"
-        echo ""
-        echo -e "${LIGHT_YELLOW}Nota:${NC} Reinicie o terminal para aplicar as mudanças"
+        log_output ""
+        log_output "${LIGHT_YELLOW}Nota:${NC} Reinicie o terminal para aplicar as mudanças"
     else
         log_warning "Nenhum autocompletar encontrado para remover"
     fi
@@ -708,7 +708,7 @@ main() {
                 ;;
             *)
                 log_error "Argumento inválido: $1"
-                echo ""
+                log_output ""
                 show_help
                 return 1
                 ;;

@@ -10,22 +10,22 @@ source "$LIB_DIR/internal/args.sh"
 # Help function
 show_help() {
     show_description
-    echo ""
+    log_output ""
     show_usage "<plugin-name>"
-    echo ""
-    echo -e "${LIGHT_GREEN}Descrição:${NC}"
-    echo "  Remove um plugin instalado do Susa CLI, incluindo"
-    echo "  todos os seus comandos e registro no sistema."
-    echo ""
-    echo -e "${LIGHT_GREEN}Opções:${NC}"
-    echo "  -v, --verbose     Modo verbose (debug)"
-    echo "  -q, --quiet       Modo silencioso (mínimo de output)"
-    echo "  -h, --help    Mostra esta mensagem de ajuda"
-    echo ""
-    echo -e "${LIGHT_GREEN}Exemplos:${NC}"
-    echo "  susa self plugin remove backup-tools    # Remove o plugin backup-tools"
-    echo "  susa self plugin remove --help          # Exibe esta ajuda"
-    echo ""
+    log_output ""
+    log_output "${LIGHT_GREEN}Descrição:${NC}"
+    log_output "  Remove um plugin instalado do Susa CLI, incluindo"
+    log_output "  todos os seus comandos e registro no sistema."
+    log_output ""
+    log_output "${LIGHT_GREEN}Opções:${NC}"
+    log_output "  -v, --verbose     Modo verbose (debug)"
+    log_output "  -q, --quiet       Modo silencioso (mínimo de output)"
+    log_output "  -h, --help    Mostra esta mensagem de ajuda"
+    log_output ""
+    log_output "${LIGHT_GREEN}Exemplos:${NC}"
+    log_output "  susa self plugin remove backup-tools    # Remove o plugin backup-tools"
+    log_output "  susa self plugin remove --help          # Exibe esta ajuda"
+    log_output ""
 }
 
 # Main function
@@ -36,32 +36,64 @@ main() {
     log_debug "Plugin: $PLUGIN_NAME"
     log_debug "Diretório de plugins: $PLUGINS_DIR"
 
-    # Check if the plugin exists
-    log_debug "Verificando se plugin existe"
-    if [ ! -d "$PLUGINS_DIR/$PLUGIN_NAME" ]; then
-        log_error "Plugin '$PLUGIN_NAME' não encontrado"
-        log_debug "Diretório não existe: $PLUGINS_DIR/$PLUGIN_NAME"
-        echo ""
-        echo -e "Use ${LIGHT_CYAN}susa self plugin list${NC} para ver plugins instalados"
-        exit 1
+    local REGISTRY_FILE="$PLUGINS_DIR/registry.yaml"
+    local is_dev_plugin=false
+    local source_path=""
+
+    # Check if plugin exists in registry (could be dev plugin)
+    log_debug "Verificando se plugin existe no registry"
+    if [ -f "$REGISTRY_FILE" ]; then
+        local plugin_count=$(yq eval ".plugins[] | select(.name == \"$PLUGIN_NAME\") | .name" "$REGISTRY_FILE" 2>/dev/null | wc -l)
+        if [ "$plugin_count" -gt 0 ]; then
+            local dev_flag=$(yq eval ".plugins[] | select(.name == \"$PLUGIN_NAME\") | .dev" "$REGISTRY_FILE" 2>/dev/null | head -1)
+            if [ "$dev_flag" = "true" ]; then
+                is_dev_plugin=true
+                source_path=$(yq eval ".plugins[] | select(.name == \"$PLUGIN_NAME\") | .source" "$REGISTRY_FILE" 2>/dev/null | head -1)
+                log_debug "Plugin dev encontrado no registry com source: $source_path"
+            fi
+        fi
     fi
-    log_debug "Plugin encontrado em: $PLUGINS_DIR/$PLUGIN_NAME"
+
+    # Check if the plugin exists in plugins directory or registry
+    if [ "$is_dev_plugin" = false ]; then
+        log_debug "Verificando se plugin existe no diretório"
+        if [ ! -d "$PLUGINS_DIR/$PLUGIN_NAME" ]; then
+            log_error "Plugin '$PLUGIN_NAME' não encontrado"
+            log_debug "Diretório não existe: $PLUGINS_DIR/$PLUGIN_NAME"
+            log_output ""
+            log_output "Use ${LIGHT_CYAN}susa self plugin list${NC} para ver plugins instalados"
+            exit 1
+        fi
+        log_debug "Plugin encontrado em: $PLUGINS_DIR/$PLUGIN_NAME"
+    fi
 
     # Confirm removal
-    echo -e "${YELLOW}Atenção:${NC} Você está prestes a remover o plugin '$PLUGIN_NAME'"
-    echo ""
+    log_warning "Você está prestes a remover o plugin '$PLUGIN_NAME'"
+    if [ "$is_dev_plugin" = true ]; then
+        log_output ""
+        log_output "  ${GRAY}Modo: desenvolvimento${NC}"
+        if [ -n "$source_path" ]; then
+            log_output "  ${GRAY}Local do plugin: $source_path${NC}"
+        fi
+    fi
+    log_output ""
 
     # List commands that will be removed
     log_debug "Contando comandos que serão removidos"
-    local cmd_count=$(find "$PLUGINS_DIR/$PLUGIN_NAME" -name "config.yaml" -type f | wc -l)
-    echo -e "Comandos que serão removidos: ${GRAY}$cmd_count${NC}"
+    local cmd_count=0
+    if [ "$is_dev_plugin" = true ] && [ -d "$source_path" ]; then
+        cmd_count=$(find "$source_path" -name "config.yaml" -type f 2>/dev/null | wc -l)
+    elif [ -d "$PLUGINS_DIR/$PLUGIN_NAME" ]; then
+        cmd_count=$(find "$PLUGINS_DIR/$PLUGIN_NAME" -name "config.yaml" -type f | wc -l)
+    fi
+    log_output "Comandos que serão removidos: ${GRAY}$cmd_count${NC}"
     log_debug "Total de comandos: $cmd_count"
+    log_output ""
+
+    read -p "Deseja continuar? (y/N): " -n 1 -r
     echo ""
 
-    read -p "Deseja continuar? (s/N): " -n 1 -r
-    echo ""
-
-    if [[ ! $REPLY =~ ^[Ss]$ ]]; then
+    if [[ ! $REPLY =~ ^[YySs]$ ]]; then
         log_info "Operação cancelada"
         log_debug "Usuário cancelou a remoção"
         exit 0
@@ -70,35 +102,53 @@ main() {
 
     # Remove o plugin
     log_info "Removendo plugin '$PLUGIN_NAME'..."
-    log_debug "Removendo diretório: $PLUGINS_DIR/$PLUGIN_NAME"
 
-    local REGISTRY_FILE="$PLUGINS_DIR/registry.yaml"
+    local removal_success=true
 
-    if rm -rf "${PLUGINS_DIR:?}/${PLUGIN_NAME:?}"; then
-        log_debug "Diretório removido com sucesso"
-
-        # Remove from registry too
-        log_debug "Removendo do registry"
+    if [ "$is_dev_plugin" = true ]; then
+        log_debug "Removendo plugin dev (apenas do registry)"
+        # Dev plugins are only in registry, not in $PLUGINS_DIR
+        # Just remove from registry
         if [ -f "$REGISTRY_FILE" ]; then
             log_debug "Registry file: $REGISTRY_FILE"
             registry_remove_plugin "$REGISTRY_FILE" "$PLUGIN_NAME"
-            log_debug "Plugin removido do registry.yaml"
+            log_debug "Plugin dev removido do registry.yaml"
         else
-            log_debug "Registry file não existe"
+            log_error "Registry file não existe"
+            removal_success=false
         fi
+    else
+        log_debug "Removendo diretório: $PLUGINS_DIR/$PLUGIN_NAME"
+        if rm -rf "${PLUGINS_DIR:?}/${PLUGIN_NAME:?}"; then
+            log_debug "Diretório removido com sucesso"
 
+            # Remove from registry too
+            log_debug "Removendo do registry"
+            if [ -f "$REGISTRY_FILE" ]; then
+                log_debug "Registry file: $REGISTRY_FILE"
+                registry_remove_plugin "$REGISTRY_FILE" "$PLUGIN_NAME"
+                log_debug "Plugin removido do registry.yaml"
+            else
+                log_debug "Registry file não existe"
+            fi
+        else
+            log_error "Falha ao remover o plugin"
+            log_debug "Erro ao executar rm -rf"
+            removal_success=false
+        fi
+    fi
+
+    if [ "$removal_success" = true ]; then
         log_success "Plugin '$PLUGIN_NAME' removido com sucesso!"
 
-        # Update lock file if it exists
+        # Update lock file
         log_debug "Atualizando lock file"
         update_lock_file
         log_debug "=== Remoção concluída ==="
 
-        echo ""
+        log_output ""
         log_info "💡 Execute 'susa --help' para ver as categorias atualizadas"
     else
-        log_error "Falha ao remover o plugin"
-        log_debug "Erro ao executar rm -rf"
         exit 1
     fi
 }

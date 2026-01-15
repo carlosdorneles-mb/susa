@@ -38,13 +38,41 @@ susa self plugin add usuario/susa-plugin-name --bitbucket
 susa self plugin add organizacao/plugin-privado --gitlab --ssh
 ```
 
+### Usando caminho local (Modo Desenvolvimento)
+
+```bash
+# Caminho absoluto
+susa self plugin add /caminho/completo/para/meu-plugin
+
+# Caminho relativo
+susa self plugin add ./meu-plugin
+susa self plugin add ../outro-plugin
+
+# Diretório atual
+susa self plugin add .
+
+# Com ~ (home directory)
+susa self plugin add ~/projetos/meu-plugin
+```
+
 ## O que acontece?
+
+### Instalação via Git (URL ou user/repo)
 
 1. Verifica se o plugin já está instalado
 2. Valida acesso ao repositório
 3. Clona o repositório Git do plugin
 4. Registra o plugin no sistema
 5. Torna os comandos do plugin disponíveis imediatamente
+
+### Instalação Local (Modo Desenvolvimento)
+
+1. Verifica se o plugin já está instalado
+2. Valida estrutura do plugin no caminho local
+3. Registra o plugin como **desenvolvimento** (dev: true)
+4. Armazena referência ao caminho local (não copia arquivos)
+5. Torna os comandos do plugin disponíveis imediatamente
+6. **Alterações no código refletem automaticamente** sem reinstalação!
 
 ## Opções
 
@@ -73,7 +101,78 @@ susa-plugin-name/
 │       └── main.sh
 ```
 
+## Modo Desenvolvimento
+
+### O que é?
+
+O modo desenvolvimento permite testar e desenvolver plugins **sem publicar no Git**. O plugin aponta para o diretório local, e todas as alterações no código refletem imediatamente.
+
+### Quando usar?
+
+- Desenvolver novos plugins
+- Testar alterações antes de publicar
+- Depurar problemas em plugins
+- Trabalhar em plugins privados localmente
+
+### Como funciona?
+
+```bash
+# Navegar até o diretório do plugin
+cd ~/projetos/meu-plugin
+
+# Instalar em modo desenvolvimento
+susa self plugin add .
+```
+
+### Características
+
+✅ **Alterações instantâneas** - Sem necessidade de reinstalar
+✅ **Não copia arquivos** - Aponta para o diretório original
+✅ **Badge [DEV]** - Identificação visual na listagem
+✅ **Versão "dev"** - Se não houver arquivo VERSION
+🚫 **Não pode ser atualizado** - Alterações já são imediatas
+
+### Diferenças entre Dev e Git
+
+| Aspecto | Plugin Git | Plugin Dev |
+|---------|------------|------------|
+| Origem | Repositório Git | Diretório local |
+| Arquivos | Copiados para ~/.susa/plugins | Referência ao path |
+| Alterações | Precisa `susa self plugin update` | Reflete automaticamente |
+| Identificação | Nome do plugin | Badge [DEV] |
+| Atualização | ✅ Pode atualizar | ❌ Não aplicável |
+| Remoção | Remove diretório + registry | Remove apenas registry |
+
+### Validação de Estrutura
+
+Plugins locais devem ter a estrutura correta:
+
+```text
+meu-plugin/
+  categoria/
+    config.yaml
+    comando/
+      config.yaml
+      main.sh
+```
+
+Se a estrutura for inválida:
+
+```text
+✗ Estrutura de plugin inválida
+
+Estrutura esperada:
+  plugin/
+    categoria/
+      config.yaml
+      comando/
+        config.yaml
+        main.sh
+```
+
 ## Exemplo de uso
+
+### Plugin Git
 
 ```bash
 # Instalar plugin de backup
@@ -84,7 +183,47 @@ susa backup criar
 susa backup restaurar
 ```
 
+### Plugin Local (Desenvolvimento)
+
+```bash
+# Criar estrutura do plugin
+mkdir -p ~/dev/my-plugin/tools/hello
+cat > ~/dev/my-plugin/tools/config.yaml << 'EOF'
+name: "tools"
+description: "Ferramentas úteis"
+EOF
+
+cat > ~/dev/my-plugin/tools/hello/config.yaml << 'EOF'
+name: "hello"
+description: "Diz olá"
+entrypoint: "main.sh"
+os: ["linux", "mac"]
+EOF
+
+echo '#!/bin/bash
+echo "Hello from dev plugin!"' > ~/dev/my-plugin/tools/hello/main.sh
+chmod +x ~/dev/my-plugin/tools/hello/main.sh
+
+# Instalar em modo dev
+cd ~/dev/my-plugin
+susa self plugin add .
+
+# Usar o comando
+susa tools hello
+# Saída: Hello from dev plugin!
+
+# Editar o código
+echo '#!/bin/bash
+echo "Hello, World! Updated!"' > ~/dev/my-plugin/tools/hello/main.sh
+
+# Testar novamente (sem reinstalar!)
+susa tools hello
+# Saída: Hello, World! Updated!
+```
+
 ## Se o plugin já estiver instalado
+
+### Plugin Git
 
 O comando mostra informações do plugin existente e sugere ações:
 
@@ -98,6 +237,24 @@ Opções disponíveis:
   • Atualizar plugin:  susa self plugin update backup-tools
   • Remover plugin:    susa self plugin remove backup-tools
   • Listar plugins:    susa self plugin list
+```
+
+### Plugin Dev
+
+Para plugins em modo desenvolvimento, não oferece opção de atualização:
+
+```text
+⚠ Plugin 'meu-plugin' já está instalado
+
+Detalhes do plugin:
+  Modo: desenvolvimento
+  Local do plugin: /home/usuario/projetos/meu-plugin
+  Versão atual: dev
+  Instalado em: 2026-01-14 23:00:00
+
+Opções disponíveis:
+  • Remover plugin:   susa self plugin remove meu-plugin
+  • Listar plugins:   susa self plugin list
 ```
 
 ## Repositórios Privados
