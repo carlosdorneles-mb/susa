@@ -29,7 +29,7 @@ show_help() {
     log_output "  -p, --print       Apenas imprime o script (não instala)"
     log_output ""
     log_output "${LIGHT_GREEN}Examples:${NC}"
-    log_output "  susa self completion --install            # Instala em todos os shells"
+    log_output "  susa self completion --ins    tall            # Instala em todos os shells"
     log_output "  susa self completion bash --install       # Instala apenas no bash"
     log_output "  susa self completion zsh --install        # Instala apenas no zsh"
     log_output "  susa self completion fish --install       # Instala apenas no fish"
@@ -713,12 +713,22 @@ install_zsh_completion() {
 
     # Add to path if necessary
     if [ -f "$shell_config" ]; then
+        # Verifica e adiciona fpath se necessário
         if ! grep -q "fpath=.*$completion_dir" "$shell_config"; then
             echo "" >> "$shell_config"
             echo "# Susa CLI completion" >> "$shell_config"
             echo "fpath=($completion_dir \$fpath)" >> "$shell_config"
+            log_debug "fpath adicionado ao shell config"
+        else
+            log_debug "fpath já existe no shell config"
+        fi
+
+        # Verifica e adiciona compinit se necessário (independente do fpath)
+        if ! grep -q "compinit" "$shell_config"; then
             echo "autoload -Uz compinit && compinit" >> "$shell_config"
-            log_debug "Configuração adicionada ao shell"
+            log_debug "compinit adicionado ao shell config"
+        else
+            log_debug "compinit já existe no shell config"
         fi
     fi
 

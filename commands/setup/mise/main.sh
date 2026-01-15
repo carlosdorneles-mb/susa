@@ -34,8 +34,10 @@ show_help() {
     echo "    source ~/.zshrc    (para Zsh)"
     echo ""
     log_output "${LIGHT_GREEN}Próximos passos:${NC}"
-    log_output "  mise use --global node@20    # Instalar e usar Node.js 20"
+    log_output "  mise use --global node@20    	# Instalar e usar Node.js 20"
     log_output "  mise use --global python@3.12 # Instalar e usar Python 3.12"
+    log_output "  mise use --global go@latest   # Instalar e usar Go (latest)"
+    log_output "  mise list                    	# Listar ferramentas instaladas"
     log_output "  mise install                  # Instalar ferramentas do .mise.toml"
 }
 
