@@ -58,7 +58,7 @@ log_debug() {
 strtobool() {
     # How to use: strtobool "value"
     local value
-    value=$(to_lowercase "$1")
+    value=$(string_to_lower "$1")
     case "$value" in
         "true" | "1" | "on" | "yes")
             return 0

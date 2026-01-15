@@ -25,6 +25,9 @@ else
 fi
 
 # Function to get the simplified name of the OS (linux or mac)
+# Usage:
+#   os_name=$(get_simple_os)
+#   echo "$os_name"  # Output: linux or mac
 get_simple_os() {
     if [[ "$OS_TYPE" == "macos" ]]; then
         echo "mac"
@@ -33,4 +36,22 @@ get_simple_os() {
     else
         echo "unknown"
     fi
+}
+
+# Check if running on Linux
+# Usage:
+#   if is_linux; then
+#       echo "Running on Linux"
+#   fi
+is_linux() {
+    [[ "$OS_TYPE" == "debian" ]] || [[ "$OS_TYPE" == "fedora" ]]
+}
+
+# Check if running on macOS
+# Usage:
+#   if is_mac; then
+#       echo "Running on macOS"
+#   fi
+is_mac() {
+    [[ "$OS_TYPE" == "macos" ]]
 }

@@ -53,6 +53,70 @@ elif [ "$simple_os" = "linux" ]; then
 fi
 ```
 
+### `get_os_name()`
+
+Alias para `get_simple_os()`. Retorna nome simplificado do OS.
+
+**Retorno:**
+
+- `mac` - macOS
+- `linux` - Qualquer Linux
+- `unknown` - Sistema não reconhecido
+
+**Uso:**
+
+```bash
+os_name=$(get_os_name)
+echo "Sistema operacional: $os_name"
+```
+
+### `is_linux()`
+
+Verifica se está rodando em Linux.
+
+**Retorno:**
+
+- `0` (true) - Sistema é Linux (Debian ou Fedora-based)
+- `1` (false) - Sistema não é Linux
+
+**Uso:**
+
+```bash
+if is_linux; then
+    echo "Rodando em Linux"
+    sudo apt-get update
+fi
+
+# Lógica específica para Linux
+if is_linux; then
+    # Instalar dependências Linux
+    install_linux_packages
+fi
+```
+
+### `is_mac()`
+
+Verifica se está rodando em macOS.
+
+**Retorno:**
+
+- `0` (true) - Sistema é macOS
+- `1` (false) - Sistema não é macOS
+
+**Uso:**
+
+```bash
+if is_mac; then
+    echo "Rodando em macOS"
+    brew install package
+fi
+
+# Configurações específicas do macOS
+if is_mac; then
+    defaults write com.apple.finder AppleShowAllFiles YES
+fi
+```
+
 ## Exemplo Completo
 
 ```bash
@@ -62,28 +126,36 @@ source "$LIB_DIR/logger.sh"
 
 log_info "Sistema detectado: $OS_TYPE"
 
-case "$OS_TYPE" in
-    macos)
-        log_info "Instalando via Homebrew..."
-        brew install docker
-        ;;
-    debian)
-        log_info "Instalando via APT..."
-        sudo apt-get install -y docker.io
-        ;;
-    fedora)
-        log_info "Instalando via DNF/YUM..."
-        sudo dnf install -y docker
-        ;;
-    *)
-        log_error "Sistema operacional não suportado"
-        exit 1
-        ;;
-esac
+# Usando funções booleanas
+if is_mac; then
+    log_info "Instalando via Homebrew..."
+    brew install docker
+elif is_linux; then
+    log_info "Instalando via gerenciador de pacotes Linux..."
+
+    # Lógica específica por distribuição
+    case "$OS_TYPE" in
+        debian)
+            sudo apt-get update
+            sudo apt-get install -y docker.io
+            ;;
+        fedora)
+            sudo dnf install -y docker
+            ;;
+    esac
+else
+    log_error "Sistema operacional não suportado"
+    exit 1
+fi
+
+# Usando get_os_name para lógica simples
+os_name=$(get_os_name)
+log_info "Configurando para: $os_name"
 ```
 
 ## Boas Práticas
 
-1. Use `get_simple_os()` para lógica de dois caminhos (mac/linux)
-2. Use `$OS_TYPE` para lógica específica de distribuição
-3. Sempre trate o caso `unknown` para SOs não suportados
+1. Use `is_linux()` e `is_mac()` para condicionais simples e legíveis
+2. Use `get_os_name()` ou `get_simple_os()` para lógica de dois caminhos (mac/linux)
+3. Use `$OS_TYPE` para lógica específica de distribuição
+4. Sempre trate o caso `unknown` para SOs não suportados

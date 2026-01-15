@@ -4,6 +4,72 @@ Gerenciamento automático de dependências externas e helpers para operações c
 
 ## Funções
 
+### `command_exists()`
+
+Verifica se um comando existe no sistema.
+
+**Parâmetros:**
+
+- `$1` - Nome do comando
+
+**Retorno:**
+
+- `0` - Comando existe
+- `1` - Comando não encontrado
+
+**Uso:**
+
+```bash
+if command_exists "docker"; then
+    echo "Docker está instalado"
+else
+    echo "Docker não encontrado"
+fi
+
+# Verificar antes de usar
+if command_exists "jq"; then
+    version=$(cat file.json | jq -r '.version')
+fi
+```
+
+### `check_dependencies()`
+
+Verifica se múltiplas dependências estão instaladas.
+
+**Parâmetros:**
+
+- `$@` - Lista de comandos a verificar
+
+**Retorno:**
+
+- `0` - Todas as dependências estão instaladas
+- `1` - Uma ou mais dependências estão faltando (exibe log de erro)
+
+**Uso:**
+
+```bash
+# Verificar múltiplas dependências
+if check_dependencies "git" "curl" "jq"; then
+    echo "Todas as dependências estão instaladas"
+    # Prosseguir com a operação
+else
+    echo "Instale as dependências faltando"
+    exit 1
+fi
+
+# Exemplo prático
+check_dependencies "docker" "docker-compose" || exit 1
+docker-compose up -d
+```
+
+**Mensagem de erro:**
+
+Quando dependências estão faltando, a função exibe:
+
+```text
+[ERROR] Dependências faltando: docker git
+```
+
 ### `wait_for_apt_lock()`
 
 Aguarda até que o lock do apt seja liberado antes de executar comandos apt-get.

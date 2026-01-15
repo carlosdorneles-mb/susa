@@ -6,32 +6,54 @@ IFS=$'\n\t'
 
 # Converts a string to uppercase.
 # Usage:
-#   to_uppercase "your_string"
+#   string_to_upper "your_string"
 # Example:
-#   result=$(to_uppercase "hello world")
+#   result=$(string_to_upper "hello world")
 #   echo "$result"  # Output: HELLO WORLD
-to_uppercase() {
+string_to_upper() {
     echo "${1^^}"
 }
 
 # Converts a string to lowercase.
 # Usage:
-#   to_lowercase "YOUR_STRING"
+#   string_to_lower "YOUR_STRING"
 # Example:
-#   result=$(to_lowercase "HELLO WORLD")
+#   result=$(string_to_lower "HELLO WORLD")
 #   echo "$result"  # Output: hello world
-to_lowercase() {
+string_to_lower() {
     echo "${1,,}"
 }
 
 # Strips leading and trailing whitespace from a string.
 # Usage:
-#   strip_whitespace "  your string  "
+#   string_trim "  your string  "
 # Example:
-#   result=$(strip_whitespace "  hello world  ")
+#   result=$(string_trim "  hello world  ")
 #   echo "$result"  # Output: hello world
-strip_whitespace() {
+string_trim() {
     echo "$1" | xargs
+}
+
+# Check if string contains a substring
+# Usage:
+#   string_contains "your_string" "substring"
+# Example:
+#   if string_contains "hello world" "world"; then
+#       echo "Contains substring"
+#   fi
+string_contains() {
+    [[ "$1" == *"$2"* ]]
+}
+
+# Check if string starts with a prefix
+# Usage:
+#   string_starts_with "your_string" "prefix"
+# Example:
+#   if string_starts_with "hello world" "hello"; then
+#       echo "Starts with prefix"
+#   fi
+string_starts_with() {
+    [[ "$1" == "$2"* ]]
 }
 
 # --- Array Helper Functions --- #

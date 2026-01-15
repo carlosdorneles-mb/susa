@@ -2,6 +2,44 @@
 set -euo pipefail
 IFS=$'\n\t'
 
+# --- Command Existence Checks ---
+
+# Check if a command exists in the system
+# Usage:
+#   command_exists "command_name"
+# Example:
+#   if command_exists "curl"; then
+#       echo "curl is installed"
+#   fi
+command_exists() {
+    command -v "$1" &>/dev/null
+}
+
+# Check if multiple dependencies are installed
+# Returns 0 if all are installed, 1 otherwise
+# Usage:
+#   check_dependencies "curl" "jq" "git"
+# Example:
+#   if ! check_dependencies "curl" "jq" "git"; then
+#       echo "Some dependencies are missing."
+#   fi
+check_dependencies() {
+    local missing=()
+
+    for cmd in "$@"; do
+        if ! command_exists "$cmd"; then
+            missing+=("$cmd")
+        fi
+    done
+
+    if [ ${#missing[@]} -gt 0 ]; then
+        log_error "Dependências faltando: ${missing[*]}"
+        return 1
+    fi
+
+    return 0
+}
+
 # --- Package Manager Lock Helper ---
 
 # Wait for apt lock to be released
