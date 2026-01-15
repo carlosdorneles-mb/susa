@@ -36,20 +36,21 @@ Veja nas [referências](../reference/commands/self/plugins/index.md) todos os co
 
 ### Modo Desenvolvimento
 
-O comando `susa self plugin run` permite testar plugins sem instalação permanente:
+Durante o desenvolvimento, instale o plugin localmente:
 
 ```bash
-# Executar plugin em desenvolvimento
 cd ~/meu-plugin
-susa self plugin run meu-plugin deploy staging
+susa self plugin add .
 
-# Plugin é automaticamente:
-# 1. Adicionado ao registry temporariamente
-# 2. Executado
-# 3. Removido após execução
+# Testar comandos
+susa deploy staging
+
+# Fazer alterações no código e testar novamente
+# Mudanças são refletidas automaticamente!
+susa deploy production
 ```
 
-Veja [Self Plugin Run](../reference/commands/self/plugins/run.md) para detalhes completos.
+Plugins instalados localmente (modo dev) refletem alterações automaticamente - não é necessário reinstalar.
 
 ## 🏗️ Criando um Plugin
 

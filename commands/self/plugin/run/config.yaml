@@ -1,5 +1,0 @@
-name: "Run Plugin"
-description: "Executa um plugin instalado ou em desenvolvimento"
-entrypoint: "main.sh"
-sudo: false
-os: ["linux", "mac"]

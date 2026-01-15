@@ -210,22 +210,6 @@ Atualiza o plugin para a versão mais recente:
 - Origem deve ser um repositório Git válido
 - Plugins locais não podem ser atualizados
 
-### Executar Plugin (Dev Mode)
-
-```bash
-cd ~/meu-plugin
-susa self plugin run meu-plugin deploy staging
-```
-
-Executa plugin sem instalação permanente:
-
-- **Modo automático**: Plugin é adicionado, executado e removido automaticamente
-- **Modo manual**: Use `--prepare` para adicionar, execute múltiplos comandos, use `--cleanup` para remover
-- **Subcategorias**: Use barra `/` para indicar hierarquia (ex: `deploy/aws`)
-- **Separador `--`**: Separa opções do run de argumentos do plugin
-
-Veja [Self Plugin Run](../reference/commands/self/plugins/run.md) para mais detalhes.
-
 ## 📦 Distribuindo Plugins
 
 Plugins podem ser distribuídos como repositórios Git:

@@ -233,13 +233,7 @@ Esse campo permite ao sistema resolver corretamente os paths dos scripts mesmo q
 
 ## Plugins em Modo Dev
 
-Quando usando `susa self plugin run` sem `--prepare`, o plugin dev:
-
-- É adicionado ao lock temporariamente com `dev: true`
-- Tem `source` apontando para diretório atual
-- É automaticamente removido após execução
-
-Veja [Self Plugin Run](plugins/run.md) para detalhes.
+Plugins instalados localmente (modo dev) são automaticamente incluídos no lock com `dev: true` e `source` apontando para o diretório local.
 
 ## Observações
 
