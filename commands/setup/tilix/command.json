@@ -1,6 +1,6 @@
 {
-  "name": "Tilix Terminal",
-  "description": "Instala Tilix (terminal)",
+  "name": "Tilix",
+  "description": "Instala Tilix (emulador de terminal com suporte a tiles)",
   "entrypoint": "main.sh",
   "sudo": true,
   "group": "terminal",

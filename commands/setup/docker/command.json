@@ -1,8 +1,9 @@
 {
   "name": "Docker",
-  "description": "Instala Docker CLI e Engine (gerenciador de containers)",
+  "description": "Instala Docker CLI e Engine (plataforma de containers)",
   "entrypoint": "main.sh",
   "sudo": true,
+  "group": "container",
   "os": [
     "linux",
     "mac"

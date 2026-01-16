@@ -1,6 +1,6 @@
 {
   "name": "Flameshot",
-  "description": "Instala Flameshot (ferramenta de captura de tela)",
+  "description": "Instala Flameshot (ferramenta de screenshot com anotações)",
   "entrypoint": "main.sh",
   "sudo": false,
   "group": "utility",

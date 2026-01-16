@@ -1,6 +1,6 @@
 {
   "name": "iTerm",
-  "description": "Instala iTerm (terminal)",
+  "description": "Instala iTerm2 (emulador de terminal para macOS)",
   "entrypoint": "main.sh",
   "sudo": false,
   "group": "terminal",

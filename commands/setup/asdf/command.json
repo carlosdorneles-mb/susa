@@ -1,8 +1,9 @@
 {
   "name": "ASDF",
-  "description": "Instala ASDF (gerenciador de versões polyglot)",
+  "description": "Instala ASDF (gerenciador de versões para múltiplas linguagens)",
   "entrypoint": "main.sh",
   "sudo": false,
+  "group": "version-manager",
   "os": [
     "linux",
     "mac"

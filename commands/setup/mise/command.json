@@ -1,8 +1,9 @@
 {
   "name": "Mise",
-  "description": "Instala Mise (gerenciador de versoes polyglot)",
+  "description": "Instala Mise (gerenciador de versões para múltiplas linguagens)",
   "entrypoint": "main.sh",
   "sudo": false,
+  "group": "version-manager",
   "os": [
     "linux",
     "mac"

@@ -1,8 +1,9 @@
 {
   "name": "JetBrains Toolbox",
-  "description": "Instala JetBrains Toolbox (gerenciador de IDEs JetBrains)",
+  "description": "Instala JetBrains Toolbox (gerenciador de IDEs da JetBrains)",
   "entrypoint": "main.sh",
   "sudo": false,
+  "group": "ide",
   "os": [
     "linux",
     "mac"

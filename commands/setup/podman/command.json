@@ -1,9 +1,9 @@
 {
   "name": "Podman",
-  "description": "Instala Podman (gerenciador de containers)",
+  "description": "Instala Podman (alternativa ao Docker sem daemon)",
   "entrypoint": "main.sh",
   "sudo": true,
-  "group": null,
+  "group": "container",
   "os": [
     "linux",
     "mac"

@@ -1,6 +1,6 @@
 {
-  "name": "UV - Astral",
-  "description": "Instala UV (gerenciador de dependências Python)",
+  "name": "UV",
+  "description": "Instala UV (gerenciador de dependências Python extremamente rápido)",
   "entrypoint": "main.sh",
   "sudo": false,
   "group": "python",

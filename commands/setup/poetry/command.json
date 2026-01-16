@@ -1,6 +1,6 @@
 {
   "name": "Poetry",
-  "description": "Instala Poetry (gerenciador de dependências Python)",
+  "description": "Instala Poetry (gerenciador de dependências e empacotamento Python)",
   "entrypoint": "main.sh",
   "sudo": false,
   "group": "python",
