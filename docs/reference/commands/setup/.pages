@@ -5,6 +5,7 @@ nav:
   - Bruno: bruno.md
   - DBeaver: dbeaver.md
   - Docker: docker.md
+  - Flameshot: flameshot.md
   - Podman: podman.md
   - Poetry: poetry.md
   - Postman: postman.md

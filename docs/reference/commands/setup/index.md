@@ -20,6 +20,10 @@ Instala e configura o DBeaver Community, uma ferramenta universal de gerenciamen
 
 Instala e configura o Docker CLI e Engine para gerenciamento de containers. Esta instalação inclui apenas o Docker CLI e Engine, sem o Docker Desktop. **Disponível para Linux e macOS.**
 
+### [Flameshot](flameshot.md)
+
+Instala e configura o Flameshot, uma ferramenta poderosa e simples de captura de tela. Oferece recursos de anotação, edição e compartilhamento de screenshots com interface intuitiva, atalhos de teclado customizáveis e upload direto para Imgur. Ideal para documentação, suporte técnico e comunicação visual. **Disponível para Linux e macOS.**
+
 ### [iTerm2](iterm.md)
 
 Instala e configura o iTerm2, um substituto avançado para o Terminal padrão do macOS, com recursos como split panes, busca avançada, autocompletar e muito mais. **Disponível apenas para macOS.**

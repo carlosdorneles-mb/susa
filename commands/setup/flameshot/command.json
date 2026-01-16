@@ -1,0 +1,15 @@
+{
+  "name": "Flameshot",
+  "description": "Instala Flameshot (ferramenta de captura de tela)",
+  "entrypoint": "main.sh",
+  "sudo": false,
+  "group": "utility",
+  "os": [
+    "linux",
+    "mac"
+  ],
+  "envs": {
+    "FLAMESHOT_HOMEBREW_FORMULA": "flameshot",
+    "FLAMESHOT_GITHUB_REPO": "flameshot-org/flameshot"
+  }
+}
