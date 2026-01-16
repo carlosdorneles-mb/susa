@@ -61,7 +61,7 @@ get_command_config_file() {
     fi
 
     local script_dir="$(cd "$(dirname "$script_path")" && pwd)"
-    echo "$script_dir/config.json"
+    echo "$script_dir/command.json"
 }
 
 # Displays the command usage information with customizable arguments
@@ -115,8 +115,8 @@ show_usage() {
     echo -e "$usage_string"
 }
 
-# Get and display the command description from config.json
-# The file config.json must have a "description" field.
+# Get and display the command description from command.json
+# The file command.json must have a "description" field.
 show_description() {
     local config_file=$(get_command_config_file)
     local cmd_desc=$(get_config_field "$config_file" "description")

@@ -260,9 +260,9 @@ list_commands() {
         # Check in plugins directories
         if [ -d "$CLI_DIR/plugins" ]; then
             for plugin_dir in "$CLI_DIR/plugins"/*/; do
-                # Check if plugin has config.json with directory setting
-                if [ -f "${plugin_dir}config.json" ]; then
-                    local plugin_directory=$(jq -r '.directory // empty' "${plugin_dir}config.json" 2> /dev/null)
+                # Check if plugin has plugin.json with directory setting
+                if [ -f "${plugin_dir}plugin.json" ]; then
+                    local plugin_directory=$(jq -r '.directory // empty' "${plugin_dir}plugin.json" 2> /dev/null)
                     if [ -n "$plugin_directory" ] && [ -d "${plugin_dir}${plugin_directory}/${category}" ]; then
                         found=true
                         break

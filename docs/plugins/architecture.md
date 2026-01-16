@@ -16,14 +16,14 @@ cli/
 ├── commands/                # Comandos built-in
 │   ├── install/
 │   │   ├── asdf/
-│   │   │   ├── config.json  # Config do comando
+│   │   │   ├── command.json  # Config do comando
 │   │   │   └── main.sh      # Script
 │   │   └── docker/
-│   │       ├── config.json
+│   │       ├── command.json
 │   │       └── main.sh
 │   └── daily/
 │       └── backup/
-│           ├── config.json
+│           ├── command.json
 │           └── main.sh
 └── plugins/                 # Plugins externos
     ├── registry.json        # Registro de plugins
@@ -31,13 +31,13 @@ cli/
         ├── plugin.json      # ⚠️ Config do plugin (OBRIGATÓRIO)
         └── daily/
             └── backup-s3/
-                ├── config.json
+                ├── command.json
                 └── main.sh
 ```
 
-## 📝 Formato do config.json
+## 📝 Formato do command.json
 
-Cada comando deve ter um arquivo `config.json` no seu diretório:
+Cada comando deve ter um arquivo `command.json` no seu diretório:
 
 ```json
 {
@@ -59,7 +59,7 @@ Cada comando deve ter um arquivo `config.json` no seu diretório:
 
 Plugins suportam **variáveis de ambiente isoladas** da mesma forma que comandos built-in.
 
-**Definição no config.json:**
+**Definição no command.json:**
 
 ```json
 {
@@ -160,7 +160,7 @@ meu-plugin/
 └── src/                 # Comandos aqui dentro
     └── demo/
         └── hello/
-            ├── config.json
+            ├── command.json
             └── main.sh
 ```
 
@@ -189,7 +189,7 @@ Crie um diretório dentro de `plugins/`:
 mkdir -p plugins/meu-plugin/src/categoria/comando
 ```
 
-### 3. Crie o config.json do Comando
+### 3. Crie o command.json do Comando
 
 ```json
 {
@@ -315,7 +315,7 @@ my-cli-plugin/
 ├── README.md
 └── daily/
     └── meu-comando/
-        ├── config.json
+        ├── category.json
         └── main.sh
 ```
 

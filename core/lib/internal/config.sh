@@ -109,9 +109,9 @@ is_command_compatible_from_lock() {
     local lock_file="$cli_dir/susa.lock"
 
     if [ ! -f "$lock_file" ]; then
-        # Fallback: check config.json directly if lock file doesn't exist
+        # Fallback: check command.json directly if lock file doesn't exist
         local command_dir="$cli_dir/commands/$category/$command"
-        local config_file="$command_dir/config.json"
+        local config_file="$command_dir/command.json"
 
         if [ -f "$config_file" ]; then
             local supported_os=$(jq -r '.os[]? // empty' "$config_file" 2> /dev/null)
@@ -304,10 +304,10 @@ find_command_config() {
             local config_path=""
             if [ -n "$plugin_directory" ] && [ "$plugin_directory" != "null" ] && [ "$plugin_directory" != "" ]; then
                 # Plugin has a specific directory configured
-                config_path="$plugin_source/$plugin_directory/$category/$command_id/config.json"
+                config_path="$plugin_source/$plugin_directory/$category/$command_id/command.json"
             else
                 # Plugin uses root directory
-                config_path="$plugin_source/$category/$command_id/config.json"
+                config_path="$plugin_source/$category/$command_id/command.json"
             fi
 
             if [ -f "$config_path" ]; then
@@ -318,7 +318,7 @@ find_command_config() {
     fi
 
     # Search in commands/
-    local config_path="$cli_dir/commands/$category/$command_id/config.json"
+    local config_path="$cli_dir/commands/$category/$command_id/command.json"
     if [ -f "$config_path" ]; then
         echo "$config_path"
         return 0
@@ -334,7 +334,7 @@ find_command_config() {
             [ "$plugin_name" = "registry.json" ] && continue
             [ "$plugin_name" = "README.md" ] && continue
 
-            config_path="$plugin_dir/$category/$command_id/config.json"
+            config_path="$plugin_dir/$category/$command_id/command.json"
             if [ -f "$config_path" ]; then
                 echo "$config_path"
                 return 0
@@ -408,10 +408,10 @@ get_command_info() {
         fi
     fi
 
-    # Fallback: read directly from config.json if lock file doesn't exist
+    # Fallback: read directly from command.json if lock file doesn't exist
     local cli_dir="${CLI_DIR:-$(dirname "$GLOBAL_CONFIG_FILE")}"
     local command_dir="$cli_dir/commands/$category/$command_id"
-    local config_file="$command_dir/config.json"
+    local config_file="$command_dir/command.json"
 
     if [ -f "$config_file" ]; then
         local value=$(jq -r ".$field // empty" "$config_file" 2> /dev/null)
@@ -553,7 +553,7 @@ load_env_files() {
     done
 }
 
-# Load environment variables from command config.json
+# Load environment variables from command.json
 load_command_envs() {
     local config_file="$1"
 

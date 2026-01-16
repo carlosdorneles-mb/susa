@@ -6,7 +6,7 @@ Parser de configurações JSON usando jq para ler configs e lock files.
 
 A biblioteca `config.sh` fornece funções para:
 
-- 📄 Leitura de configurações JSON (cli.json, config.json)
+- 📄 Leitura de configurações JSON (cli.json, command.json, category.json, plugin.json)
 - 🔒 Leitura do lock file (susa.lock)
 - 📦 Descoberta de categorias e comandos
 - ℹ️ Funções de versão do CLI
@@ -73,7 +73,7 @@ done
 
 ### `get_category_info()`
 
-Obtém informações de uma categoria do config.json dela.
+Obtém informações de uma categoria do category.json dela.
 
 **Parâmetros:**
 
@@ -90,7 +90,7 @@ echo "Categoria setup: $desc"
 
 ### `is_command_dir()`
 
-Verifica se um diretório é um comando (tem config.json com campo script).
+Verifica se um diretório é um comando (tem command.json com campo entrypoint).
 
 **Retorno:**
 
@@ -140,20 +140,20 @@ done
 
 ### `get_command_config_field()`
 
-Lê um campo do config.json de um comando.
+Lê um campo do command.json de um comando.
 
 **Parâmetros:**
 
-- `$1` - Caminho do arquivo config.json
+- `$1` - Caminho do arquivo command.json
 - `$2` - Campo (category, id, name, description, script, sudo, os)
 
 ```bash
-name=$(get_command_config_field "/opt/susa/commands/setup/asdf/config.json" "name")
+name=$(get_command_config_field "/opt/susa/commands/setup/asdf/command.json" "name")
 ```
 
 ### `find_command_config()`
 
-Encontra o arquivo config.json de um comando, considerando comandos locais e de plugins.
+Encontra o arquivo command.json de um comando, considerando comandos locais e de plugins.
 
 **Para que serve:**
 Localiza onde está o arquivo de configuração de um comando, seja ele um comando nativo do Susa ou de um plugin instalado. Suporta plugins com campo `directory` configurado.
@@ -173,15 +173,15 @@ Esta função é usada internamente pelo sistema ao executar comandos. Você nã
 - `$1` - Categoria do comando (ex: "setup" ou "install/python")
 - `$2` - ID do comando
 
-**Retorno:** Caminho completo do config.json ou vazio se não encontrado
+**Retorno:** Caminho completo do command.json ou vazio se não encontrado
 
 ```bash
 config=$(find_command_config "setup" "asdf")
-echo "$config"  # /opt/susa/commands/setup/asdf/config.json
+echo "$config"  # /opt/susa/commands/setup/asdf/command.json
 
 # Para plugin com directory configurado:
 config=$(find_command_config "demo" "hello")
-echo "$config"  # /path/to/plugin/src/demo/hello/config.json
+echo "$config"  # /path/to/plugin/src/demo/hello/command.json
 ```
 
 ### `get_command_info()`
@@ -306,16 +306,16 @@ load_env_files "/" "/etc/myapp/.env" "$HOME/.env"
 
 ### `load_command_envs()`
 
-Carrega e exporta variáveis de ambiente de arquivos .env e da seção `envs` do config.json de um comando.
+Carrega e exporta variáveis de ambiente de arquivos .env e da seção `envs` do command.json de um comando.
 
 **Parâmetros:**
 
-- `$1` - Caminho do arquivo config.json do comando
+- `$1` - Caminho do arquivo command.json do comando
 
 **Comportamento:**
 
 1. Carrega arquivos .env (se especificados em `env_files:`)
-2. Carrega seção `envs:` do config.json
+2. Carrega seção `envs:` do command.json
 3. Exporta cada variável como variável de ambiente
 4. Expande variáveis como `$HOME`, `$USER`, etc.
 5. Respeita variáveis já definidas (não sobrescreve sistema)
@@ -338,7 +338,7 @@ local timeout="${MY_TIMEOUT:-30}"
 local url="${MY_API_URL:-https://default.com}"
 ```
 
-**Exemplo de config.json (com .env files):**
+**Exemplo de command.json (com .env files):**
 
 ```json
 {
@@ -376,7 +376,7 @@ DEBUG_MODE="false"
 set -euo pipefail
 
 
-# Variáveis do config.json já estão exportadas
+# Variáveis do command.json já estão exportadas
 install_app() {
     local api_url="${MY_API_URL:-https://api.example.com}"
     local timeout="${MY_TIMEOUT:-30}"
@@ -398,14 +398,14 @@ install_app "$@"
 - ✅ Suporta qualquer variável de ambiente válida
 - ✅ Funciona em comandos built-in e plugins
 - ✅ Suporta múltiplos arquivos .env
-- ✅ Caminhos relativos ao diretório do config.json
+- ✅ Caminhos relativos ao diretório do command.json
 - ✅ Arquivos .env inexistentes são ignorados silenciosamente
 
 **Ordem de Precedência (maior → menor):**
 
 1. **Variáveis de Sistema** (maior prioridade)
    - `export VAR=value` ou `VAR=value comando`
-2. **Variáveis do Config** - `config.json` → `envs:`
+2. **Variáveis do Config** - `command.json` → `envs:`
 3. **Variáveis Globais** - `config/settings.conf`
 4. **Arquivos .env** (menor prioridade entre fontes configuráveis)
    - Na ordem especificada em `env_files:`
@@ -416,7 +416,7 @@ install_app "$@"
 **Exemplo de precedência completa:**
 
 ```json
-// config.json
+// command.json
 {
   "env_files": [".env", ".env.local"],
   "envs": {
@@ -441,7 +441,7 @@ timeout="${TIMEOUT:-10}"
 api_url="${API_URL:-https://default.com}"
 
 # Resultados:
-./core/susa comando                  # → TIMEOUT=60 (do config.json envs)
+./core/susa comando                  # → TIMEOUT=60 (do command.json envs)
                                      # → API_URL=https://api.example.com (do .env)
 TIMEOUT=90 ./core/susa comando       # → TIMEOUT=90 (do sistema - maior prioridade)
 ```

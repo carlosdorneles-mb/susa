@@ -54,9 +54,9 @@ susa/
 │   └── lib/               # Bibliotecas compartilhadas
 ├── commands/              # Comandos nativos
 │   ├── setup/            # Categoria de comandos
-│   │   ├── config.json
+│   │   ├── category.json
 │   │   └── docker/       # Comando individual
-│   │       ├── config.json
+│   │       ├── command.json
 │   │       └── main.sh
 │   └── self/             # Comandos internos (plugin, completion)
 ├── plugins/              # Plugins externos (Git)
@@ -77,7 +77,7 @@ mkdir -p commands/setup/myapp
 **2. Configurar comando com envs:**
 
 ```json
-// commands/setup/myapp/config.json
+// commands/setup/myapp/command.json
 {
   "name": "My App",
   "description": "Instala My App",

@@ -105,7 +105,7 @@ Comandos são descobertos automaticamente da estrutura de diretórios:
 
 ```bash
 mkdir -p commands/setup/docker
-# Criar config.json e main.sh
+# Criar command.json e main.sh
 ```
 
 Veja o [Guia de Adição de Comandos](guides/adding-commands.md) para instruções completas.

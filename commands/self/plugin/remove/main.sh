@@ -88,9 +88,9 @@ main() {
     # List commands that will be removed
     local cmd_count=0
     if [ "$is_dev_plugin" = true ] && [ -d "$source_path" ]; then
-        cmd_count=$(find "$source_path" -name "config.json" -type f 2> /dev/null | wc -l)
+        cmd_count=$(find "$source_path" -name "command.json" -type f 2> /dev/null | wc -l)
     elif [ -d "$PLUGINS_DIR/$PLUGIN_NAME" ]; then
-        cmd_count=$(find "$PLUGINS_DIR/$PLUGIN_NAME" -name "config.json" -type f | wc -l)
+        cmd_count=$(find "$PLUGINS_DIR/$PLUGIN_NAME" -name "command.json" -type f | wc -l)
     fi
     log_output "Comandos que serão removidos: ${GRAY}$cmd_count${NC}"
     log_output ""

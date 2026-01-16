@@ -40,9 +40,9 @@ Cada comando deve seguir esta estrutura hierárquica:
 ```text
 commands/
   <categoria>/
-    config.json           # Configuração da categoria
+    category.json         # Configuração da categoria
     <comando>/
-      config.json         # Configuração do comando
+      command.json        # Configuração do comando
       main.sh             # Entrypoint principal executável
 ```
 
@@ -51,12 +51,12 @@ commands/
 ```text
 commands/
   setup/
-    config.json
+    category.json
     asdf/
-      config.json
+      command.json
       main.sh
     docker/
-      config.json
+      command.json
       main.sh
 ```
 
@@ -87,7 +87,7 @@ mkdir -p commands/tools/My Tool       # Espaço
 
 ### 2. Configurar a Categoria
 
-Crie ou edite `commands/<categoria>/config.json`:
+Crie ou edite `commands/<categoria>/category.json`:
 
 ```json
 {
@@ -98,7 +98,7 @@ Crie ou edite `commands/<categoria>/config.json`:
 
 ### 3. Configurar o Comando
 
-Crie `commands/<categoria>/<comando>/config.json`:
+Crie `commands/<categoria>/<comando>/command.json`:
 
 ```json
 {
@@ -305,11 +305,11 @@ Para detalhes completos de todas as bibliotecas, veja [Referência de Biblioteca
 6. **Validação**: Verifique se dependências estão instaladas antes de usar
 7. **Cores com reset**: Sempre termine mensagens coloridas com `${NC}`
 8. **Variáveis de ambiente**:
-   - Use seção `envs` no `config.json` para URLs, timeouts e configurações
+   - Use seção `envs` no `command.json` para URLs, timeouts e configurações
    - Sempre forneça valores de fallback: `${VAR:-default}`
    - Use prefixos únicos para evitar conflitos: `COMANDO_VAR` em vez de `VAR`
    - Documente as variáveis com comentários no JSON
-9. **Configurações**: Prefira `envs` no `config.json` em vez de hardcoded no script
+9. **Configurações**: Prefira `envs` no `command.json` em vez de hardcoded no script
 
 ## 🔍 Descoberta Automática
 
@@ -317,7 +317,7 @@ O Susa CLI descobre comandos **automaticamente**:
 
 - Não há registro central de comandos
 - O CLI varre o diretório `commands/` em tempo de execução
-- Cada `config.json` é lido dinamicamente
+- Cada arquivo de configuração é lido dinamicamente
 - Plugins funcionam da mesma forma em `plugins/`
 
 > **💡 Para entender como o sistema diferencia comandos e subcategorias**, veja [Diferença entre Comandos e Subcategorias](subcategories.md#diferenca-entre-comandos-e-subcategorias).
@@ -354,13 +354,13 @@ Veja o comando [setup asdf](../reference/commands/setup/asdf.md) como referênci
 ```text
 commands/
   deploy/
-    config.json
+    category.json
     app/
-      config.json    # Com seção envs
+      command.json    # Com seção envs
       main.sh        # Usa as envs
 ```
 
-**commands/deploy/config.json:**
+**commands/deploy/category.json:**
 
 ```json
 {
@@ -369,7 +369,7 @@ commands/
 }
 ```
 
-**commands/deploy/app/config.json:**
+**commands/deploy/app/command.json:**
 
 ```json
 {

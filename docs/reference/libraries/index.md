@@ -75,7 +75,7 @@ Gerenciamento de autocompletar (tab completion) para Bash e Zsh. Verifica instal
 
 #### [config.sh](config.md)
 
-Parser JSON completo para configurações. Descobre categorias, comandos e lê metadados dos arquivos `config.json`. Inclui funções de versão do CLI.
+Parser JSON completo para configurações. Descobre categorias, comandos e lê metadados dos arquivos de configuração (command.json e category.json). Inclui funções de versão do CLI.
 
 #### [git.sh](git.md)
 

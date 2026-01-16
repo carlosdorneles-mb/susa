@@ -17,17 +17,17 @@ Plugins são **pacotes externos** que adicionam:
 meu-plugin/
 ├── plugin.json           # Metadados do plugin (obrigatório)
 ├── categoria1/
-│   ├── config.json
+│   ├── category.json
 │   ├── comando1/
-│   │   ├── config.json
+│   │   ├── command.json
 │   │   └── main.sh
 │   └── subcategoria/
-│       ├── config.json
+│       ├── category.json
 │       └── comando2/
-│           ├── config.json
+│           ├── command.json
 │           └── main.sh
 └── categoria2/
-    ├── config.json
+    ├── category.json
     └── ...
 ```
 
@@ -53,7 +53,7 @@ Campos:
 
 **Nota**: Plugins sem `plugin.json` válido não poderão ser instalados.
 
-Veja mais detalhes em [Plugin Configuration](plugin-config.md).
+Para mais detalhes sobre a estrutura de plugins, veja [Arquitetura de Plugins](architecture.md).
 
 ## 🚀 Comandos de Gerenciamento
 
@@ -102,13 +102,13 @@ EOF
 mkdir -p meu-plugin/deploy/{staging,production}
 
 # Categoria
-cat > meu-plugin/deploy/config.json << EOF
+cat > meu-plugin/deploy/category.json << EOF
 name: "Deploy"
 description: "Ferramentas de deployment"
 EOF
 
 # Comando
-cat > meu-plugin/deploy/staging/config.json << EOF
+cat > meu-plugin/deploy/staging/command.json << EOF
 name: "Staging"
 description: "Deploy para staging"
 entrypoint: "main.sh"
@@ -165,14 +165,14 @@ Plugins suportam a mesma estrutura hierárquica que comandos built-in:
 ```text
 meu-plugin/
   deploy/
-    config.json
+    category.json
     staging/
-      config.json
+      command.json
       main.sh
     aws/                 # Subcategoria
-      config.json
+      category.json
       ec2/               # Comando em subcategoria
-        config.json
+        command.json
         main.sh
 ```
 
@@ -212,7 +212,7 @@ Commands:
 4. **Naming** - Use nomes descritivos e sem espaços
 5. **Testes** - Teste localmente antes de publicar
 6. **Compatibilidade** - Use campo `os:` se específico de plataforma
-7. **Variáveis de Ambiente** - Use `envs:` no config.json para configurações
+7. **Variáveis de Ambiente** - Use `envs:` no command.json para configurações
    - Sempre forneça fallback no script: `${VAR:-default}`
    - Use prefixos únicos: `MYPLUGIN_*`
    - Documente no README quais envs estão disponíveis

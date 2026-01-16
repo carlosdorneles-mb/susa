@@ -69,5 +69,5 @@ log_success "Sistema atualizado!"
 ## Boas Práticas
 
 1. Use no início de comandos que modificam o sistema
-2. Combine com campo `sudo: true` no config.json
+2. Combine com campo `sudo: true` no command.json
 3. Informe o usuário antes de pedir sudo

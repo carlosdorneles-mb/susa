@@ -4,7 +4,7 @@
 
 O CLI suporta uma estrutura hierárquica de categorias e subcategorias baseada em diretórios, permitindo organizar comandos em múltiplos níveis de profundidade.
 
-> **📖 Pré-requisito:** Este guia assume que você já conhece os conceitos básicos de estrutura de comandos, `config.json` e criação de scripts. Se não, veja primeiro [Como Adicionar Novos Comandos](adding-commands.md).
+> **📖 Pré-requisito:** Este guia assume que você já conhece os conceitos básicos de estrutura de comandos e criação de scripts. Se não, veja primeiro [Como Adicionar Novos Comandos](adding-commands.md).
 
 ## 🏗️ Estrutura de Diretórios
 
@@ -14,8 +14,8 @@ O CLI suporta uma estrutura hierárquica de categorias e subcategorias baseada e
 
 O sistema verifica:
 
-1. Se o diretório tem `config.json`
-2. Se o `config.json` tem o campo `entrypoint:` definido
+1. Se o diretório tem arquivo de configuração (command.json ou category.json)
+2. Se o `command.json` tem o campo `entrypoint:` definido
 3. Se o arquivo do script existe
 
 **Resultado:**
@@ -28,21 +28,21 @@ O sistema verifica:
   - Sistema permite navegar (listar sub-itens)
   - Aparece na seção "Subcategories"
 
-### Todos usam config.json
+### Arquivos de Configuração Diferenciados
 
-Tanto comandos quanto subcategorias têm `config.json`, mas com campos diferentes:
+Tanto comandos quanto categorias usam arquivos de configuração, mas com campos diferentes:
 
-| Tipo | Campos no config.json |
+| Tipo | Campos de configuração |
 | ---- | --------------------- |
-| **Comando** | `name`, `description`, `script` (obrigatório), `sudo`, `os` |
-| **Subcategoria** | `name`, `description` (sem campo `entrypoint`) |
+| **Comando** (command.json) | `name`, `description`, `entrypoint` (obrigatório), `sudo`, `os` |
+| **Categoria/Subcategoria** (category.json) | `name`, `description` (sem campo `entrypoint`) |
 
-> **ℹ️ Para detalhes completos sobre campos do config.json, veja [Configuração de Comandos](adding-commands.md#3-configurar-o-comando).**
+> **ℹ️ Para detalhes completos sobre campos de configuração, veja [Configuração de Comandos](adding-commands.md#3-configurar-o-comando).**
 
 **Vantagens dessa abordagem:**
 
 - ✅ Mais intuitivo: "tem script = é executável"
-- ✅ Mais consistente: todos usam o mesmo tipo de arquivo
+- ✅ Mais consistente: categorias usam category.json e comandos usam command.json
 - ✅ Mais lógico: comandos PRECISAM de script, subcategorias não
 
 ### Estrutura Exemplo
@@ -50,27 +50,27 @@ Tanto comandos quanto subcategorias têm `config.json`, mas com campos diferente
 ```text
 commands/
   setup/                            # Categoria principal
-    config.json                     # name, description (sem script)
+    category.json                     # name, description (sem entrypoint)
     asdf/                           # Comando direto
-      config.json                   # category, id, name, description, script, sudo, os
+      command.json                   # category, id, name, description, script, sudo, os
       main.sh                       # Script executável
     python/                         # Subcategoria
-      config.json                   # name, description (sem script)
+      command.json                   # name, description (sem script)
       pip/                          # Comando
-        config.json                 # category, id, name, description, script
+        command.json                 # category, id, name, description, script
         main.sh
       poetry/                       # Comando
-        config.json
+        command.json
         main.sh
       tools/                        # Sub-subcategoria (nível 3)
-        config.json                 # name, description (sem script)
+        command.json                 # name, description (sem script)
         venv/                       # Comando nível 3
-          config.json               # category, id, name, description, script
+          command.json               # category, id, name, description, entrypoint
           main.sh
     nodejs/                         # Subcategoria
-      config.json                   # name, description (sem script)
+      command.json                   # name, description (sem script)
       npm/                          # Comando
-        config.json                 # category, id, name, description, script
+        command.json                 # category, id, name, description, script
         main.sh
 ```
 
@@ -103,9 +103,9 @@ susa setup python tools venv
 
 ## 📝 Arquivos de Configuração
 
-### Arquivo Único: config.json
+### Arquivos de Configuração
 
-Todos os itens (categorias, subcategorias e comandos) usam `config.json`.
+Categorias e subcategorias usam `category.json`, enquanto comandos usam `command.json`.
 A diferença está nos **campos definidos**.
 
 ### 1. Categoria/Subcategoria (Navegável)
@@ -119,7 +119,7 @@ Usado para itens que contêm outros itens.
 }
 ```
 
-**Localização:** `commands/{categoria}/config.json` ou `commands/{categoria}/{subcategoria}/config.json`
+**Localização:** `commands/{categoria}/category.json` ou `commands/{categoria}/{subcategoria}/command.json`
 
 ### 2. Comando (Executável)
 
@@ -135,7 +135,7 @@ Configuração completa de um comando executável.
 }
 ```
 
-**Localização:** `commands/{categoria}/.../{comando}/config.json`
+**Localização:** `commands/{categoria}/.../{comando}/command.json`
 
 **Importante:** O arquivo definido em `entrypoint:` DEVE existir e ter permissão de execução.
 
@@ -197,26 +197,26 @@ Commands:
 
 ```bash
 mkdir -p commands/setup/comando-novo
-# Criar config.json e main.sh conforme guia básico
+# Criar arquivos de configuração e main.sh conforme guia básico
 ```
 
 ### 2. Comando em Nova Subcategoria
 
-A diferença principal: criar um `config.json` **sem** campo `entrypoint` para a subcategoria.
+A diferença principal: criar um `category.json` **sem** campo `entrypoint` para a subcategoria.
 
 ```bash
 # Criar estrutura
 mkdir -p commands/install/nova-categoria/comando-xyz
 
 # Criar configuração da subcategoria (SEM campo 'script')
-cat > commands/install/nova-categoria/config.json << EOF
+cat > commands/install/nova-categoria/category.json << EOF
 name: "Nova Categoria"
 description: "Descrição da nova categoria"
 # Sem campo 'script' = subcategoria navegável
 EOF
 
 # Criar configuração do comando (COM campo 'script')
-cat > commands/install/nova-categoria/comando-xyz/config.json << EOF
+cat > commands/install/nova-categoria/comando-xyz/command.json << EOF
 name: "Comando XYZ"
 description: "Descrição do comando XYZ"
 entrypoint: "main.sh"       # ← Indica que é executável
@@ -241,19 +241,19 @@ chmod +x commands/setup/nova-categoria/comando-xyz/main.sh
 # Criar estrutura completa
 mkdir -p commands/install/categoria/subcategoria/comando
 
-# Criar config.json para cada nível navegável
-cat > commands/install/categoria/config.json << EOF
+# Criar arquivos de configuração para cada nível navegável
+cat > commands/install/categoria/category.json << EOF
 name: "Categoria"
 description: "Nível 1"
 EOF
 
-cat > commands/install/categoria/subcategoria/config.json << EOF
+cat > commands/install/categoria/subcategoria/category.json << EOF
 name: "Subcategoria"
 description: "Nível 2"
 EOF
 
 # Criar comando executável (COM campo 'script')
-cat > commands/install/categoria/subcategoria/comando/config.json << EOF
+cat > commands/install/categoria/subcategoria/comando/command.json << EOF
 name: "Comando"
 description: "Comando no nível 3"
 entrypoint: "main.sh"       # ← Indica que é executável
@@ -275,8 +275,8 @@ chmod +x commands/setup/categoria/subcategoria/comando/main.sh
 O sistema descobre automaticamente:
 
 - ✅ Todas as categorias em `commands/`
-- ✅ Todas as subcategorias (diretórios sem `config.json`)
-- ✅ Todos os comandos (diretórios com `config.json`)
+- ✅ Todas as subcategorias (diretórios com `category.json`)
+- ✅ Todos os comandos (diretórios com `command.json` e campo `entrypoint`)
 - ✅ Múltiplos níveis de aninhamento
 - ✅ Comandos em plugins externos
 
@@ -290,28 +290,28 @@ Plugins também suportam a mesma estrutura hierárquica com subcategorias aninha
 plugins/
   dev-tools/                    # Plugin
     deploy/                     # Categoria
-      config.json               # name, description (sem script)
+      command.json               # name, description (sem script)
       staging/                  # Comando
-        config.json             # name, description, script
+        command.json             # name, description, script
         main.sh
       production/               # Comando
-        config.json
+        command.json
         main.sh
       aws/                      # Subcategoria
-        config.json             # name, description (sem script)
+        command.json             # name, description (sem script)
         ec2/                    # Comando
-          config.json           # name, description, script
+          command.json           # name, description, entrypoint
           main.sh
         lambda/                 # Comando
-          config.json
+          category.json
           main.sh
     test/                       # Categoria
-      config.json
+      command.json
       unit/                     # Comando
-        config.json
+        command.json
         main.sh
       integration/              # Comando
-        config.json
+        command.json
         main.sh
 ```
 
@@ -337,7 +337,7 @@ plugins/
 ✅ Plugins funcionam **exatamente** como `commands/`:
 
 - Mesma lógica de detecção (script = comando, sem script = subcategoria)
-- Mesma estrutura de config.json
+- Mesma estrutura de arquivos de configuração (command.json/category.json)
 - Mesma navegação multinível
 - Mesma descoberta automática
 
@@ -379,12 +379,12 @@ Commands:
 Comandos podem ser agrupados para melhor organização:
 
 ```json
-// commands/install/tool1/config.json
+// commands/install/tool1/command.json
 {
   "group": "Development Tools"
 }
 
-// commands/install/tool2/config.json
+// commands/install/tool2/command.json
 {
   "group": "Development Tools"
 }
@@ -432,7 +432,7 @@ commands/tools/dev/lang/python/pkg/pip
 
 ### Comando não aparece na listagem
 
- 1:** Falta campo `entrypoint:` no `config.json`
+ 1:** Falta campo `entrypoint:` no `command.json`
 
 **Solução:** Adicionar o campo script
 
@@ -452,11 +452,11 @@ ls -la commands/categoria/comando/main.sh
 
 **Causa 3:** Incompatível com o sistema operacional atual
 
-**Solução:** Verificar campo `os:` no config.json
+**Solução:** Verificar campo `os:` no command.json
 
 ### Subcategoria aparece como comando (não consigo navegar)
 
-**Causa:** config.json tem campo `entrypoint:` definido e o arquivo existe
+**Causa:** command.json tem campo `entrypoint:` definido e o arquivo existe
 
 **Explicação:** O sistema identifica como comando executável pela presença do script.
 
@@ -468,7 +468,7 @@ ls -la commands/categoria/comando/main.sh
 chmod +x commands/path/to/command/main.sh
 ```
 
-**Causa 2:** Nome do script no config.json não corresponde ao arquivo
+**Causa 2:** Nome do script no command.json não corresponde ao arquivo
 
 **Solução:** Verificar se `entrypoint:` aponta para o arquivo correto
 
@@ -478,7 +478,7 @@ chmod +x commands/path/to/command/main.sh
 
 ### Descrição não aparece
 
-**Causa:** Falta campo `description:` no config.json
+**Causa:** Falta campo `description:` no command.json
 
 **Solução:** Adicionar descrição
 
@@ -491,9 +491,9 @@ chmod +x commands/path/to/command/main.sh
 
 ### Descrição da subcategoria não aparece
 
-**Causa:** Falta `config.json` ou está sem campos obrigatórios
+**Causa:** Falta arquivo de configuração (command.json ou category.json) ou está sem campos obrigatórios
 
-**Solução:** Criar `config.json` com `name` e `description` (SEM campo `entrypoint`)
+**Solução:** Criar `category.json` com `name` e `description` (SEM campo `entrypoint`)
 
 ```json
 {
@@ -513,13 +513,13 @@ chmod +x commands/path/to/command/main.sh
 mkdir -p commands/backup/{local,cloud}/{full,incremental}
 
 # Subcategoria: backup/local (SEM campo 'script')
-cat > commands/backup/local/config.json << EOF
+cat > commands/backup/local/command.json << EOF
 name: "Local"
 description: "Backups locais"
 EOF
 
 # Comando: backup/local/full (COM campo 'script')
-cat > commands/backup/local/full/config.json << EOF
+cat > commands/backup/local/full/command.json << EOF
 name: "Full Backup"
 description: "Backup completo local"
 entrypoint: "main.sh"
@@ -550,13 +550,13 @@ mkdir -p plugins/dev-tools/deploy/{staging,production,aws/{ec2,lambda}}
 mkdir -p plugins/dev-tools/test/{unit,integration}
 
 # Categoria: deploy (SEM script)
-cat > plugins/dev-tools/deploy/config.json << EOF
+cat > plugins/dev-tools/deploy/category.json << EOF
 name: "Deploy"
 description: "Ferramentas de deployment"
 EOF
 
 # Comando: deploy/staging
-cat > plugins/dev-tools/deploy/staging/config.json << EOF
+cat > plugins/dev-tools/deploy/staging/command.json << EOF
 name: "Staging"
 description: "Deploy para ambiente de staging"
 entrypoint: "main.sh"
@@ -569,13 +569,13 @@ echo "✅ Deploy concluído!"
 EOF
 
 # Subcategoria: deploy/aws (SEM script)
-cat > plugins/dev-tools/deploy/aws/config.json << EOF
+cat > plugins/dev-tools/deploy/aws/command.json << EOF
 name: "AWS"
 description: "Deploy para serviços AWS"
 EOF
 
 # Comando em subcategoria: deploy/aws/ec2
-cat > plugins/dev-tools/deploy/aws/ec2/config.json << EOF
+cat > plugins/dev-tools/deploy/aws/ec2/command.json << EOF
 name: "EC2"
 description: "Deploy para instâncias EC2"
 entrypoint: "main.sh"

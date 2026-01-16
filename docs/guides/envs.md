@@ -8,7 +8,7 @@ Referência rápida sobre o sistema de variáveis de ambiente do Susa CLI.
 
 ### 1. Variáveis por Comando (Isoladas)
 
-Definidas no `config.json` do comando, disponíveis apenas durante sua execução.
+Definidas no `command.json` do comando, disponíveis apenas durante sua execução.
 
 **Funciona em:**
 
@@ -18,9 +18,9 @@ Definidas no `config.json` do comando, disponíveis apenas durante sua execuçã
 **Definição:**
 
 ```json
-// commands/setup/docker/config.json (built-in)
+// commands/setup/docker/command.json (built-in)
 // ou
-// plugins/meu-plugin/deploy/staging/config.json (plugin)
+// plugins/meu-plugin/deploy/staging/command.json (plugin)
 {
   "name": "Docker",
   "description": "Instala Docker",
@@ -56,12 +56,12 @@ install_dir="${DOCKER_INSTALL_DIR:-$HOME/.docker}"
 
 ### 1.1 Variáveis de Arquivos .env
 
-Além de definir variáveis diretamente no `config.json`, você pode carregá-las de arquivos `.env`.
+Além de definir variáveis diretamente no `command.json`, você pode carregá-las de arquivos `.env`.
 
 **Definição:**
 
 ```json
-// commands/deploy/app/config.json
+// commands/deploy/app/command.json
 {
   "name": "Deploy App",
   "description": "Deploy da aplicação",
@@ -102,7 +102,7 @@ VERSION='1.0.0'
 
 **Características dos arquivos .env:**
 
-- ✅ Caminhos relativos ao diretório do `config.json`
+- ✅ Caminhos relativos ao diretório do `command.json`
 - ✅ Caminhos absolutos também suportados
 - ✅ Múltiplos arquivos .env podem ser especificados
 - ✅ Carregados na ordem definida em `env_files`
@@ -154,16 +154,16 @@ Ordem de precedência (maior → menor):
 
 ```text
 1. Variáveis de Sistema    → export VAR=value ou VAR=value comando
-2. Envs do Comando         → config.json → envs:
+2. Envs do Comando         → command.json → envs:
 3. Variáveis Globais       → config/settings.conf
-4. Arquivos .env           → config.json → env_files: (na ordem especificada)
+4. Arquivos .env           → command.json → env_files: (na ordem especificada)
 5. Valores Padrão          → ${VAR:-default}
 ```
 
 **Exemplo prático:**
 
 ```json
-// config.json
+// command.json
 {
   "env_files": [".env", ".env.local"],
   "envs": {
@@ -194,7 +194,7 @@ timeout="${TIMEOUT:-10}"
 api_url="${API_URL:-https://default.com}"
 
 # Resultados:
-./susa comando                    # → TIMEOUT=60 (do config.json envs)
+./susa comando                    # → TIMEOUT=60 (do command.json envs)
                                   # → API_URL=https://api.example.com (do .env)
 TIMEOUT=90 ./susa comando        # → TIMEOUT=90 (do sistema - maior prioridade)
 ```
@@ -204,7 +204,7 @@ TIMEOUT=90 ./susa comando        # → TIMEOUT=90 (do sistema - maior prioridade
 1. Sistema verifica variáveis de ambiente do sistema primeiro
 2. Carrega `config/settings.conf` (variáveis globais)
 3. Carrega arquivos .env na ordem especificada em `env_files`
-4. Carrega variáveis da seção `envs` do `config.json`
+4. Carrega variáveis da seção `envs` do `command.json`
 5. Variáveis já definidas não são sobrescritas (princípio da precedência)
 
 ## 📝 Sintaxe JSON
@@ -274,7 +274,7 @@ local timeout="$TIMEOUT"
 **Exemplos:**
 
 ```bash
-# Variável definida no config.json
+# Variável definida no command.json
 TIMEOUT="60"
 timeout="${TIMEOUT:-30}"        # → 60 (usa o valor da env)
 
@@ -332,7 +332,7 @@ local backup_dir="${BACKUP_DIR:-/var/backups}"        # Diretório de backup
 | Característica | Envs por Comando | Envs Globais | Variáveis de Sistema |
 | -------------- | ---------------- | ------------ | -------------------- |
 | **Escopo** | Apenas o comando | Todos os comandos | Override temporário |
-| **Arquivo** | `config.json` | `config/settings.conf` | Linha de comando |
+| **Arquivo** | `command.json` | `config/settings.conf` | Linha de comando |
 | **Isolamento** | ✅ Total | ❌ Compartilhado | ✅ Por execução |
 | **Expansão** | ✅ Automática | ❌ Manual | ❌ Manual |
 | **Precedência** | Média | Baixa | Alta |
@@ -374,10 +374,10 @@ local backup_dir="${BACKUP_DIR:-/var/backups}"        # Diretório de backup
 
 ### 3. Valores Padrão Sensatos
 
-Configure valores padrão no `config.json` e **sempre** forneça fallback no script:
+Configure valores padrão no `command.json` e **sempre** forneça fallback no script:
 
 ```json
-// config.json
+// command.json
 {
   "envs": {
     "HTTP_TIMEOUT": "30",
@@ -398,7 +398,7 @@ install_dir="${INSTALL_DIR:-$HOME/.app}"
 
 **Por que usar fallback no script?**
 
-- ✅ Script funciona mesmo se `config.json` não tiver `envs`
+- ✅ Script funciona mesmo se `command.json` não tiver `envs`
 - ✅ Valores padrão visíveis no código
 - ✅ Facilita manutenção e testes
 - ✅ Documentação inline dos valores esperados
@@ -467,7 +467,7 @@ Plugins suportam variáveis de ambiente da **mesma forma** que comandos built-in
 **Exemplo de plugin com envs e arquivos .env:**
 
 ```json
-// plugins/deploy-tools/deploy/staging/config.json
+// plugins/deploy-tools/deploy/staging/command.json
 {
   "name": "Deploy Staging",
   "description": "Deploy para ambiente de staging",
@@ -520,9 +520,9 @@ log_info "Target: $deploy_target"
 ```text
 commands/
   deploy/
-    config.json
+    category.json
     app/
-      config.json
+      command.json
       main.sh
       .env
       .env.development
@@ -530,7 +530,7 @@ commands/
       .env.production
 ```
 
-**config.json:**
+**command.json:**
 
 ```json
 {
@@ -607,13 +607,13 @@ $ DEPLOY_ENV=production susa deploy app
 ```text
 commands/
   api/
-    config.json
+    category.json
     main.sh
     .env
     .env.secrets  # Não commitado (no .gitignore)
 ```
 
-**config.json:**
+**command.json:**
 
 ```json
 {
@@ -672,11 +672,11 @@ DATABASE_PASSWORD="your-database-password"
 commands/
   setup/
     project/
-      config.json
+      command.json
       main.sh
 ```
 
-**config.json:**
+**command.json:**
 
 ```json
 {
@@ -706,7 +706,7 @@ $ susa setup project
 **Exemplo de plugin com envs:**
 
 ```json
-// plugins/deploy-tools/deploy/staging/config.json
+// plugins/deploy-tools/deploy/staging/command.json
 {
   "name": "Deploy Staging",
   "description": "Deploy para ambiente de staging",
@@ -734,7 +734,7 @@ ssh -i "$ssh_key" deploy@staging.example.com "./deploy.sh"
 **Execução:**
 
 ```bash
-# Usar valores do config.json
+# Usar valores do command.json
 $ susa deploy staging
 
 # Override temporário
@@ -752,7 +752,7 @@ Veja [Arquitetura de Plugins](../plugins/architecture.md#variaveis-de-ambiente-e
 
 ## 🎯 Exemplo Mínimo
 
-**config.json:**
+**command.json:**
 
 ```json
 {
@@ -784,7 +784,7 @@ curl --max-time "$timeout" "$url"
 **Execução:**
 
 ```bash
-# Usar valores do config.json
+# Usar valores do command.json
 $ susa my command
 
 # Override temporário

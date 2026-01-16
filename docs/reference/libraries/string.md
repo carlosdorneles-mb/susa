@@ -209,6 +209,7 @@ Converte string para valor booleano.
 - `$1` - String a converter
 
 **Retorno:**
+
 - `1` (false) - String não começa com o prefixo
 
 **Uso:**
@@ -347,4 +348,4 @@ echo "Ambiente: $env_upper"  # Ambiente: PRODUCTION
 1. Use `string_trim()` para normalizar entrada de usuário
 2. Use `string_contains()` e `string_starts_with()` para validação
 3. Combine com validação de entrada antes de processar
-4. Útil para processar campos de config.json
+4. Útil para processar campos de command.json

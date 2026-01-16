@@ -132,8 +132,8 @@ validate_local_plugin() {
         return 1
     fi
 
-    # Check if it has plugin structure (at least one category with config.json)
-    local found_configs=$(find "$commands_dir" -mindepth 2 -maxdepth 2 -type f -name "config.json" 2> /dev/null | head -1)
+    # Check if it has plugin structure (at least one category with command.json)
+    local found_configs=$(find "$commands_dir" -mindepth 3 -maxdepth 3 -type f -name "command.json" 2> /dev/null | head -1)
 
     if [ -z "$found_configs" ]; then
         log_error "Estrutura de plugin inválida"
@@ -143,16 +143,16 @@ validate_local_plugin() {
             log_output "  plugin/" >&2
             log_output "    $configured_dir/" >&2
             log_output "      categoria/" >&2
-            log_output "        config.json" >&2
+            log_output "        category.json" >&2
             log_output "        comando/" >&2
-            log_output "          config.json" >&2
+            log_output "          command.json" >&2
             log_output "          main.sh" >&2
         else
             log_output "  plugin/" >&2
             log_output "    categoria/" >&2
-            log_output "      config.json" >&2
+            log_output "      category.json" >&2
             log_output "      comando/" >&2
-            log_output "        config.json" >&2
+            log_output "        command.json" >&2
             log_output "        main.sh" >&2
         fi
         return 1
@@ -333,13 +333,11 @@ show_installation_success() {
     local plugin_version="$3"
     local cmd_count="$4"
 
-    log_output ""
     log_success "Plugin ${BOLD}$plugin_name${NC} instalado com sucesso!"
     log_output ""
     show_plugin_details "$plugin_name" "$plugin_version" "$cmd_count" "" "" "" "$plugin_url"
     log_output ""
     log_output "Use ${LIGHT_CYAN}susa self plugin list${NC} para ver todos os plugins"
-    log_output ""
 }
 
 # Main function
@@ -482,6 +480,33 @@ main() {
     fi
     log_debug "Nome do plugin (do plugin.json): $plugin_name"
 
+    # Check if plugin is already installed (before renaming/moving files)
+    # Check registry first - if plugin exists there with different source, it's a conflict
+    local registry_file="$PLUGINS_DIR/registry.json"
+    if [ -f "$registry_file" ]; then
+        local existing_in_registry=$(jq -r ".plugins[] | select(.name == \"$plugin_name\") | .name // empty" "$registry_file" 2> /dev/null | head -1)
+        if [ -n "$existing_in_registry" ]; then
+            log_warning "Plugin ${BOLD}$plugin_name${NC} já está instalado"
+            log_output ""
+
+            local current_version=$(registry_get_plugin_info "$registry_file" "$plugin_name" "version" | head -1)
+            local install_date=$(registry_get_plugin_info "$registry_file" "$plugin_name" "installed_at" | head -1)
+            local source_path=$(registry_get_plugin_info "$registry_file" "$plugin_name" "source" | head -1)
+            local is_dev=$(jq -r ".plugins[] | select(.name == \"$plugin_name\") | .dev // false" "$registry_file" 2> /dev/null | head -1)
+
+            show_plugin_details "$plugin_name" "$current_version" "" "" "" "" "$source_path" "$install_date" "$is_dev"
+
+            log_output ""
+            log_output "${LIGHT_YELLOW}Opções disponíveis:${NC}"
+            log_output "  • Atualizar plugin:  ${LIGHT_CYAN}susa self plugin update $plugin_name${NC}"
+            log_output "  • Remover plugin:  ${LIGHT_CYAN}susa self plugin remove $plugin_name${NC}"
+            log_output "  • Listar plugins:   ${LIGHT_CYAN}susa self plugin list${NC}"
+
+            rm -rf "${PLUGINS_DIR:?}/${temp_plugin_name:?}"
+            exit 0
+        fi
+    fi
+
     # If temp name differs from actual name, rename the directory
     if [ "$temp_plugin_name" != "$plugin_name" ]; then
         log_debug "Renomeando diretório de $temp_plugin_name para $plugin_name"
@@ -493,15 +518,16 @@ main() {
         mv "$PLUGINS_DIR/$temp_plugin_name" "$PLUGINS_DIR/$plugin_name"
     fi
 
-    # Check if already installed (after getting real name)
-    if check_plugin_already_installed "$plugin_name"; then
-        rm -rf "${PLUGINS_DIR:?}/${plugin_name:?}"
-        exit 0
-    fi
-
     # Register plugin in registry with Git URL
     if ! update_plugin_registry "$plugin_name" "$PLUGINS_DIR/$plugin_name" "false" "$plugin_url"; then
         log_error "Falha ao registrar plugin no registry"
+        rm -rf "${PLUGINS_DIR:?}/${plugin_name:?}"
+        exit 1
+    fi
+
+    # Update lock file to make plugin commands available
+    if ! update_lock_file; then
+        log_error "Falha ao atualizar o lock"
         rm -rf "${PLUGINS_DIR:?}/${plugin_name:?}"
         exit 1
     fi
@@ -512,13 +538,6 @@ main() {
 
     # Show success message
     show_installation_success "$plugin_name" "$plugin_url" "$plugin_version" "$cmd_count"
-
-    # Update lock file to make plugin commands available
-    if ! update_lock_file; then
-        log_error "Falha ao atualizar o lock"
-        rm -rf "${PLUGINS_DIR:?}/${plugin_name:?}"
-        exit 1
-    fi
 
     log_output ""
     log_info "💡 Os comandos do plugin já estão disponíveis!"

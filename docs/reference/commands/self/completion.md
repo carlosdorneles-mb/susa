@@ -92,7 +92,7 @@ susa setup <TAB>
 
 **Como funciona:**
 
-1. O completion verifica o arquivo `config.json` de cada comando
+1. O completion verifica o arquivo `command.json` de cada comando
 2. Lê o campo `os: ["linux", "mac"]`
 3. Filtra comandos incompatíveis com o OS atual
 4. Exibe apenas sugestões relevantes

@@ -142,7 +142,7 @@ cd meu-projeto
 
 Estrutura criada:
 
-```
+```text
 meu-projeto/
 ├── meu_projeto/
 │   └── __init__.py
@@ -183,6 +183,7 @@ poetry install
 ```
 
 Isso vai:
+
 - Resolver todas as dependências
 - Criar/atualizar poetry.lock
 - Criar ambiente virtual automaticamente
@@ -390,6 +391,7 @@ Ou adicione ao `.vscode/settings.json`:
 3. Selecione: `{project}/.venv/bin/python`
 
 Ou use o Poetry plugin:
+
 - Settings → Plugins → Marketplace
 - Procure "Poetry"
 - Instale e reinicie
@@ -430,7 +432,7 @@ git commit -m "Add nova-biblioteca"
 
 ### CI/CD
 
-```json
+```yaml
 # .github/workflows/test.yml
 name: Tests
 

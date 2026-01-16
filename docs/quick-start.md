@@ -192,7 +192,7 @@ susa self plugin remove nome-plugin
 mkdir -p commands/demo/hello
 
 # Configuração da categoria
-cat > commands/demo/config.json << EOF
+cat > commands/demo/category.json << EOF
 {
   "name": "Demo",
   "description": "Comandos de demonstração"
@@ -200,7 +200,7 @@ cat > commands/demo/config.json << EOF
 EOF
 
 # Configuração do comando
-cat > commands/demo/hello/config.json << EOF
+cat > commands/demo/hello/command.json << EOF
 {
   "name": "Hello World",
   "description": "Comando de exemplo",

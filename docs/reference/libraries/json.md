@@ -113,7 +113,7 @@ Obtém elementos de um array JSON.
 ```bash
 source "$LIB_DIR/internal/json.sh"
 
-json_get_array "config.json" ".plugins[].name" | while read plugin; do
+json_get_array "command.json" ".plugins[].name" | while read plugin; do
     echo "Plugin: $plugin"
 done
 ```
@@ -198,7 +198,7 @@ Verifica se um arquivo contém JSON válido.
 ```bash
 source "$LIB_DIR/internal/json.sh"
 
-if json_is_valid "config.json"; then
+if json_is_valid "command.json"; then
     echo "JSON válido"
 else
     echo "JSON inválido ou arquivo não encontrado"
@@ -414,7 +414,7 @@ Formata JSON de forma legível (pretty print).
 ```bash
 source "$LIB_DIR/internal/json.sh"
 
-json_pretty_print "config.json"
+json_pretty_print "command.json"
 ```
 
 ---
@@ -436,7 +436,7 @@ Formata JSON de forma compacta (minified).
 ```bash
 source "$LIB_DIR/internal/json.sh"
 
-json_compact_print "config.json"
+json_compact_print "command.json"
 ```
 
 ---

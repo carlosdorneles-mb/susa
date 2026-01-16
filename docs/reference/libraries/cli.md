@@ -28,21 +28,21 @@ echo "$path"  # self plugin add
 
 ### `get_command_config_file()`
 
-Obtém o caminho do arquivo config.json do comando sendo executado.
+Obtém o caminho do arquivo command.json do comando sendo executado.
 
 **Comportamento:**
 
 - Detecta automaticamente o script main.sh na pilha de chamadas
-- Retorna o caminho para config.json do mesmo diretório
+- Retorna o caminho para command.json do mesmo diretório
 
-**Retorno:** Caminho absoluto para config.json
+**Retorno:** Caminho absoluto para command.json ou category.json
 
 **Exemplo:**
 
 ```bash
 # Se executando commands/setup/docker/main.sh
 config=$(get_command_config_file)
-echo "$config"  # /path/to/commands/setup/docker/config.json
+echo "$config"  # /path/to/commands/setup/docker/command.json
 ```
 
 **Uso interno:** Chamada automaticamente por `show_description()`
@@ -71,16 +71,16 @@ show_usage --no-options
 
 ### `show_description()`
 
-Exibe a descrição do comando do arquivo config.json.
+Exibe a descrição do comando do arquivo command.json.
 
 **Comportamento:**
 
-- Detecta automaticamente o config.json do comando
+- Detecta automaticamente o command.json do comando
 - Lê e exibe o campo "description"
 
 **Requisitos:**
 
-- O arquivo config.json deve ter um campo "description"
+- O arquivo command.json deve ter um campo "description"
 
 **Uso:**
 

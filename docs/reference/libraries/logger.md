@@ -248,7 +248,7 @@ processar_arquivo() {
 }
 
 # Com verificação de erro
-if ! processar_arquivo "config.json"; then
+if ! processar_arquivo "command.json"; then
     log_error "Falha no processamento, abortando"
     exit 1
 fi

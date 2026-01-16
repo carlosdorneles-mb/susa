@@ -5,7 +5,7 @@ Este documento descreve os padrões e convenções utilizados nos comandos da ca
 ## 📋 Índice
 
 - [Estrutura de Arquivos](#estrutura-de-arquivos)
-- [Arquivo config.json](#arquivo-configjson)
+- [Arquivo command.json](#arquivo-commandjson)
 - [Estrutura do main.sh](#estrutura-do-mainsh)
 - [Funções Obrigatórias](#funções-obrigatórias)
 - [Funções Auxiliares Comuns](#funções-auxiliares-comuns)
@@ -23,7 +23,7 @@ Cada comando de setup deve seguir esta estrutura:
 ```text
 commands/setup/
 └── nome-ferramenta/
-    ├── config.json      # Configuração do comando
+    ├── command.json     # Configuração do comando
     └── main.sh          # Script de instalação
 ```
 
@@ -35,7 +35,7 @@ Alguns comandos podem incluir:
 
 ---
 
-## Arquivo config.json
+## Arquivo command.json
 
 Configuração padrão com metadados e variáveis de ambiente:
 
@@ -903,7 +903,7 @@ nav:
 
 Ao criar um novo comando setup, certifique-se de:
 
-- [ ] Criar `config.json` com todas as variáveis necessárias
+- [ ] Criar `command.json` com todas as variáveis necessárias
 - [ ] Definir `sudo: true|false` corretamente
 - [ ] Listar sistemas operacionais suportados em `os:`
 - [ ] Implementar `show_help()` completo

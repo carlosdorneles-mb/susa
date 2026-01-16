@@ -2,7 +2,7 @@
 
 Este guia explica como configurar e personalizar o comportamento global do CLI.
 
-> **📖 Para configuração de comandos individuais** (config.json de comandos), veja [Como Adicionar Novos Comandos](adding-commands.md#3-configurar-o-comando).
+> **📖 Para configuração de comandos individuais** (command.json de comandos), veja [Como Adicionar Novos Comandos](adding-commands.md#3-configurar-o-comando).
 
 ---
 
@@ -141,14 +141,14 @@ Quando você executa `susa categoria comando`, o framework carrega as configura�
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
 │ 7. Configuração do Comando                                  │
-│    └─ categoria/comando/config.json                         │
+│    └─ categoria/comando/command.json                         │
 │       • Valida comando existe e é compatível com OS         │
 │       • Lê metadados (nome, entrypoint, sudo, os)          │
 └─────────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
 │ 8. Variáveis de Ambiente do Comando                         │
-│    └─ load_command_envs() lê config.json → envs:           │
+│    └─ load_command_envs() lê command.json → envs:           │
 │       • Exporta variáveis específicas do comando            │
 │       • NÃO sobrescreve variáveis já definidas no sistema   │
 │       • Expande $HOME, $USER, etc.                          │
@@ -208,8 +208,8 @@ Quando uma mesma variável é definida em múltiplos lugares:
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
 │ 2. Envs do Comando                                          │
-│    └─ config.json → envs:                                   │
-│    • Variáveis definidas no config.json do comando          │
+│    └─ command.json → envs:                                   │
+│    • Variáveis definidas no command.json do comando          │
 │    • Funciona em comandos built-in e plugins                │
 └─────────────────────────────────────────────────────────────┘
                           ↓
@@ -221,7 +221,7 @@ Quando uma mesma variável é definida em múltiplos lugares:
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
 │ 4. Arquivos .env                                            │
-│    └─ config.json → env_files:                              │
+│    └─ command.json → env_files:                              │
 │    • Carregados na ordem especificada                       │
 │    • Último arquivo tem prioridade sobre anteriores         │
 │    • Funciona em comandos built-in e plugins                │
@@ -237,7 +237,7 @@ Quando uma mesma variável é definida em múltiplos lugares:
 **Exemplo prático completo:**
 
 ```json
-// commands/setup/docker/config.json
+// commands/setup/docker/command.json
 {
   "env_files": [".env", ".env.local"],
   "envs": {
@@ -274,7 +274,7 @@ database="${DATABASE_URL:-sqlite:///local.db}"
 ```bash
 # Sem override
 ./susa setup docker
-# → TIMEOUT=60 (do config.json envs - prioridade 2)
+# → TIMEOUT=60 (do command.json envs - prioridade 2)
 # → API_URL=https://api.example.com (do .env - prioridade 4)
 # → DATABASE_URL=postgresql://localhost/mydb (do .env.local - prioridade 4)
 
@@ -289,7 +289,7 @@ TIMEOUT=90 ./susa setup docker
 A mesma lógica de precedência se aplica a plugins:
 
 ```json
-// plugins/meu-plugin/deploy/staging/config.json
+// plugins/meu-plugin/deploy/staging/command.json
 {
   "env_files": [".env", ".env.staging"],
   "envs": {
@@ -314,17 +314,18 @@ DATABASE_URL="postgresql://localhost/mydb"
 
 ### 3. Configuração de Categorias e Comandos
 
-> **📖 Documentação completa:** Para detalhes sobre `config.json` de categorias, subcategorias e comandos, consulte:
-> - **[Como Adicionar Novos Comandos](adding-commands.md)** - Estrutura básica e campos do config.json
+> **📖 Documentação completa:** Para detalhes sobre arquivos de configuração (command.json e category.json) de categorias, subcategorias e comandos, consulte:
+
+> - **[Como Adicionar Novos Comandos](adding-commands.md)** - Estrutura básica e campos de configuração
 > - **[Sistema de Subcategorias](subcategories.md)** - Hierarquias e organização multinível
 
 **Resumo:**
 
 | Tipo | Arquivo | Campos Principais | Referência |
 |------|---------|-------------------|------------|
-| Categoria | `commands/<categoria>/config.json` | `name`, `description` | [Ver guia](adding-commands.md#2-configurar-a-categoria) |
-| Comando | `commands/<categoria>/<comando>/config.json` | `name`, `description`, `script`, `sudo`, `os`, `group` (opcional) | [Ver guia](adding-commands.md#3-configurar-o-comando) |
-| Subcategoria | `commands/<categoria>/<sub>/config.json` | `name`, `description` (sem `script`) | [Ver guia](subcategories.md#todos-usam-configjson) |
+| Categoria | `commands/<categoria>/category.json` | `name`, `description` | [Ver guia](adding-commands.md#2-configurar-a-categoria) |
+| Comando | `commands/<categoria>/<comando>/command.json` | `name`, `description`, `script`, `sudo`, `os`, `group` (opcional) | [Ver guia](adding-commands.md#3-configurar-o-comando) |
+| Subcategoria | `commands/<categoria>/<sub>/command.json` | `name`, `description` (sem `script`) | [Ver guia](subcategories.md#arquivos-de-configuracao-diferenciados) |
 
 **Indicadores Visuais:**
 
@@ -413,15 +414,15 @@ GLOBAL_CONFIG_FILE=/tmp/test-cli.json ./susa --version
 
 ## 🌍 Variáveis de Ambiente por Comando
 
-O Susa CLI permite definir variáveis de ambiente específicas para cada comando através da seção `envs` no `config.json`.
+O Susa CLI permite definir variáveis de ambiente específicas para cada comando através da seção `envs` no `command.json`.
 
 ### Como Funciona
 
 Cada comando pode ter suas próprias variáveis de ambiente que são automaticamente carregadas e exportadas **apenas durante a execução daquele comando**. Isso garante isolamento e evita conflitos entre comandos.
 
-### Definindo Variáveis no config.json
+### Definindo Variáveis no command.json
 
-No arquivo `config.json` do seu comando, adicione a seção `envs`:
+No arquivo `command.json` do seu comando, adicione a seção `envs`:
 
 ```json
 {
@@ -512,13 +513,13 @@ Usuario executa comando
         ↓
 [core/susa] execute_command()
         ↓
-Valida e localiza config.json
+Valida e localiza command.json
         ↓
-[config.sh] load_command_envs(config.json)
+[config.sh] load_command_envs(command.json)
         ↓
 Carrega arquivos .env (se especificados)
         ↓
-Carrega seção envs do config.json
+Carrega seção envs do command.json
         ↓
 Exporta todas as envs (com expansão)
         ↓
@@ -531,12 +532,12 @@ Fim da execução (envs descartadas)
 
 ### Suporte a Arquivos .env
 
-Além de definir variáveis diretamente no `config.json`, você pode carregá-las de arquivos `.env`.
+Além de definir variáveis diretamente no `command.json`, você pode carregá-las de arquivos `.env`.
 
 #### Configuração
 
 ```json
-// commands/deploy/app/config.json
+// commands/deploy/app/command.json
 {
   "name": "Deploy App",
   "description": "Deploy da aplicação",
@@ -579,7 +580,7 @@ REDIS_URL="redis://localhost:6379"
 
 #### Características
 
-- ✅ Caminhos relativos ao diretório do `config.json`
+- ✅ Caminhos relativos ao diretório do `command.json`
 - ✅ Caminhos absolutos também suportados
 - ✅ Múltiplos arquivos .env podem ser especificados
 - ✅ Carregados na ordem definida em `env_files`
@@ -592,21 +593,25 @@ REDIS_URL="redis://localhost:6379"
 
 ```text
 1. Variáveis de Sistema    → export VAR=value ou VAR=value comando
-2. Envs do Comando         → config.json → envs:
+2. Envs do Comando         → command.json → envs:
 3. Variáveis Globais       → config/settings.conf
-4. Arquivos .env           → config.json → env_files: (ordem especificada)
+4. Arquivos .env           → command.json → env_files: (ordem especificada)
 5. Valores Padrão          → ${VAR:-default}
 ```
 
 **Exemplo:**
 
 ```json
-# config.json
-env_files:
-  - ".env"
-  - ".env.local"
-envs:
-  TIMEOUT: "60"
+// command.json
+{
+  "env_files": [
+    ".env",
+    ".env.local"
+  ],
+  "envs": {
+    "TIMEOUT": "60"
+  }
+}
 ```
 
 ```bash
@@ -622,20 +627,21 @@ DATABASE_URL="postgresql://localhost/mydb"
 
 **Resultado:**
 
-- `TIMEOUT` = 60 (do `config.json` envs, maior prioridade que .env)
+- `TIMEOUT` = 60 (do `command.json` envs, maior prioridade que .env)
 - `API_URL` = https://api.example.com (do `.env`)
 - `DATABASE_URL` = postgresql://localhost/mydb (do `.env.local`)
 
 #### Exemplo com Múltiplos Ambientes
 
 ```json
-# config.json
-name: "Deploy"
-entrypoint: "main.sh"
-
-env_files:
-  - ".env"                              # Base
-  - ".env.${DEPLOY_ENV:-development}"   # Específico do ambiente
+{
+  "name": "Deploy",
+  "entrypoint": "main.sh",
+  "env_files": [
+    ".env",
+    ".env.${DEPLOY_ENV:-development}"
+  ]
+}
 ```
 
 ```bash
@@ -661,9 +667,19 @@ $ DEPLOY_ENV=production susa deploy app # Usa .env.production
 **1. Use Prefixos Únicos**
 
 ```json
-envs:
-  ASDF_INSTALL_DIR: "..."      # ✅ Prefixo único
-  INSTALL_DIR: "..."           # ❌ Muito genérico
+{
+  "envs": {
+    "ASDF_INSTALL_DIR": "..."      // ✅ Prefixo único
+  }
+}
+```
+
+```json
+{
+  "envs": {
+    "INSTALL_DIR": "..."           // ❌ Muito genérico
+  }
+}
 ```
 
 **2. Sempre Forneça Fallbacks**
@@ -679,14 +695,17 @@ local dir="$ASDF_INSTALL_DIR"
 **3. Documente as Variáveis**
 
 ```json
-envs:
-  # Timeout máximo para API do GitHub (em segundos)
-  # Padrão: 10
-  ASDF_API_MAX_TIME: "10"
+{
+  "envs": {
+    // Timeout máximo para API do GitHub (em segundos)
+    // Padrão: 10
+    "ASDF_API_MAX_TIME": "10",
 
-  # Diretório de instalação do ASDF
-  # Padrão: $HOME/.asdf
-  ASDF_INSTALL_DIR: "$HOME/.asdf"
+    // Diretório de instalação do ASDF
+    // Padrão: $HOME/.asdf
+    "ASDF_INSTALL_DIR": "$HOME/.asdf"
+  }
+}
 ```
 
 **4. Use Tipos Apropriados**
@@ -705,7 +724,7 @@ envs:
 
 ### Exemplo Completo
 
-**config.json:**
+**command.json:**
 
 ```json
 {
@@ -828,7 +847,7 @@ Quando a mesma variável existe em múltiplos lugares:
 
 ```text
 1. Variáveis de Ambiente do Sistema (maior precedência)
-2. Variáveis do Comando (config.json envs:)
+2. Variáveis do Comando (command.json envs:)
 3. Variáveis Globais (config/settings.conf)
 4. Valores Padrão no Script (fallback)
 ```
@@ -838,11 +857,18 @@ Quando a mesma variável existe em múltiplos lugares:
 ```bash
 # settings.conf
 TIMEOUT="30"
+```
 
-# comando/config.json
-envs:
-  TIMEOUT: "60"
+```json
+// comando/command.json
+{
+  "envs": {
+    "TIMEOUT": "60"
+  }
+}
+```
 
+```bash
 # No script
 timeout="${TIMEOUT:-10}"  # Usará 60 (do comando)
 
@@ -870,7 +896,7 @@ HTTP_RETRY="3"
 API_BASE_URL="https://api.example.com"
 ```
 
-**commands/deploy/app/config.json:**
+**commands/deploy/app/command.json:**
 
 ```json
 {
@@ -1064,24 +1090,24 @@ susa/
 │   └── settings.conf           # ⚠️ Opcional (não usado por padrão)
 ├── commands/
 │   ├── setup/
-│   │   ├── config.json         # ⚠️ Opcional (metadados da categoria)
+│   │   ├── category.json        # ⚠️ Opcional (metadados da categoria)
 │   │   └── asdf/
-│   │       ├── config.json     # ✅ Obrigatório (config do comando)
+│   │       ├── command.json      # ✅ Obrigatório (config do comando)
 │   │       └── main.sh         # ✅ Obrigatório (script)
 │   └── self/
-│       ├── config.json
+│       ├── category.json
 │       └── plugin/
-│           ├── config.json
+│           ├── command.json
 │           └── add/
-│               ├── config.json # ✅ Obrigatório
+│               ├── command.json # ✅ Obrigatório
 │               └── main.sh     # ✅ Obrigatório
 └── plugins/
     ├── registry.json            # 🔧 Gerado automaticamente
     └── hello-world/             # Exemplo de plugin
         └── text/
-            ├── config.json
+            ├── category.json
             └── hello-world/
-                ├── config.json  # ✅ Obrigatório (plugin)
+                ├── command.json  # ✅ Obrigatório (plugin)
                 └── main.sh      # ✅ Obrigatório (plugin)
 ```
 
@@ -1118,9 +1144,9 @@ categories:
 commands/
 ├── install/
 │   ├── docker/
-│   │   └── config.json    # Apenas config do docker
+│   │   └── command.json    # Config do docker
 │   └── nodejs/
-│       └── config.json    # Apenas config do nodejs
+│       └── command.json    # Config do nodejs
 ```
 
 ---
@@ -1130,7 +1156,7 @@ commands/
 ❌ **Evite:**
 
 ```json
-// config.json - NÃO FAÇA ISSO!
+// command.json - NÃO FAÇA ISSO!
 {
   "api_token": "sk-1234567890abcdef"
 }
@@ -1295,7 +1321,7 @@ DEBUG=true susa setup docker
 **Configurações principais:**
 
 1. **`cli.json`** - Metadados globais (obrigatório)
-2. **`<comando>/config.json`** - Config de cada comando com envs (obrigatório)
+2. **`<comando>/command.json`** - Config de cada comando com envs (obrigatório)
 3. **`config/settings.conf`** - Variáveis globais compartilhadas (opcional)
 4. **Variáveis de ambiente do sistema** - Override temporário (opcional)
 
@@ -1303,7 +1329,7 @@ DEBUG=true susa setup docker
 
 | Tipo | Arquivo | Escopo | Uso |
 |------|---------|--------|-----|
-| **Por Comando** | `config.json` (seção `envs:`) | Apenas durante execução do comando | URLs, timeouts, paths específicos |
+| **Por Comando** | `command.json` (seção `envs:`) | Apenas durante execução do comando | URLs, timeouts, paths específicos |
 | **Globais** | `config/settings.conf` | Todos os comandos | Credenciais, configs de rede |
 | **Sistema** | Linha de comando | Override temporário | `DEBUG=true susa comando` |
 
@@ -1312,7 +1338,7 @@ DEBUG=true susa setup docker
 ```text
 1. Variáveis de Ambiente do Sistema (export VAR=value ou VAR=value comando)
     ↓
-2. Envs do Comando (config.json → envs:)
+2. Envs do Comando (command.json → envs:)
     ↓
 3. Variáveis Globais (config/settings.conf)
     ↓
@@ -1329,14 +1355,14 @@ DEBUG=true susa setup docker
 
 **Para começar:**
 
-- **Básico:** Apenas `cli.json` e `<comando>/config.json` são necessários
-- **Com envs por comando:** Adicione seção `envs:` no `config.json` do comando
+- **Básico:** Apenas `cli.json` e `<comando>/command.json` são necessários
+- **Com envs por comando:** Adicione seção `envs:` no `command.json` do comando
 - **Com envs globais:** Crie `config/settings.conf` com variáveis compartilhadas
 
 **Exemplo mínimo com envs:**
 
 ```json
-// commands/setup/docker/config.json
+// commands/setup/docker/command.json
 {
   "name": "Docker",
   "description": "Instala Docker",

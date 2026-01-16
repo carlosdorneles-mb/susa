@@ -74,7 +74,7 @@ main() {
         # If commands not in registry, count from directory (fallback)
         if [ "$cmd_count" = "null" ] || [ -z "$cmd_count" ]; then
             if [ -d "$PLUGINS_DIR/$plugin_name" ]; then
-                cmd_count=$(find "$PLUGINS_DIR/$plugin_name" -name "config.json" -type f | wc -l)
+                cmd_count=$(find "$PLUGINS_DIR/$plugin_name" -name "command.json" -type f | wc -l)
             else
                 cmd_count=0
             fi

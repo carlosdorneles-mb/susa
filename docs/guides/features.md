@@ -24,7 +24,7 @@ O **Susa CLI** é um framework modular e extensível para criar ferramentas de l
 | Funcionalidade | Descrição |
 |----------------|------------|
 | 🔍 **Descoberta Automática** | Comandos descobertos da estrutura de diretórios |
-| 📄 **Config Descentralizada** | Cada comando tem seu próprio `config.json` |
+| 📄 **Config Descentralizada** | Cada comando tem seu próprio `command.json` e cada categoria seu `category.json` |
 | 🌍 **Multi-plataforma** | Suporte para Linux e macOS |
 | 📂 **Subcategorias** | Hierarquia de comandos ilimitada |
 | 🔌 **Plugins** | Extensão via Git sem modificar código |
@@ -49,7 +49,7 @@ O CLI **descobre comandos automaticamente** da estrutura de diretórios:
 ```bash
 # Criar nova pasta = novo comando disponível
 mkdir -p commands/setup/docker
-cat > commands/setup/docker/config.json << EOF
+cat > commands/setup/docker/command.json << EOF
 name: "Docker"
 description: "Instala Docker Engine"
 entrypoint: "main.sh"
@@ -61,7 +61,7 @@ susa setup docker
 
 ### 📄 Configuração Descentralizada
 
-Cada comando tem seu próprio `config.json`:
+Cada comando tem seu próprio `command.json` e cada categoria seu `category.json`:
 
 ```json
 {
@@ -79,12 +79,12 @@ Cada comando tem seu próprio `config.json`:
 commands/
   setup/                 # Categoria
   ├── asdf/              # Comando
-  │   ├── config.json
+  │   ├── category.json
   │   └── main.sh
   └── python/            # Subcategoria
-      ├── config.json
+      ├── category.json
       └── pip/           # Comando
-          ├── config.json
+          ├── category.json
           └── main.sh
 ```
 
@@ -107,9 +107,9 @@ Procura em:
 
 | Condição | Tipo | Resultado |
 |----------|------|-----------|
-| Tem `config.json` + campo `entrypoint` + arquivo existe | **Comando** | Executável |
-| Tem `config.json` sem script | **Categoria** | Navegável |
-| Sem `config.json` | **Ignorado** | - |
+| Tem `command.json` + campo `entrypoint` + arquivo existe | **Comando** | Executável |
+| Tem `category.json` sem entrypoint | **Categoria** | Navegável |
+| Sem arquivo de configuração | **Ignorado** | - |
 
 #### 3. Disponibilização Imediata
 
@@ -117,7 +117,7 @@ Comandos ficam disponíveis automaticamente:
 
 ```bash
 mkdir -p commands/deploy/production
-cat > commands/deploy/production/config.json << EOF
+cat > commands/deploy/production/command.json << EOF
 name: "Production"
 description: "Deploy para produção"
 entrypoint: "main.sh"
@@ -165,27 +165,27 @@ susa setup python pip
 ```text
 commands/
 ├── setup/               # Categoria
-│   ├── config.json
+│   ├── category.json
 │   ├── asdf/            # Comando
-│   │   ├── config.json
+│   │   ├── category.json
 │   │   └── main.sh
 │   └── python/          # Subcategoria
-│       ├── config.json
+│       ├── category.json
 │       └── pip/         # Comando
-│           ├── config.json
+│           ├── command.json
 │           └── main.sh
 └── self/                # Categoria
-    ├── config.json
+    ├── category.json
     ├── version/         # Comando
-    │   ├── config.json
+    │   ├── category.json
     │   └── main.sh
     └── plugin/          # Subcategoria
-        ├── config.json
+        ├── category.json
         ├── add/         # Comando
-        │   ├── config.json
+        │   ├── category.json
         │   └── main.sh
         └── list/        # Comando
-            ├── config.json
+            ├── category.json
             └── main.sh
 ```
 
@@ -194,7 +194,7 @@ commands/
 - Mantenha 2-3 níveis de profundidade
 - Use nomes descritivos e curtos
 - Agrupe comandos relacionados
-- Cada nível pode ter `config.json` com metadados
+- Cada nível pode ter arquivos de configuração (command.json ou category.json) com metadados
 
 Para mais detalhes, veja [Guia de Subcategorias](subcategories.md).
 
@@ -204,7 +204,7 @@ Para mais detalhes, veja [Guia de Subcategorias](subcategories.md).
 
 ### Como Funciona
 
-O campo `os` no `config.json` filtra comandos automaticamente:
+O campo `os` no `command.json` filtra comandos automaticamente:
 
 ```json
 // Apenas Linux
@@ -222,7 +222,7 @@ O campo `os` no `config.json` filtra comandos automaticamente:
 ### Exemplos
 
 ```json
-// commands/setup/apt/config.json
+// commands/setup/apt/command.json
 {
   "name": "APT Tools",
   "description": "Ferramentas APT (Ubuntu/Debian)",
@@ -232,7 +232,7 @@ O campo `os` no `config.json` filtra comandos automaticamente:
 ```
 
 ```json
-// commands/setup/brew/config.json
+// commands/setup/brew/command.json
 {
   "name": "Homebrew",
   "description": "Gerenciador de pacotes",
@@ -277,14 +277,14 @@ susa self plugin add usuario/plugin
 ```text
 meu-plugin/
 ├── categoria1/
-│   ├── config.json
+│   ├── category.json
 │   └── comando1/
-│       ├── config.json
+│       ├── category.json
 │       └── main.sh
 └── categoria2/
-    ├── config.json
+    ├── category.json
     └── comando2/
-        ├── config.json
+        ├── category.json
         └── main.sh
 ```
 
@@ -372,7 +372,7 @@ Para documentação completa, veja [Referência de Bibliotecas](../reference/lib
 ```
 
 ```json
-// commands/categoria/config.json
+// commands/categoria/category.json
 {
   "name": "Setup",
   "description": "Instalar e configurar ferramentas"
@@ -380,7 +380,7 @@ Para documentação completa, veja [Referência de Bibliotecas](../reference/lib
 ```
 
 ```json
-// commands/categoria/comando/config.json
+// commands/categoria/comando/command.json
 {
   "name": "ASDF",
   "description": "Instala ASDF",

@@ -94,7 +94,7 @@ Isso é especialmente útil durante o desenvolvimento de plugins.
 ## Opções
 
 | Opção | O que faz |
-|-------|-----------|
+| ------- | ----------- |
 | `-v, --verbose` | Modo verbose (exibe logs de debug) |
 | `-q, --quiet` | Modo silencioso (mínimo de output) |
 | `--gitlab` | Usa GitLab (para formato user/repo) |
@@ -120,7 +120,7 @@ susa-plugin-name/
 ├── README.md
 └── categoria/
     └── comando/
-        ├── config.json
+        ├── command.json
         └── main.sh
 ```
 
@@ -135,7 +135,7 @@ susa-plugin-name/
 └── src/                 # Comandos aqui dentro
     └── categoria/
         └── comando/
-            ├── config.json
+            ├── command.json
             └── main.sh
 ```
 
@@ -175,7 +175,7 @@ susa self plugin add .
 ### Diferenças entre Dev e Git
 
 | Aspecto | Plugin Git | Plugin Dev |
-|---------|------------|------------|
+| --------- | ------------ | ------------ |
 | Origem | Repositório Git | Diretório local |
 | Arquivos | Copiados para ~/.susa/plugins | Referência ao path |
 | Alterações | Precisa `susa self plugin update` | Reflete automaticamente |
@@ -192,23 +192,25 @@ Plugins locais são validados automaticamente. O sistema verifica:
 3. Estrutura de categorias e comandos está correta
 
 **Estrutura sem campo directory:**
+
 ```text
 meu-plugin/
 ├── plugin.json
 └── categoria/
     └── comando/
-        ├── config.json
+        ├── category.json
         └── main.sh
 ```
 
 **Estrutura com campo directory:**
+
 ```text
 meu-plugin/
 ├── plugin.json       # "directory": "src"
 └── src/
     └── categoria/
         └── comando/
-            ├── config.json
+            ├── category.json
             └── main.sh
 ```
 
@@ -232,12 +234,12 @@ susa backup restaurar
 ```bash
 # Criar estrutura do plugin
 mkdir -p ~/dev/my-plugin/tools/hello
-cat > ~/dev/my-plugin/tools/config.json << 'EOF'
+cat > ~/dev/my-plugin/tools/category.json << 'EOF'
 name: "tools"
 description: "Ferramentas úteis"
 EOF
 
-cat > ~/dev/my-plugin/tools/hello/config.json << 'EOF'
+cat > ~/dev/my-plugin/tools/hello/command.json << 'EOF'
 name: "hello"
 description: "Diz olá"
 entrypoint: "main.sh"

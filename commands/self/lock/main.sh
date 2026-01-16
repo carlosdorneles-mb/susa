@@ -84,20 +84,20 @@ scan_category_dir() {
             continue
         fi
 
-        # Check if it's a command (has entrypoint field in config.json)
-        if [ -f "$item_dir/config.json" ]; then
-            local script_name=$(jq -r '.entrypoint // empty' "$item_dir/config.json" 2> /dev/null)
+        # Check if it's a command (has entrypoint field in command.json)
+        if [ -f "$item_dir/command.json" ]; then
+            local script_name=$(jq -r '.entrypoint // empty' "$item_dir/command.json" 2> /dev/null)
 
             if [ -n "$script_name" ] && [ -f "$item_dir/$script_name" ]; then
                 # It's a command
                 echo "COMMAND|$category_path|$item_name|$source"
 
                 # Read additional metadata
-                local description=$(jq -r '.description // empty' "$item_dir/config.json" 2> /dev/null)
-                local script=$(jq -r '.entrypoint // empty' "$item_dir/config.json" 2> /dev/null)
-                local os=$(jq -c '.os // empty' "$item_dir/config.json" 2> /dev/null)
-                local sudo=$(jq -r '.sudo // empty' "$item_dir/config.json" 2> /dev/null)
-                local group=$(jq -r '.group // empty' "$item_dir/config.json" 2> /dev/null)
+                local description=$(jq -r '.description // empty' "$item_dir/command.json" 2> /dev/null)
+                local script=$(jq -r '.entrypoint // empty' "$item_dir/command.json" 2> /dev/null)
+                local os=$(jq -c '.os // empty' "$item_dir/command.json" 2> /dev/null)
+                local sudo=$(jq -r '.sudo // empty' "$item_dir/command.json" 2> /dev/null)
+                local group=$(jq -r '.group // empty' "$item_dir/command.json" 2> /dev/null)
 
                 # Always output entrypoint (use default if not specified)
                 if [ -z "$script" ]; then
@@ -114,7 +114,7 @@ scan_category_dir() {
                 scan_category_dir "$base_dir" "$category_path/$item_name" "$source"
             fi
         else
-            # No config.json means it's a subcategory
+            # No command.json means it's a subcategory
             scan_category_dir "$base_dir" "$category_path/$item_name" "$source"
         fi
     done
@@ -140,8 +140,8 @@ scan_all_structure() {
             fi
 
             # Read category info
-            if [ -f "$cat_dir/config.json" ]; then
-                local cat_desc=$(jq -r '.description // empty' "$cat_dir/config.json" 2> /dev/null)
+            if [ -f "$cat_dir/category.json" ]; then
+                local cat_desc=$(jq -r '.description // empty' "$cat_dir/category.json" 2> /dev/null)
                 echo "CATEGORY|$cat_name|$cat_desc|commands"
             else
                 echo "CATEGORY|$cat_name||commands"
@@ -187,8 +187,8 @@ scan_all_structure() {
                 fi
 
                 # Read category info
-                if [ -f "$cat_dir/config.json" ]; then
-                    local cat_desc=$(jq -r '.description // empty' "$cat_dir/config.json" 2> /dev/null)
+                if [ -f "$cat_dir/category.json" ]; then
+                    local cat_desc=$(jq -r '.description // empty' "$cat_dir/category.json" 2> /dev/null)
                     echo "CATEGORY|$cat_name|$cat_desc|$plugin_name"
                 else
                     echo "CATEGORY|$cat_name||$plugin_name"
@@ -238,8 +238,8 @@ scan_all_structure() {
                 fi
 
                 # Read category info
-                if [ -f "$cat_dir/config.json" ]; then
-                    local cat_desc=$(jq -r '.description // empty' "$cat_dir/config.json" 2> /dev/null)
+                if [ -f "$cat_dir/category.json" ]; then
+                    local cat_desc=$(jq -r '.description // empty' "$cat_dir/category.json" 2> /dev/null)
                     echo "CATEGORY|$cat_name|$cat_desc|$plugin_name"
                 else
                     echo "CATEGORY|$cat_name||$plugin_name"
