@@ -2,7 +2,7 @@
   "name": "Postman",
   "description": "Instala Postman (plataforma de desenvolvimento de APIs)",
   "entrypoint": "main.sh",
-  "sudo": false,
+  "sudo": true,
   "group": "api",
   "os": [
     "linux",
