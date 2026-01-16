@@ -1,0 +1,14 @@
+{
+  "name": "Google Cloud SDK",
+  "description": "Instala Google Cloud SDK (gcloud CLI para gerenciamento de recursos GCP)",
+  "entrypoint": "main.sh",
+  "sudo": false,
+  "group": "cloud",
+  "os": [
+    "linux",
+    "mac"
+  ],
+  "envs": {
+    "GCLOUD_SDK_BASE_URL": "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads"
+  }
+}
