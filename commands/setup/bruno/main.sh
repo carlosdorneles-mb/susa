@@ -67,8 +67,15 @@ get_current_version() {
             echo "desconhecida"
         fi
     elif [ "$os_type" = "linux" ]; then
+        # Try version file first
         if [ -f "$BRUNO_INSTALL_DIR/version.txt" ]; then
             cat "$BRUNO_INSTALL_DIR/version.txt"
+        # Try dpkg for deb packages
+        elif command -v dpkg &> /dev/null && dpkg -l bruno 2> /dev/null | grep -q '^ii'; then
+            dpkg -l bruno 2> /dev/null | grep '^ii' | awk '{print $3}' | cut -d'-' -f1
+        # Try rpm for rpm packages
+        elif command -v rpm &> /dev/null && rpm -q bruno &> /dev/null; then
+            rpm -q --queryformat '%{VERSION}' bruno 2> /dev/null
         else
             echo "desconhecida"
         fi
