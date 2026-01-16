@@ -41,32 +41,7 @@ show_help() {
 }
 # Get latest Poetry version
 get_latest_poetry_version() {
-    # Try to get the latest version via GitHub API
-    local latest_version=$(curl -s --max-time 10 --connect-timeout 5 https://api.github.com/repos/python-poetry/poetry/releases/latest 2> /dev/null | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
-
-    if [ -n "$latest_version" ]; then
-        log_debug "Versão obtida via API do GitHub: $latest_version" >&2
-        echo "$latest_version"
-        return 0
-    fi
-
-    # If it fails, try via git ls-remote with semantic version sorting
-    log_debug "API do GitHub falhou, tentando via git ls-remote..." >&2
-    latest_version=$(timeout 5 git ls-remote --tags --refs https://github.com/python-poetry/poetry.git 2> /dev/null |
-        grep -oE '[0-9]+\.[0-9]+\.[0-9]+$' |
-        sort -V |
-        tail -1)
-
-    if [ -n "$latest_version" ]; then
-        log_debug "Versão obtida via git ls-remote: $latest_version" >&2
-        echo "$latest_version"
-        return 0
-    fi
-
-    # If both methods fail, notify user
-    log_error "Não foi possível obter a versão mais recente do Poetry" >&2
-    log_error "Verifique sua conexão com a internet e tente novamente" >&2
-    return 1
+    github_get_latest_version "python-poetry/poetry"
 }
 
 # Get installed Poetry version
@@ -80,7 +55,7 @@ get_poetry_version() {
 
 # Get Poetry installation path
 get_poetry_home() {
-    log_output "${POETRY_HOME:-$HOME/.local/share/pypoetry}"
+    echo "$POETRY_HOME"
 }
 
 # Check if Poetry is already installed
@@ -158,7 +133,7 @@ install_poetry() {
 
     local install_script="/tmp/poetry-installer-$$.py"
 
-    if ! curl -sSL ${POETRY_INSTALL_URL:-https://install.python-poetry.org} -o "$install_script"; then
+    if ! curl -sSL "$POETRY_INSTALL_URL" -o "$install_script"; then
         log_error "Falha ao baixar o instalador do Poetry"
         rm -f "$install_script"
         return 1
@@ -190,7 +165,6 @@ install_poetry() {
     setup_poetry_environment "$poetry_home"
 
     # Verify installation
-
     if command -v poetry &> /dev/null; then
         local version=$(get_poetry_version)
 
@@ -220,7 +194,6 @@ update_poetry() {
     log_info "Atualizando Poetry..."
 
     # Check if Poetry is installed
-
     if ! command -v poetry &> /dev/null; then
         log_error "Poetry não está instalado"
         echo ""
@@ -242,7 +215,6 @@ update_poetry() {
     fi
 
     # Verify update
-
     if command -v poetry &> /dev/null; then
         local new_version=$(get_poetry_version)
 
@@ -283,7 +255,7 @@ uninstall_poetry() {
     log_output "${YELLOW}Deseja realmente desinstalar o Poetry $version? (s/N)${NC}"
     read -r response
 
-    if [[ ! "$response" =~ ^[sS]$ ]]; then
+    if [[ ! "$response" =~ ^[sSyY]$ ]]; then
         log_info "Desinstalação cancelada"
         return 1
     fi
@@ -295,7 +267,7 @@ uninstall_poetry() {
 
     local uninstall_script="/tmp/poetry-uninstaller-$$.py"
 
-    if ! curl -sSL ${POETRY_INSTALL_URL:-https://install.python-poetry.org} -o "$uninstall_script"; then
+    if ! curl -sSL "$POETRY_INSTALL_URL" -o "$uninstall_script"; then
         log_error "Falha ao baixar o desinstalador"
         rm -f "$uninstall_script"
 
@@ -351,7 +323,8 @@ uninstall_poetry() {
         log_info "Reinicie o terminal ou execute: source $shell_config"
     else
         log_warning "Poetry removido, mas executável ainda encontrado no PATH"
-        log_debug "Pode ser necessário remover manualmente de: $(which poetry)"
+        local poetry_path=$(command -v poetry 2> /dev/null || echo "desconhecido")
+        log_debug "Pode ser necessário remover manualmente de: $poetry_path"
     fi
 
     # Ask about cache and config removal
@@ -359,8 +332,7 @@ uninstall_poetry() {
     log_output "${YELLOW}Deseja remover também o cache e configurações do Poetry? (s/N)${NC}"
     read -r config_response
 
-    if [[ "$config_response" =~ ^[sS]$ ]]; then
-
+    if [[ "$config_response" =~ ^[sSyY]$ ]]; then
         rm -rf "$HOME/.cache/pypoetry" 2> /dev/null || true
 
         rm -rf "$HOME/.config/pypoetry" 2> /dev/null || true

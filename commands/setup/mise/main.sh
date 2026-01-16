@@ -2,8 +2,9 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-# Source installations library
+# Source libraries
 source "$LIB_DIR/internal/installations.sh"
+source "$LIB_DIR/github.sh"
 
 # Help function
 show_help() {
@@ -43,32 +44,7 @@ show_help() {
 
 # Get latest Mise version from GitHub
 get_latest_mise_version() {
-    # Try to get the latest version via GitHub API
-    local latest_version=$(curl -s --max-time ${MISE_API_MAX_TIME:-10} --connect-timeout ${MISE_API_CONNECT_TIMEOUT:-5} ${MISE_GITHUB_API_URL:-https://api.github.com/repos/jdx/mise/releases/latest} 2> /dev/null | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
-
-    if [ -n "$latest_version" ]; then
-        log_debug "Versão obtida via API do GitHub: $latest_version" >&2
-        echo "$latest_version"
-        return 0
-    fi
-
-    # If it fails, try via git ls-remote with semantic version sorting
-    log_debug "API do GitHub falhou, tentando via git ls-remote..." >&2
-    latest_version=$(timeout ${MISE_GIT_TIMEOUT:-5} git ls-remote --tags --refs ${MISE_GITHUB_REPO_URL:-https://github.com/jdx/mise.git} 2> /dev/null |
-        grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+$' |
-        sort -V |
-        tail -1)
-
-    if [ -n "$latest_version" ]; then
-        log_debug "Versão obtida via git ls-remote: $latest_version" >&2
-        echo "$latest_version"
-        return 0
-    fi
-
-    # If both methods fail, notify user
-    log_error "Não foi possível obter a versão mais recente do Mise" >&2
-    log_error "Verifique sua conexão com a internet e tente novamente" >&2
-    return 1
+    github_get_latest_version "jdx/mise"
 }
 
 # Get installed Mise version
@@ -82,33 +58,12 @@ get_mise_version() {
 
 # Get local bin directory path
 get_local_bin_dir() {
-    log_output "${MISE_LOCAL_BIN_DIR:-$HOME/.local/bin}"
+    echo "$MISE_LOCAL_BIN_DIR"
 }
 
 # Detect operating system and architecture
 detect_os_and_arch() {
-    local os_name=$(uname -s | tr '[:upper:]' '[:lower:]')
-
-    case "$os_name" in
-        darwin) os_name="macos" ;;
-        linux) os_name="linux" ;;
-        *)
-            log_error "Sistema operacional não suportado: $os_name"
-            return 1
-            ;;
-    esac
-
-    local arch=$(uname -m)
-    case "$arch" in
-        x86_64) arch="x64" ;;
-        aarch64 | arm64) arch="arm64" ;;
-        *)
-            log_error "Arquitetura não suportada: $arch"
-            return 1
-            ;;
-    esac
-
-    log_output "${os_name}:${arch}"
+    github_detect_os_arch "standard"
 }
 
 # Check if Mise is already installed
@@ -179,26 +134,22 @@ configure_shell() {
     log_debug "Configuração adicionada"
 }
 
-# Download Mise release
-download_mise_release() {
-    local download_url="$1"
-    local output_file="/tmp/mise.tar.gz"
+# Download and verify Mise release
+download_and_verify_mise() {
+    local version="$1"
+    local os_name="$2"
+    local arch="$3"
+    local output_file="/tmp/mise-${version}.tar.gz"
 
-    log_info "Baixando Mise..." >&2
+    # Build download URL using github library pattern
+    local download_url=$(github_build_download_url "jdx/mise" "$version" "$os_name" "$arch" "mise-{version}-{os}-{arch}.tar.gz")
 
-    curl -L --progress-bar \
-        --connect-timeout 30 \
-        --max-time 300 \
-        --retry 3 \
-        --retry-delay 2 \
-        "$download_url" -o "$output_file"
+    log_info "Baixando e verificando Mise..." >&2
+    log_debug "URL: $download_url" >&2
 
-    local exit_code=$?
-
-    if [ $exit_code -ne 0 ]; then
-        log_error "Falha ao baixar Mise" >&2
-        log_debug "Código de saída: $exit_code" >&2
-        rm -f "$output_file"
+    # Download with checksum verification (SHA256)
+    if ! github_download_and_verify "jdx/mise" "$version" "$download_url" "$output_file" "SHASUMS256.txt" "sha256"; then
+        log_error "Falha ao baixar ou verificar Mise" >&2
         return 1
     fi
 
@@ -277,11 +228,8 @@ install_mise_release() {
 
     log_info "Instalando Mise $mise_version..."
 
-    # Build release URL
-    local download_url="${MISE_RELEASES_BASE_URL:-https://github.com/jdx/mise/releases/download}/${mise_version}/mise-${mise_version}-${os_name}-${arch}.tar.gz"
-
-    # Download release
-    local tar_file=$(download_mise_release "$download_url")
+    # Download and verify release
+    local tar_file=$(download_and_verify_mise "$mise_version" "$os_name" "$arch")
     [ $? -ne 0 ] && return 1
 
     # Extract and setup binary
@@ -359,11 +307,8 @@ update_mise() {
     local bin_dir=$(get_local_bin_dir)
     local mise_bin="$bin_dir/mise"
 
-    # Build release URL
-    local download_url="https://github.com/jdx/mise/releases/download/${mise_version}/mise-${mise_version}-${os_name}-${arch}.tar.gz"
-
-    # Download release
-    local tar_file=$(download_mise_release "$download_url")
+    # Download and verify release
+    local tar_file=$(download_and_verify_mise "$mise_version" "$os_name" "$arch")
     if [ $? -ne 0 ]; then
         return 1
     fi
@@ -423,7 +368,7 @@ uninstall_mise() {
     log_output "${YELLOW}Deseja realmente desinstalar o Mise $version? (s/N)${NC}"
     read -r response
 
-    if [[ ! "$response" =~ ^[sS]$ ]]; then
+    if [[ ! "$response" =~ ^[sSyY]$ ]]; then
         log_info "Desinstalação cancelada"
         return 1
     fi
@@ -440,7 +385,7 @@ uninstall_mise() {
         rm -rf "$mise_data_dir"
     fi
 
-    local mise_config_dir="${MISE_CONFIG_DIR:-$HOME/.config/mise}"
+    local mise_config_dir="$MISE_CONFIG_DIR"
     if [ -d "$mise_config_dir" ]; then
         rm -rf "$mise_config_dir"
     fi
@@ -480,7 +425,7 @@ uninstall_mise() {
     log_output "${YELLOW}Deseja remover também o cache do Mise? (s/N)${NC}"
     read -r cache_response
 
-    if [[ "$cache_response" =~ ^[sS]$ ]]; then
+    if [[ "$cache_response" =~ ^[sSyY]$ ]]; then
 
         local cache_dir="$HOME/.cache/mise"
         if [ -d "$cache_dir" ]; then

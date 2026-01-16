@@ -8,17 +8,7 @@
     "mac"
   ],
   "envs": {
-    "MISE_GITHUB_API_URL": "https://api.github.com/repos/jdx/mise/releases/latest",
-    "MISE_GITHUB_REPO_URL": "https://github.com/jdx/mise.git",
-    "MISE_RELEASES_BASE_URL": "https://github.com/jdx/mise/releases/download",
-    "MISE_API_MAX_TIME": "10",
-    "MISE_API_CONNECT_TIMEOUT": "5",
-    "MISE_GIT_TIMEOUT": "5",
-    "MISE_DOWNLOAD_CONNECT_TIMEOUT": "30",
-    "MISE_DOWNLOAD_MAX_TIME": "300",
     "MISE_LOCAL_BIN_DIR": "$HOME/.local/bin",
-    "MISE_DATA_DIR": "$HOME/.local/share/mise",
-    "MISE_CONFIG_DIR": "$HOME/.config/mise",
-    "MISE_CACHE_DIR": "$HOME/.cache/mise"
+    "MISE_CONFIG_DIR": "$HOME/.config/mise"
   }
 }

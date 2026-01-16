@@ -2,8 +2,9 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-# Source installations library
+# Source libraries
 source "$LIB_DIR/internal/installations.sh"
+source "$LIB_DIR/github.sh"
 
 # Help function
 show_help() {
@@ -40,32 +41,7 @@ show_help() {
 }
 
 get_latest_podman_version() {
-    # Try to get the latest version via GitHub API
-    local latest_version=$(curl -s --max-time ${PODMAN_API_MAX_TIME:-10} --connect-timeout ${PODMAN_API_CONNECT_TIMEOUT:-5} ${PODMAN_GITHUB_API_URL:-https://api.github.com/repos/containers/podman/releases/latest} 2> /dev/null | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
-
-    if [ -n "$latest_version" ]; then
-        log_debug "Versão obtida via API do GitHub: $latest_version" >&2
-        echo "$latest_version"
-        return 0
-    fi
-
-    # If it fails, try via git ls-remote with semantic version sorting
-    log_debug "API do GitHub falhou, tentando via git ls-remote..." >&2
-    latest_version=$(timeout ${PODMAN_GIT_TIMEOUT:-5} git ls-remote --tags --refs ${PODMAN_GITHUB_REPO_URL:-https://github.com/containers/podman.git} 2> /dev/null |
-        grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+$' |
-        sort -V |
-        tail -1)
-
-    if [ -n "$latest_version" ]; then
-        log_debug "Versão obtida via git ls-remote: $latest_version" >&2
-        echo "$latest_version"
-        return 0
-    fi
-
-    # If both methods fail, notify user
-    log_error "Não foi possível obter a versão mais recente do Podman" >&2
-    log_error "Verifique sua conexão com a internet e tente novamente" >&2
-    return 1
+    github_get_latest_version "containers/podman"
 }
 
 # Get installed Podman version
@@ -120,7 +96,7 @@ install_podman_macos() {
     # Check if Homebrew is installed
     if ! command -v brew &> /dev/null; then
         log_error "Homebrew não está instalado. Instale-o primeiro:"
-        log_output "  /bin/bash -c \"\$(curl -fsSL ${PODMAN_HOMEBREW_INSTALL_URL:-https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh})\""
+        log_output "  /bin/bash -c \"\$(curl -fsSL $PODMAN_HOMEBREW_INSTALL_URL)\""
         return 1
     fi
 
@@ -157,11 +133,17 @@ install_podman_linux() {
         return 1
     fi
 
-    # Detect architecture
-    local arch=$(uname -m)
+    # Detect OS and architecture using github library
+    local os_arch=$(github_detect_os_arch "standard")
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    local arch="${os_arch#*:}"
+    # Convert arch format for Podman (x64 -> amd64)
     case "$arch" in
-        x86_64) arch="amd64" ;;
-        aarch64 | arm64) arch="arm64" ;;
+        x64) arch="amd64" ;;
+        arm64) arch="arm64" ;;
         *)
             log_error "Arquitetura não suportada: $arch"
             return 1
@@ -171,20 +153,17 @@ install_podman_linux() {
     local install_dir=$(get_local_bin_dir)
     mkdir -p "$install_dir"
 
-    # Build download URL
-    local download_url="https://github.com/containers/podman/releases/download/${podman_version}/podman-remote-static-linux_${arch}.tar.gz"
-    local output_file="/tmp/podman-remote.tar.gz"
+    # Build download URL with correct filename for checksum verification
+    local filename="podman-remote-static-linux_${arch}.tar.gz"
+    local download_url="https://github.com/containers/podman/releases/download/${podman_version}/${filename}"
+    local output_file="/tmp/${filename}"
 
-    log_info "Baixando Podman ${podman_version}..."
+    log_info "Baixando e verificando Podman ${podman_version}..."
+    log_debug "URL: $download_url" >&2
 
-    if ! curl -L --progress-bar \
-        --connect-timeout 30 \
-        --max-time 300 \
-        --retry 3 \
-        --retry-delay 2 \
-        "$download_url" -o "$output_file"; then
-        log_error "Falha ao baixar Podman"
-        rm -f "$output_file"
+    # Download and verify with checksum
+    if ! github_download_and_verify "containers/podman" "$podman_version" "$download_url" "$output_file" "shasums" "sha256"; then
+        log_error "Falha ao baixar ou verificar Podman" >&2
         return 1
     fi
 
@@ -421,7 +400,27 @@ update_podman() {
 uninstall_podman() {
     log_info "Desinstalando Podman..."
 
+    # Check if Podman is installed
+    if ! command -v podman &> /dev/null; then
+        log_warning "Podman não está instalado"
+        return 0
+    fi
+
+    local version=$(get_podman_version)
+    log_debug "Versão a ser removida: $version"
+
+    # Confirm uninstallation
+    echo ""
+    log_output "${YELLOW}Deseja realmente desinstalar o Podman $version? (s/N)${NC}"
+    read -r response
+
+    if [[ ! "$response" =~ ^[sSyY]$ ]]; then
+        log_info "Desinstalação cancelada"
+        return 1
+    fi
+
     local os_name=$(uname -s | tr '[:upper:]' '[:lower:]')
+    local shell_config=$(detect_shell_config)
 
     case "$os_name" in
         darwin)
@@ -440,13 +439,83 @@ uninstall_podman() {
             fi
             ;;
         linux)
-            # Remove binary
+            local podman_location=$(which podman 2> /dev/null)
+            local removed_system=false
+
+            # Check if installed via system package manager
+            if [ -n "$podman_location" ]; then
+                log_debug "Podman encontrado em: $podman_location"
+
+                # Detect installation method
+                if [[ "$podman_location" == "/usr/bin/podman" ]] || [[ "$podman_location" == "/usr/local/bin/podman" ]]; then
+                    log_info "Detectado Podman instalado via gerenciador de pacotes do sistema"
+
+                    # Try to remove via package manager
+                    if command -v apt-get &> /dev/null; then
+                        log_debug "Verificando instalação via apt..."
+                        if dpkg -l podman 2> /dev/null | grep -q "^ii"; then
+                            log_info "Removendo Podman via apt..."
+                            log_debug "Executando: sudo apt-get remove -y podman"
+                            local apt_output=$(sudo apt-get remove -y podman 2>&1)
+                            local apt_exit=$?
+                            echo "$apt_output" | while read -r line; do log_debug "apt: $line"; done
+                            if [ $apt_exit -eq 0 ]; then
+                                removed_system=true
+                                log_debug "Podman removido via apt com sucesso"
+                            else
+                                log_warning "Falha ao remover Podman via apt (código $apt_exit)"
+                            fi
+                        else
+                            log_debug "Podman não está instalado via apt"
+                        fi
+                    elif command -v dnf &> /dev/null; then
+                        if rpm -qa | grep -q "^podman"; then
+                            log_info "Removendo Podman via dnf..."
+                            local dnf_output=$(sudo dnf remove -y podman 2>&1)
+                            local dnf_exit=$?
+                            echo "$dnf_output" | while read -r line; do log_debug "dnf: $line"; done
+                            if [ $dnf_exit -eq 0 ]; then
+                                removed_system=true
+                                log_debug "Podman removido via dnf com sucesso"
+                            else
+                                log_warning "Falha ao remover Podman via dnf (código $dnf_exit)"
+                            fi
+                        fi
+                    elif command -v yum &> /dev/null; then
+                        if rpm -qa | grep -q "^podman"; then
+                            log_info "Removendo Podman via yum..."
+                            local yum_output=$(sudo yum remove -y podman 2>&1)
+                            local yum_exit=$?
+                            echo "$yum_output" | while read -r line; do log_debug "yum: $line"; done
+                            if [ $yum_exit -eq 0 ]; then
+                                removed_system=true
+                                log_debug "Podman removido via yum com sucesso"
+                            else
+                                log_warning "Falha ao remover Podman via yum (código $yum_exit)"
+                            fi
+                        fi
+                    elif command -v pacman &> /dev/null; then
+                        if pacman -Q podman &> /dev/null; then
+                            log_info "Removendo Podman via pacman..."
+                            local pacman_output=$(sudo pacman -R --noconfirm podman 2>&1)
+                            local pacman_exit=$?
+                            echo "$pacman_output" | while read -r line; do log_debug "pacman: $line"; done
+                            if [ $pacman_exit -eq 0 ]; then
+                                removed_system=true
+                                log_debug "Podman removido via pacman com sucesso"
+                            else
+                                log_warning "Falha ao remover Podman via pacman (código $pacman_exit)"
+                            fi
+                        fi
+                    fi
+                fi
+            fi
+
+            # Remove binary from local bin if exists
             local podman_bin="$(get_local_bin_dir)/podman"
             if [ -f "$podman_bin" ]; then
                 rm -f "$podman_bin"
-                log_debug "Binário removido: $podman_bin"
-            else
-                log_debug "Podman não está instalado em $(dirname "$podman_bin")"
+                log_debug "Binário local removido: $podman_bin"
             fi
 
             # Remove podman-compose
@@ -468,8 +537,17 @@ uninstall_podman() {
             ;;
     esac
 
-    log_success "Podman desinstalado com sucesso!"
-    mark_uninstalled "podman"
+    # Verify removal
+    if ! command -v podman &> /dev/null; then
+        log_success "Podman desinstalado com sucesso!"
+        mark_uninstalled "podman"
+
+        echo ""
+        log_info "Reinicie o terminal ou execute: source $shell_config"
+    else
+        log_warning "Podman removido, mas executável ainda encontrado no PATH"
+        log_debug "Pode ser necessário remover manualmente de: $(which podman)"
+    fi
 }
 
 # Main function

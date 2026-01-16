@@ -127,7 +127,7 @@ install_iterm() {
     if ! check_homebrew; then
         echo ""
         log_output "${YELLOW}Para instalar o Homebrew, execute:${NC}"
-        log_output "  /bin/bash -c \"\$(curl -fsSL ${ITERM_HOMEBREW_INSTALL_URL:-https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh})\""
+        log_output "  /bin/bash -c \"\$(curl -fsSL $ITERM_HOMEBREW_INSTALL_URL)\""
         return 1
     fi
 
@@ -228,7 +228,7 @@ uninstall_iterm() {
             log_output "${YELLOW}Deseja remover manualmente? (s/N)${NC}"
             read -r response
 
-            if [[ "$response" =~ ^[sS]$ ]]; then
+            if [[ "$response" =~ ^[sSyY]$ ]]; then
                 rm -rf "/Applications/iTerm.app"
                 log_success "iTerm2 removido com sucesso"
                 return 0
@@ -250,7 +250,7 @@ uninstall_iterm() {
     log_output "${YELLOW}Deseja realmente desinstalar o iTerm2 $version? (s/N)${NC}"
     read -r response
 
-    if [[ ! "$response" =~ ^[sS]$ ]]; then
+    if [[ ! "$response" =~ ^[sSyY]$ ]]; then
         log_info "Desinstalação cancelada"
         return 1
     fi
@@ -274,7 +274,7 @@ uninstall_iterm() {
     log_output "${YELLOW}Deseja remover as preferências e configurações do iTerm2? (s/N)${NC}"
     read -r response
 
-    if [[ "$response" =~ ^[sS]$ ]]; then
+    if [[ "$response" =~ ^[sSyY]$ ]]; then
         rm -rf "$HOME/Library/Preferences/com.googlecode.iterm2.plist" 2> /dev/null || true
         rm -rf "$HOME/Library/Application Support/iTerm2" 2> /dev/null || true
         rm -rf "$HOME/Library/Saved Application State/com.googlecode.iterm2.savedState" 2> /dev/null || true

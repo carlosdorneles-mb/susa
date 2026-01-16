@@ -6,13 +6,5 @@
   "group": "terminal",
   "os": [
     "linux"
-  ],
-  "envs": {
-    "TILIX_GITHUB_API_URL": "https://api.github.com/repos/gnunn1/tilix/releases/latest",
-    "TILIX_GITHUB_REPO_URL": "https://github.com/gnunn1/tilix.git",
-    "TILIX_WEBSITE_URL": "https://gnunn1.github.io/tilix-web/",
-    "TILIX_API_MAX_TIME": "10",
-    "TILIX_API_CONNECT_TIMEOUT": "5",
-    "TILIX_GIT_TIMEOUT": "5"
-  }
+  ]
 }

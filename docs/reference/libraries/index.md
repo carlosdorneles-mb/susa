@@ -51,6 +51,10 @@ Gerenciamento automático de dependências externas. Auto-instala ferramentas co
 
 Funções auxiliares para trabalhar com Kubernetes. Valida instalação do `kubectl`, verifica namespaces e contextos.
 
+#### [github.sh](github.md)
+
+Gerenciamento de releases do GitHub. Baixa releases com verificação de checksum, detecta sistema/arquitetura e automatiza instalação de binários de projetos hospedados no GitHub.
+
 ### CLI Core
 
 #### [cli.sh](cli.md)

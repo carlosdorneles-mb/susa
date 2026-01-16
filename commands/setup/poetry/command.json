@@ -9,12 +9,7 @@
     "mac"
   ],
   "envs": {
-    "POETRY_GITHUB_API_URL": "https://api.github.com/repos/python-poetry/poetry/releases/latest",
-    "POETRY_GITHUB_REPO_URL": "https://github.com/python-poetry/poetry.git",
-    "POETRY_INSTALL_SCRIPT_URL": "https://install.python-poetry.org",
-    "POETRY_API_MAX_TIME": "10",
-    "POETRY_API_CONNECT_TIMEOUT": "5",
-    "POETRY_GIT_TIMEOUT": "5",
+    "POETRY_INSTALL_URL": "https://install.python-poetry.org",
     "POETRY_HOME": "$HOME/.local/share/pypoetry"
   }
 }

@@ -196,7 +196,7 @@ main() {
         # Ask if you want to continue without version check
         if [ "$auto_confirm" = false ]; then
             if [ -t 0 ]; then
-                read -p "Deseja continuar com a atualização? (y/N): " -n 1 -r
+                read -p "Deseja continuar com a atualização? (s/N): " -n 1 -r
                 log_output ""
 
                 if [[ ! $REPLY =~ ^[SsYy]$ ]]; then

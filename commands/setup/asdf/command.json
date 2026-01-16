@@ -8,16 +8,6 @@
     "mac"
   ],
   "envs": {
-    "ASDF_GITHUB_API_URL": "https://api.github.com/repos/asdf-vm/asdf/releases/latest",
-    "ASDF_GITHUB_REPO_URL": "https://github.com/asdf-vm/asdf.git",
-    "ASDF_RELEASES_BASE_URL": "https://github.com/asdf-vm/asdf/releases/download",
-    "ASDF_API_MAX_TIME": "10",
-    "ASDF_API_CONNECT_TIMEOUT": "5",
-    "ASDF_GIT_TIMEOUT": "5",
-    "ASDF_DOWNLOAD_CONNECT_TIMEOUT": "30",
-    "ASDF_DOWNLOAD_MAX_TIME": "300",
-    "ASDF_DOWNLOAD_RETRY": "3",
-    "ASDF_DOWNLOAD_RETRY_DELAY": "2",
     "ASDF_INSTALL_DIR": "$HOME/.asdf",
     "ASDF_LOCAL_BIN_DIR": "$HOME/.local/bin"
   }

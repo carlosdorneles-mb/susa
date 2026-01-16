@@ -9,15 +9,7 @@
   ],
   "envs": {
     "TOOLBOX_API_URL": "https://data.services.jetbrains.com/products/releases?code=TBA&latest=true&type=release",
-    "TOOLBOX_DOWNLOAD_BASE_URL": "https://download.jetbrains.com/toolbox",
-    "TOOLBOX_ICON_URL": "https://resources.jetbrains.com/storage/products/toolbox/img/meta/toolbox_logo_300x300.png",
     "TOOLBOX_API_MAX_TIME": "10",
-    "TOOLBOX_API_CONNECT_TIMEOUT": "5",
-    "TOOLBOX_DOWNLOAD_CONNECT_TIMEOUT": "30",
-    "TOOLBOX_DOWNLOAD_MAX_TIME": "300",
-    "TOOLBOX_DATA_DIR_LINUX": "$HOME/.local/share/JetBrains/Toolbox",
-    "TOOLBOX_BIN_DIR": "$HOME/.local/bin",
-    "TOOLBOX_DESKTOP_FILE": "$HOME/.local/share/applications/jetbrains-toolbox.desktop",
-    "TOOLBOX_DATA_DIR_MAC": "$HOME/Library/Application Support/JetBrains/Toolbox"
+    "TOOLBOX_API_CONNECT_TIMEOUT": "5"
   }
 }

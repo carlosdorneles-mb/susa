@@ -2,8 +2,9 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-# Source installations library
+# Source libraries
 source "$LIB_DIR/internal/installations.sh"
+source "$LIB_DIR/github.sh"
 
 # Help function
 show_help() {
@@ -41,32 +42,7 @@ show_help() {
 }
 # Get latest UV version
 get_latest_uv_version() {
-    # Try to get the latest version via GitHub API
-    local latest_version=$(curl -s --max-time 10 --connect-timeout 5 https://api.github.com/repos/astral-sh/uv/releases/latest 2> /dev/null | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
-
-    if [ -n "$latest_version" ]; then
-        log_debug "Versão obtida via API do GitHub: $latest_version" >&2
-        echo "$latest_version"
-        return 0
-    fi
-
-    # If it fails, try via git ls-remote with semantic version sorting
-    log_debug "API do GitHub falhou, tentando via git ls-remote..." >&2
-    latest_version=$(timeout 5 git ls-remote --tags --refs https://github.com/astral-sh/uv.git 2> /dev/null |
-        grep -oE '[0-9]+\.[0-9]+\.[0-9]+$' |
-        sort -V |
-        tail -1)
-
-    if [ -n "$latest_version" ]; then
-        log_debug "Versão obtida via git ls-remote: $latest_version" >&2
-        echo "$latest_version"
-        return 0
-    fi
-
-    # If both methods fail, notify user
-    log_error "Não foi possível obter a versão mais recente do UV" >&2
-    log_error "Verifique sua conexão com a internet e tente novamente" >&2
-    return 1
+    github_get_latest_version "astral-sh/uv"
 }
 
 # Get installed UV version
@@ -81,6 +57,35 @@ get_uv_version() {
 # Get UV installation path
 get_local_bin_dir() {
     echo "$HOME/.local/bin"
+}
+
+# Detect OS and architecture for UV (uses specific naming)
+detect_uv_platform() {
+    local os_name=$(uname -s)
+    local arch=$(uname -m)
+
+    # Convert OS name
+    case "$os_name" in
+        Linux) os_name="unknown-linux-gnu" ;;
+        Darwin) os_name="apple-darwin" ;;
+        *)
+            log_error "Sistema operacional não suportado: $os_name" >&2
+            return 1
+            ;;
+    esac
+
+    # Convert architecture
+    case "$arch" in
+        x86_64) arch="x86_64" ;;
+        aarch64 | arm64) arch="aarch64" ;;
+        armv7l) arch="armv7" ;;
+        *)
+            log_error "Arquitetura não suportada: $arch" >&2
+            return 1
+            ;;
+    esac
+
+    echo "${arch}-${os_name}"
 }
 
 # Check if UV is already installed
@@ -146,44 +151,73 @@ setup_uv_environment() {
 
 # Install UV
 install_uv() {
-    if ! check_existing_installation; then
-        exit 0
-    fi
-
     log_info "Iniciando instalação do UV..."
 
-    local bin_dir=$(get_local_bin_dir)
+    # Get latest version
+    local uv_version=$(get_latest_uv_version)
+    if [ $? -ne 0 ] || [ -z "$uv_version" ]; then
+        return 1
+    fi
 
-    # Create bin directory if it doesn't exist
+    # Detect platform
+    local platform=$(detect_uv_platform)
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    local bin_dir=$(get_local_bin_dir)
     mkdir -p "$bin_dir"
 
-    # Download and install UV using official installer
-    log_info "Baixando instalador do UV..."
+    # Build download URL
+    local filename="uv-${platform}.tar.gz"
+    local download_url="https://github.com/astral-sh/uv/releases/download/${uv_version}/${filename}"
+    local checksum_filename="${filename}.sha256"
+    local output_file="/tmp/${filename}"
 
-    local install_script="/tmp/uv-installer-$$.sh"
+    log_info "Baixando e verificando UV ${uv_version}..."
+    log_debug "Plataforma: $platform" >&2
+    log_debug "URL: $download_url" >&2
 
-    if ! curl -sSfL ${UV_INSTALL_URL:-https://astral.sh/uv/install.sh} -o "$install_script"; then
-        log_error "Falha ao baixar o instalador do UV"
-        rm -f "$install_script"
+    # Download and verify with checksum
+    if ! github_download_and_verify "astral-sh/uv" "$uv_version" "$download_url" "$output_file" "$checksum_filename" "sha256"; then
+        log_error "Falha ao baixar ou verificar UV" >&2
         return 1
     fi
 
-    log_debug "Instalador baixado em: $install_script"
+    # Extract binary
+    log_info "Extraindo UV..."
+    local temp_dir="/tmp/uv-extract-$$"
+    mkdir -p "$temp_dir"
 
-    # Run installer
-    log_info "Instalando UV..."
-    log_debug "Executando instalador..."
+    if ! tar -xzf "$output_file" -C "$temp_dir" 2> /dev/null; then
+        log_error "Falha ao extrair UV" >&2
+        rm -rf "$temp_dir" "$output_file"
+        return 1
+    fi
+    rm -f "$output_file"
 
-    if bash "$install_script" 2>&1 | while read -r line; do log_debug "installer: $line"; done; then
-        log_debug "Instalação concluída com sucesso"
-    else
-        log_error "Falha ao executar o instalador do UV"
-        rm -f "$install_script"
+    # Find and install binaries
+    local uv_binary=$(find "$temp_dir" -type f -name "uv" -o -name "uvx" | grep -E "/uv$" | head -1)
+    local uvx_binary=$(find "$temp_dir" -type f -name "uvx" | head -1)
+
+    if [ -z "$uv_binary" ]; then
+        log_error "Binário do UV não encontrado no arquivo" >&2
+        rm -rf "$temp_dir"
         return 1
     fi
 
-    rm -f "$install_script"
-    log_debug "Instalador removido"
+    log_debug "Binário UV encontrado: $uv_binary" >&2
+    mv "$uv_binary" "$bin_dir/uv"
+    chmod +x "$bin_dir/uv"
+
+    if [ -n "$uvx_binary" ]; then
+        log_debug "Binário UVX encontrado: $uvx_binary" >&2
+        mv "$uvx_binary" "$bin_dir/uvx"
+        chmod +x "$bin_dir/uvx"
+    fi
+
+    rm -rf "$temp_dir"
+    log_debug "Binários instalados em $bin_dir" >&2
 
     # Configure shell
     configure_shell "$bin_dir"
@@ -286,7 +320,7 @@ uninstall_uv() {
     log_output "${YELLOW}Deseja realmente desinstalar o UV $version? (s/N)${NC}"
     read -r response
 
-    if [[ ! "$response" =~ ^[sS]$ ]]; then
+    if [[ ! "$response" =~ ^[sSyY]$ ]]; then
         log_info "Desinstalação cancelada"
         return 1
     fi
@@ -331,7 +365,8 @@ uninstall_uv() {
         log_info "Reinicie o terminal ou execute: source $shell_config"
     else
         log_warning "UV removido, mas executável ainda encontrado no PATH"
-        log_debug "Pode ser necessário remover manualmente de: $(which uv)"
+        local uv_path=$(command -v uv 2> /dev/null || echo "desconhecido")
+        log_debug "Pode ser necessário remover manualmente de: $uv_path"
     fi
 
     # Ask about cache removal
@@ -339,7 +374,7 @@ uninstall_uv() {
     log_output "${YELLOW}Deseja remover também o cache do UV? (s/N)${NC}"
     read -r cache_response
 
-    if [[ "$cache_response" =~ ^[sS]$ ]]; then
+    if [[ "$cache_response" =~ ^[sSyY]$ ]]; then
 
         local cache_dir="$HOME/.cache/uv"
         if [ -d "$cache_dir" ]; then
@@ -391,6 +426,9 @@ main() {
 
     case "$action" in
         install)
+            if ! check_existing_installation; then
+                exit 0
+            fi
             install_uv
             ;;
         update)

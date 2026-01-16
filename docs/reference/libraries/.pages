@@ -13,6 +13,8 @@ nav:
   - CLI: cli.md
   - Config: config.md
   - Git: git.md
+  - Github: github.md
+  - JSON: json.md
   - Plugins: plugin.md
   - Registry: registry.md
   - Cache: cache.md

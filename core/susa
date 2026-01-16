@@ -393,7 +393,11 @@ execute_command() {
     local current_os=$(get_simple_os)
 
     # Validate command exists and is compatible
-    local config_file=$(validate_command "$category" "$command" "$current_os")
+    local config_file
+    config_file=$(validate_command "$category" "$command" "$current_os")
+    if [ $? -ne 0 ] || [ -z "$config_file" ]; then
+        exit 1
+    fi
 
     # Get entrypoint name and build path
     local script_name=$(get_command_info "$GLOBAL_CONFIG_FILE" "$category" "$command" "entrypoint")

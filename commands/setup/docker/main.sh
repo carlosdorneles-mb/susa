@@ -2,8 +2,9 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-# Source installations library
+# Source libraries
 source "$LIB_DIR/internal/installations.sh"
+source "$LIB_DIR/github.sh"
 
 # Help function
 show_help() {
@@ -41,34 +42,19 @@ show_help() {
 }
 
 get_latest_docker_version() {
-    # Try to get the latest version via GitHub API (format: docker-v29.1.4)
-    local latest_version=$(curl -s --max-time 10 --connect-timeout 5 https://api.github.com/repos/moby/moby/releases/latest 2> /dev/null | grep '"tag_name":' | sed -E 's/.*"docker-v([0-9]+\.[0-9]+\.[0-9]+)".*/\1/')
+    # Get latest version from GitHub releases (format: docker-v29.1.4)
+    local version_tag
+    version_tag=$(github_get_latest_version "moby/moby")
 
-    if [ -n "$latest_version" ]; then
-        log_debug "Versão obtida via API do GitHub: $latest_version" >&2
-        echo "$latest_version"
+    if [ $? -eq 0 ] && [ -n "$version_tag" ]; then
+        # Remove "docker-v" prefix to get just the version number
+        local version="${version_tag#docker-v}"
+        echo "$version"
         return 0
     fi
 
-    # If it fails, try via git ls-remote with semantic version sorting
-    log_debug "API do GitHub falhou, tentando via git ls-remote..." >&2
-    latest_version=$(timeout ${DOCKER_GIT_TIMEOUT:-5} git ls-remote --tags --refs ${DOCKER_GITHUB_REPO_URL:-https://github.com/moby/moby.git} 2> /dev/null |
-        grep 'docker-v' |
-        grep -v '\-rc' |
-        grep -oE 'docker-v[0-9]+\.[0-9]+\.[0-9]+$' |
-        sed 's/docker-v//' |
-        sort -V |
-        tail -1)
-
-    if [ -n "$latest_version" ]; then
-        log_debug "Versão obtida via git ls-remote: $latest_version" >&2
-        echo "$latest_version"
-        return 0
-    fi
-
-    # If both methods fail, notify user
-    log_error "Não foi possível obter a versão mais recente do Docker" >&2
-    log_error "Verifique sua conexão com a internet e tente novamente" >&2
+    log_error "Não foi possível obter a versão mais recente do Docker"
+    log_error "Verifique sua conexão com a internet e tente novamente"
     return 1
 }
 
@@ -134,7 +120,7 @@ detect_os_and_arch() {
             ;;
     esac
 
-    log_output "${os_name}:${arch}"
+    echo "${os_name}:${arch}"
 }
 
 # Configure user to run Docker without sudo
@@ -172,7 +158,7 @@ install_docker_macos() {
     # Check if Homebrew is installed
     if ! command -v brew &> /dev/null; then
         log_error "Homebrew não está instalado. Instale-o primeiro:"
-        log_output "  /bin/bash -c \"\$(curl -fsSL ${DOCKER_HOMEBREW_INSTALL_URL:-https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh})\""
+        log_output "  /bin/bash -c \"\$(curl -fsSL $DOCKER_HOMEBREW_INSTALL_URL)\""
         return 1
     fi
 
@@ -269,13 +255,13 @@ install_docker_debian() {
     sudo install -m 0755 -d /etc/apt/keyrings
     local distro
     distro=$(lsb_release -is | tr '[:upper:]' '[:lower:]')
-    curl -fsSL "${DOCKER_DOWNLOAD_BASE_URL:-https://download.docker.com}/linux/${distro}/gpg" | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg > /dev/null 2>&1
+    curl -fsSL "$DOCKER_DOWNLOAD_BASE_URL/linux/${distro}/gpg" | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg > /dev/null 2>&1
     sudo chmod a+r /etc/apt/keyrings/docker.gpg
 
     # Set up repository
     log_info "Configurando repositório do Docker..."
     echo \
-        "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] ${DOCKER_DOWNLOAD_BASE_URL:-https://download.docker.com}/linux/$(lsb_release -is | tr '[:upper:]' '[:lower:]') \
+        "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] $DOCKER_DOWNLOAD_BASE_URL/linux/$(lsb_release -is | tr '[:upper:]' '[:lower:]') \
       $(lsb_release -cs) stable" |
         sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
@@ -314,7 +300,7 @@ install_docker_rhel() {
 
     # Add Docker repository
     log_info "Adicionando repositório do Docker..."
-    sudo dnf config-manager --add-repo ${DOCKER_DOWNLOAD_BASE_URL:-https://download.docker.com}/linux/fedora/docker-ce.repo > /dev/null 2>&1
+    sudo dnf config-manager --add-repo $DOCKER_DOWNLOAD_BASE_URL/linux/fedora/docker-ce.repo > /dev/null 2>&1
 
     # Install Docker Engine
     log_info "Instalando Docker Engine, CLI e plugins..."
@@ -520,7 +506,7 @@ uninstall_docker() {
     log_output "${YELLOW}Deseja realmente desinstalar o Docker $current_version? (s/N)${NC}"
     read -r response
 
-    if [[ ! "$response" =~ ^[sS]$ ]]; then
+    if [[ ! "$response" =~ ^[sSyY]$ ]]; then
         log_info "Desinstalação cancelada"
         return 0
     fi
@@ -601,7 +587,7 @@ uninstall_docker() {
     log_output "${YELLOW}Deseja remover também as imagens, containers e volumes do Docker? (s/N)${NC}"
     read -r response
 
-    if [[ "$response" =~ ^[sS]$ ]]; then
+    if [[ "$response" =~ ^[sSyY]$ ]]; then
         log_info "Removendo dados do Docker..."
         log_info "Dados removidos"
     fi

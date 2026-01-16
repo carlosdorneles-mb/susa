@@ -40,7 +40,7 @@ show_help() {
 
 get_latest_toolbox_version() {
     # Try to get the latest version from JetBrains data service
-    local latest_version=$(curl -s --max-time ${TOOLBOX_API_MAX_TIME:-10} --connect-timeout ${TOOLBOX_API_CONNECT_TIMEOUT:-5} ${TOOLBOX_API_URL:-https://data.services.jetbrains.com/products/releases?code=TBA&latest=true&type=release} 2> /dev/null | grep -oP '"build"\s*:\s*"\K[^"]+' | head -1)
+    local latest_version=$(curl -s --max-time "$TOOLBOX_API_MAX_TIME" --connect-timeout "$TOOLBOX_API_CONNECT_TIMEOUT" "$TOOLBOX_API_URL" 2> /dev/null | grep -oP '"build"\s*:\s*"\K[^"]+' | head -1)
 
     if [ -n "$latest_version" ]; then
         log_debug "Versão obtida via API JetBrains: $latest_version" >&2
@@ -77,7 +77,7 @@ detect_os_and_arch() {
             ;;
     esac
 
-    log_output "${os_name}:${arch}"
+    echo "${os_name}:${arch}"
 }
 
 # Get installation directory based on OS
@@ -89,7 +89,7 @@ get_install_dir() {
             echo "$HOME/.local/share/JetBrains/Toolbox"
             ;;
         darwin)
-            log_output "$HOME/Library/Application Support/JetBrains/Toolbox"
+            echo "$HOME/Library/Application Support/JetBrains/Toolbox"
             ;;
     esac
 }
@@ -172,10 +172,6 @@ check_existing_installation() {
 install_toolbox_linux() {
     local version="$1"
     local os_arch="$2"
-
-    if ! check_existing_installation; then
-        exit 0
-    fi
 
     log_info "Instalando JetBrains Toolbox $version no Linux..."
 
@@ -507,7 +503,7 @@ uninstall_toolbox() {
     log_output "${YELLOW}Deseja realmente desinstalar o JetBrains Toolbox $current_version? (s/N)${NC}"
     read -r response
 
-    if [[ ! "$response" =~ ^[sS]$ ]]; then
+    if [[ ! "$response" =~ ^[sSyY]$ ]]; then
         log_info "Desinstalação cancelada"
         return 0
     fi
@@ -562,7 +558,7 @@ uninstall_toolbox() {
     log_output "${YELLOW}Deseja remover também os dados das IDEs instaladas pelo Toolbox? (s/N)${NC}"
     read -r response
 
-    if [[ "$response" =~ ^[sS]$ ]]; then
+    if [[ "$response" =~ ^[sSyY]$ ]]; then
         log_info "Removendo dados das IDEs..."
 
         if [ "$os_name" = "darwin" ]; then
@@ -612,6 +608,9 @@ main() {
 
     case "$action" in
         install)
+            if ! check_existing_installation; then
+                exit 0
+            fi
             install_toolbox
             ;;
         update)

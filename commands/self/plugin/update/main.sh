@@ -159,7 +159,7 @@ main() {
 
     # Confirm update
     if [ "$auto_confirm" = false ]; then
-        read -p "Deseja continuar? (y/N): " -n 1 -r
+        read -p "Deseja continuar? (s/N): " -n 1 -r
         log_output ""
 
         if [[ ! $REPLY =~ ^[YySs]$ ]]; then

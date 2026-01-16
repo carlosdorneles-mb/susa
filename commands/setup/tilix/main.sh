@@ -43,32 +43,7 @@ show_help() {
 
 # Get latest Tilix version
 get_latest_tilix_version() {
-    # Try to get the latest version via GitHub API
-    local latest_version=$(curl -s --max-time ${TILIX_API_MAX_TIME:-10} --connect-timeout ${TILIX_API_CONNECT_TIMEOUT:-5} ${TILIX_GITHUB_API_URL:-https://api.github.com/repos/gnunn1/tilix/releases/latest} 2> /dev/null | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
-
-    if [ -n "$latest_version" ]; then
-        log_debug "Versão obtida via API do GitHub: $latest_version" >&2
-        echo "$latest_version"
-        return 0
-    fi
-
-    # If it fails, try via git ls-remote with semantic version sorting
-    log_debug "API do GitHub falhou, tentando via git ls-remote..." >&2
-    latest_version=$(timeout ${TILIX_GIT_TIMEOUT:-5} git ls-remote --tags --refs ${TILIX_GITHUB_REPO_URL:-https://github.com/gnunn1/tilix.git} 2> /dev/null |
-        grep -oE '[0-9]+\.[0-9]+\.[0-9]+$' |
-        sort -V |
-        tail -1)
-
-    if [ -n "$latest_version" ]; then
-        log_debug "Versão obtida via git ls-remote: $latest_version" >&2
-        echo "$latest_version"
-        return 0
-    fi
-
-    # If both methods fail, notify user
-    log_error "Não foi possível obter a versão mais recente do Tilix" >&2
-    log_error "Verifique sua conexão com a internet e tente novamente" >&2
-    return 1
+    github_get_latest_version "gnunn1/tilix"
 }
 
 # Get installed Tilix version
@@ -338,7 +313,7 @@ uninstall_tilix() {
     log_output "${YELLOW}Deseja realmente desinstalar o Tilix $version? (s/N)${NC}"
     read -r response
 
-    if [[ ! "$response" =~ ^[sS]$ ]]; then
+    if [[ ! "$response" =~ ^[sSyY]$ ]]; then
         log_info "Desinstalação cancelada"
         return 1
     fi
@@ -355,7 +330,7 @@ uninstall_tilix() {
             log_output "${YELLOW}Deseja remover também os arquivos de configuração? (s/N)${NC}"
             read -r purge_response
 
-            if [[ "$purge_response" =~ ^[sS]$ ]]; then
+            if [[ "$purge_response" =~ ^[sSyY]$ ]]; then
                 log_debug "Executando: sudo apt-get purge -y tilix"
                 sudo apt-get purge -y tilix 2>&1 | while read -r line; do log_debug "apt: $line"; done
                 log_debug "Executando: sudo apt-get autoremove -y"
@@ -393,7 +368,7 @@ uninstall_tilix() {
     log_output "${YELLOW}Deseja remover as configurações de usuário do Tilix? (s/N)${NC}"
     read -r config_response
 
-    if [[ "$config_response" =~ ^[sS]$ ]]; then
+    if [[ "$config_response" =~ ^[sSyY]$ ]]; then
         rm -rf "$HOME/.config/tilix" 2> /dev/null || true
         rm -rf "$HOME/.local/share/tilix" 2> /dev/null || true
         dconf reset -f /com/gexperts/Tilix/ 2> /dev/null || true
