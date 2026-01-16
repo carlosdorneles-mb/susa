@@ -204,6 +204,97 @@ Commands:
   deploy-prod   Deploy produção com privilégios elevados [plugin] [sudo]
 ```
 
+### Categorias com Entrypoint (Feature Avançada)
+
+Assim como categorias built-in, categorias de plugins podem ter um `entrypoint` que permite aceitar parâmetros diretamente:
+
+**Estrutura:**
+
+```text
+meu-plugin/
+  demo/
+    category.json        # ← Com campo entrypoint
+    main.sh              # ← Script da categoria
+    hello/
+      command.json
+      main.sh
+    info/
+      command.json
+      main.sh
+```
+
+**demo/category.json:**
+
+```json
+{
+  "name": "Demo",
+  "description": "Comandos de demonstração",
+  "entrypoint": "main.sh"
+}
+```
+
+**demo/main.sh:**
+
+```bash
+#!/bin/bash
+set -euo pipefail
+IFS=$'\n\t'
+
+source "$LIB_DIR/logger.sh"
+source "$LIB_DIR/color.sh"
+
+# Exibida ao listar comandos da categoria
+show_complement_help() {
+    echo ""
+    log_output "${LIGHT_GREEN}Opções da categoria:${NC}"
+    log_output "  -h, --help       Mostra ajuda"
+    log_output "  --list           Lista comandos disponíveis"
+    log_output "  --about          Sobre o plugin"
+}
+
+list_demo_commands() {
+    local lock_file="$CLI_DIR/susa.lock"
+    jq -r '.commands[]? | select(.category == "demo") |
+           "\(.name)\t\(.description)"' "$lock_file"
+}
+
+main() {
+    case "${1:-}" in
+        --list) list_demo_commands; exit 0 ;;
+        --about) echo "Sobre o plugin..."; exit 0 ;;
+        *) log_error "Opção desconhecida: $1"; exit 1 ;;
+    esac
+}
+
+# IMPORTANTE: Permite controle de execução
+if [ "${SUSA_SKIP_MAIN:-}" != "1" ]; then
+    main "$@"
+fi
+```
+
+**Uso:**
+
+```bash
+# Lista comandos + mostra help complementar
+susa demo
+
+# Executa opção da categoria
+susa demo --list
+susa demo --about
+
+# Executa comando específico normalmente
+susa demo hello
+```
+
+**Quando usar:**
+
+- ✅ Operações em massa (--upgrade-all, --list-all)
+- ✅ Ações que afetam toda a categoria
+- ✅ Help complementar com informações extras
+- ❌ Comandos individuais (use comandos normais)
+
+> **📖 Referência completa:** Veja [Categorias com Parâmetros](../guides/subcategories.md#🎨-categorias-com-parâmetros-feature-avançada) para detalhes sobre implementação.
+
 ## 📝 Boas Práticas
 
 1. **plugin.json** - ⚠️ Obrigatório! Sempre inclua com `name` e `version`

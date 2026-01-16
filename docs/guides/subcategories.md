@@ -35,7 +35,7 @@ Tanto comandos quanto categorias usam arquivos de configuração, mas com campos
 | Tipo | Campos de configuração |
 | ---- | --------------------- |
 | **Comando** (command.json) | `name`, `description`, `entrypoint` (obrigatório), `sudo`, `os` |
-| **Categoria/Subcategoria** (category.json) | `name`, `description` (sem campo `entrypoint`) |
+| **Categoria/Subcategoria** (category.json) | `name`, `description`, `entrypoint` (opcional) |
 
 > **ℹ️ Para detalhes completos sobre campos de configuração, veja [Configuração de Comandos](adding-commands.md#3-configurar-o-comando).**
 
@@ -44,6 +44,7 @@ Tanto comandos quanto categorias usam arquivos de configuração, mas com campos
 - ✅ Mais intuitivo: "tem script = é executável"
 - ✅ Mais consistente: categorias usam category.json e comandos usam command.json
 - ✅ Mais lógico: comandos PRECISAM de script, subcategorias não
+- ✅ Categorias podem ter entrypoint para aceitar parâmetros
 
 ### Estrutura Exemplo
 
@@ -353,6 +354,182 @@ Commands:
   asdf           Instala ASDF Version Manager
   staging        Deploy para staging [plugin]
   production     Deploy produção (requer sudo) [plugin] [sudo]
+```
+
+## 🎨 Categorias com Parâmetros (Feature Avançada)
+
+### Visão Geral
+
+Categorias podem ter um `entrypoint` opcional que permite aceitar parâmetros diretamente, sem precisar criar comandos individuais. Isso é útil para operações em massa ou ações que afetam todos os comandos da categoria.
+
+### Como Funciona
+
+Quando uma categoria tem um `entrypoint`:
+
+1. **Sem parâmetros** (`susa setup`): Lista comandos normalmente + mostra help complementar
+2. **Com parâmetros** (`susa setup --upgrade`): Executa o script da categoria
+3. **Comandos específicos** (`susa setup docker`): Funciona normalmente
+
+### Configuração da Categoria
+
+**category.json com entrypoint:**
+
+```json
+{
+  "name": "Setup",
+  "description": "Instalação e atualização de softwares e ferramentas",
+  "entrypoint": "main.sh"
+}
+```
+
+### Script da Categoria (main.sh)
+
+O script deve implementar a função `show_complement_help()` para exibir ajuda adicional:
+
+```bash
+#!/bin/bash
+set -euo pipefail
+IFS=$'\n\t'
+
+# Source libraries
+source "$LIB_DIR/logger.sh"
+source "$LIB_DIR/color.sh"
+
+# Show complement help (exibida ao final da listagem de comandos)
+show_complement_help() {
+    echo ""
+    log_output "${LIGHT_GREEN}Opções da categoria:${NC}"
+    log_output "  -u, --upgrade    Atualiza todos os softwares instalados"
+    log_output "  --list           Lista todos os softwares instalados"
+}
+
+upgrade_all() {
+    # criar logica
+}
+
+list_installed() {
+    # criar logica
+}
+
+# Main function
+main() {
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -u|--upgrade)
+                upgrade_all
+                exit 0
+                ;;
+            --list)
+                list_installed
+                exit 0
+                ;;
+            *)
+                log_error "Opção desconhecida: $1"
+                echo ""
+                log_output "Use ${LIGHT_CYAN}susa setup --help${NC} para ver as opções"
+                exit 1
+                ;;
+        esac
+    done
+}
+
+# Execute main (controlado por SUSA_SKIP_MAIN)
+if [ "${SUSA_SKIP_MAIN:-}" != "1" ]; then
+    main "$@"
+fi
+```
+
+### Importante sobre `SUSA_SKIP_MAIN`
+
+A variável `SUSA_SKIP_MAIN` é usada pelo sistema para evitar execução do `main` quando apenas quer chamar `show_complement_help`:
+
+```bash
+# Sempre adicione esta condição no final do script
+if [ "${SUSA_SKIP_MAIN:-}" != "1" ]; then
+    main "$@"
+fi
+```
+
+Isso permite que o sistema:
+
+1. Execute o script normalmente quando o usuário passa parâmetros
+2. Apenas source o script e chame `show_complement_help()` ao listar comandos
+
+### Exemplo de Uso
+
+```bash
+# Lista comandos + mostra help complementar ao final
+$ susa setup
+Instalação e atualização de softwares e ferramentas
+
+Uso: susa <comando> setup
+
+Comandos:
+  docker          Instala Docker
+  poetry          Instala Poetry
+  uv              Instala UV
+
+Opções da categoria:
+  -u, --upgrade    Atualiza todos os softwares instalados
+  --list           Lista todos os softwares instalados
+
+# Executa ação em massa
+$ susa setup --upgrade
+[INFO] Atualizando softwares instalados...
+[INFO] Atualizando docker...
+[SUCCESS] Docker atualizado!
+...
+
+# Lista softwares instalados
+$ susa setup --list
+[INFO] Softwares instalados (categoria setup):
+  docker          v24.0.7
+  poetry          v1.7.1
+  uv              v0.1.9
+
+# Comando específico funciona normalmente
+$ susa setup docker
+[INFO] Instalando Docker...
+```
+
+### Quando Usar Entrypoints em Categorias
+
+**✅ Bons casos de uso:**
+
+- Operações em massa (atualizar todos, listar todos)
+- Ações que afetam múltiplos comandos da categoria
+- Parâmetros comuns que se aplicam a toda categoria
+- Help complementar com informações da categoria
+
+**❌ Evite usar para:**
+
+- Comandos individuais (use comandos normais)
+- Lógica complexa que deveria ser um comando próprio
+- Categorias que são apenas contêineres de navegação
+
+### Estrutura de Exemplo Completa
+
+```text
+commands/
+  setup/
+    category.json          # ← Com entrypoint
+    main.sh                # ← Script da categoria
+    docker/
+      command.json
+      main.sh
+    poetry/
+      command.json
+      main.sh
+```
+
+**category.json:**
+
+```json
+{
+  "name": "Setup",
+  "description": "Instalação e atualização de softwares",
+  "entrypoint": "main.sh"
+}
 ```
 
 ## ⚙️ Filtros de Sistema Operacional e Sudo

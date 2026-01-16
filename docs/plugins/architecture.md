@@ -341,6 +341,104 @@ susa self plugin add https://github.com/user/my-cli-plugin.git
 
 ⚠️ **Importante**: Plugins sem `plugin.json` válido serão rejeitados durante a instalação.
 
+## 🎨 Categorias com Entrypoint em Plugins
+
+Plugins suportam o mesmo sistema de categorias com entrypoint que comandos built-in.
+
+### Estrutura
+
+```text
+meu-plugin/
+├── plugin.json
+└── demo/
+    ├── category.json        # ← Com campo entrypoint
+    ├── main.sh              # ← Script da categoria
+    ├── hello/
+    │   ├── command.json
+    │   └── main.sh
+    └── info/
+        ├── command.json
+        └── main.sh
+```
+
+### Configuração
+
+**demo/category.json:**
+
+```json
+{
+  "name": "Demo",
+  "description": "Comandos de demonstração",
+  "entrypoint": "main.sh"
+}
+```
+
+**demo/main.sh:**
+
+```bash
+#!/bin/bash
+set -euo pipefail
+IFS=$'\n\t'
+
+source "$LIB_DIR/logger.sh"
+
+# Função chamada ao listar comandos da categoria
+show_complement_help() {
+    echo ""
+    log_output "Opções da categoria:"
+    log_output "  --list    Lista comandos"
+    log_output "  --about   Sobre o plugin"
+}
+
+main() {
+    case "${1:-}" in
+        --list)
+            # Listar comandos da categoria
+            jq -r '.commands[] | select(.category == "demo")' "$CLI_DIR/susa.lock"
+            ;;
+        --about)
+            echo "Informações do plugin..."
+            ;;
+        *)
+            log_error "Opção desconhecida: $1"
+            exit 1
+            ;;
+    esac
+}
+
+# IMPORTANTE: Controle de execução
+if [ "${SUSA_SKIP_MAIN:-}" != "1" ]; then
+    main "$@"
+fi
+```
+
+### Resolução de Paths
+
+O sistema resolve automaticamente o path do script da categoria:
+
+1. **Verifica no lock** se categoria tem `entrypoint`
+2. **Identifica se é plugin** verificando comandos da categoria
+3. **Obtém source do plugin** do campo `plugin.source` no lock
+4. **Constrói path correto:**
+   - Plugin instalado: `$CLI_DIR/plugins/<nome>/<categoria>/<entrypoint>`
+   - Plugin dev: `<source>/<categoria>/<entrypoint>`
+   - Considera `directory` do plugin.json se configurado
+
+### Variáveis Disponíveis
+
+O script da categoria tem acesso às mesmas variáveis que comandos:
+
+- `$CLI_DIR` - Diretório base do CLI
+- `$CORE_DIR` - Diretório do core
+- `$LIB_DIR` - Diretório das bibliotecas
+- `$SUSA_SKIP_MAIN` - Flag de controle (setada pelo sistema)
+
+### Comportamento
+
+- **Sem argumentos** (`susa demo`): Lista comandos + mostra `show_complement_help()`
+- **Com argumentos** (`susa demo --list`): Executa script da categoria
+- **Comando específico** (`susa demo hello`): Executa comando normalmente
+
 ## 🔍 Discovery de Comandos
 
 O sistema descobre comandos automaticamente:

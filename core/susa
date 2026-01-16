@@ -338,6 +338,26 @@ list_commands() {
             log_output "  ${GRAY}Nenhum comando ou subcategoria disponível${NC}"
         fi
     fi
+
+    # If category has entrypoint, execute show_complement_help if it exists
+    if category_has_entrypoint "$category"; then
+        local script_path=$(get_category_entrypoint_path "$category")
+        if [ -n "$script_path" ] && [ -f "$script_path" ]; then
+            # Check if show_complement_help function exists in the script
+            if grep -q "^show_complement_help()" "$script_path" 2> /dev/null; then
+                # Execute show_complement_help from the category script
+                # Use a special environment variable to prevent main from running
+                (
+                    export CORE_DIR LIB_DIR CLI_DIR
+                    export SUSA_SKIP_MAIN=1
+                    source "$script_path" 2> /dev/null || true
+                    if declare -F show_complement_help > /dev/null 2>&1; then
+                        show_complement_help
+                    fi
+                ) || true
+            fi
+        fi
+    fi
 }
 
 # Validate command exists and is compatible with current OS
@@ -498,7 +518,19 @@ main() {
             category="$category/$next_arg"
             remaining_args=("${remaining_args[@]:1}")
         else
-            # Not a subcategory, must be a command
+            # Not a subcategory, check if it's an option for the category script
+            if [[ "$next_arg" =~ ^- ]]; then
+                # It's an option (starts with -), check if category has a script
+                if category_has_entrypoint "$category"; then
+                    local script_path=$(get_category_entrypoint_path "$category")
+                    if [ -n "$script_path" ] && [ -f "$script_path" ]; then
+                        # Execute category script with all remaining arguments
+                        source "$script_path" "${remaining_args[@]}"
+                        exit $?
+                    fi
+                fi
+            fi
+            # Not a subcategory or option, must be a command
             break
         fi
     done

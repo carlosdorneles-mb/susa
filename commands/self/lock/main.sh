@@ -112,11 +112,33 @@ scan_category_dir() {
                 [ -n "$sudo" ] && echo "META|sudo|${sudo}"
                 [ -n "$group" ] && echo "META|group|${group}"
             else
-                # It's a subcategory - scan recursively
+                # It's a subcategory - check for category.json and register it
+                if [ -f "$item_dir/category.json" ]; then
+                    local subcat_desc=$(jq -r '.description // empty' "$item_dir/category.json" 2> /dev/null)
+                    local subcat_entrypoint=$(jq -r '.entrypoint // empty' "$item_dir/category.json" 2> /dev/null)
+
+                    if [ -n "$subcat_entrypoint" ] && [ "$subcat_entrypoint" != "" ]; then
+                        echo "CATEGORY|$category_path/$item_name|$subcat_desc|$source|$subcat_entrypoint"
+                    else
+                        echo "CATEGORY|$category_path/$item_name|$subcat_desc|$source"
+                    fi
+                fi
+                # Scan recursively
                 scan_category_dir "$base_dir" "$category_path/$item_name" "$source"
             fi
         else
-            # No command.json means it's a subcategory
+            # No command.json means it's a subcategory - check for category.json and register it
+            if [ -f "$item_dir/category.json" ]; then
+                local subcat_desc=$(jq -r '.description // empty' "$item_dir/category.json" 2> /dev/null)
+                local subcat_entrypoint=$(jq -r '.entrypoint // empty' "$item_dir/category.json" 2> /dev/null)
+
+                if [ -n "$subcat_entrypoint" ] && [ "$subcat_entrypoint" != "" ]; then
+                    echo "CATEGORY|$category_path/$item_name|$subcat_desc|$source|$subcat_entrypoint"
+                else
+                    echo "CATEGORY|$category_path/$item_name|$subcat_desc|$source"
+                fi
+            fi
+            # Scan recursively
             scan_category_dir "$base_dir" "$category_path/$item_name" "$source"
         fi
     done
@@ -144,7 +166,13 @@ scan_all_structure() {
             # Read category info
             if [ -f "$cat_dir/category.json" ]; then
                 local cat_desc=$(jq -r '.description // empty' "$cat_dir/category.json" 2> /dev/null)
-                echo "CATEGORY|$cat_name|$cat_desc|commands"
+                local cat_entrypoint=$(jq -r '.entrypoint // empty' "$cat_dir/category.json" 2> /dev/null)
+
+                if [ -n "$cat_entrypoint" ] && [ "$cat_entrypoint" != "" ]; then
+                    echo "CATEGORY|$cat_name|$cat_desc|commands|$cat_entrypoint"
+                else
+                    echo "CATEGORY|$cat_name|$cat_desc|commands"
+                fi
             else
                 echo "CATEGORY|$cat_name||commands"
             fi
@@ -191,7 +219,13 @@ scan_all_structure() {
                 # Read category info
                 if [ -f "$cat_dir/category.json" ]; then
                     local cat_desc=$(jq -r '.description // empty' "$cat_dir/category.json" 2> /dev/null)
-                    echo "CATEGORY|$cat_name|$cat_desc|$plugin_name"
+                    local cat_entrypoint=$(jq -r '.entrypoint // empty' "$cat_dir/category.json" 2> /dev/null)
+
+                    if [ -n "$cat_entrypoint" ] && [ "$cat_entrypoint" != "" ]; then
+                        echo "CATEGORY|$cat_name|$cat_desc|$plugin_name|$cat_entrypoint"
+                    else
+                        echo "CATEGORY|$cat_name|$cat_desc|$plugin_name"
+                    fi
                 else
                     echo "CATEGORY|$cat_name||$plugin_name"
                 fi
@@ -242,7 +276,13 @@ scan_all_structure() {
                 # Read category info
                 if [ -f "$cat_dir/category.json" ]; then
                     local cat_desc=$(jq -r '.description // empty' "$cat_dir/category.json" 2> /dev/null)
-                    echo "CATEGORY|$cat_name|$cat_desc|$plugin_name"
+                    local cat_entrypoint=$(jq -r '.entrypoint // empty' "$cat_dir/category.json" 2> /dev/null)
+
+                    if [ -n "$cat_entrypoint" ] && [ "$cat_entrypoint" != "" ]; then
+                        echo "CATEGORY|$cat_name|$cat_desc|$plugin_name|$cat_entrypoint"
+                    else
+                        echo "CATEGORY|$cat_name|$cat_desc|$plugin_name"
+                    fi
                 else
                     echo "CATEGORY|$cat_name||$plugin_name"
                 fi
@@ -309,18 +349,23 @@ generate_lock_file() {
             local cat_name="$field1"
             local cat_desc="$field2"
             local cat_source="$field3"
+            local cat_entrypoint="$field4"
+
+            # Build category JSON object
+            local cat_obj=$(jq -n --arg name "$cat_name" '{name: $name}')
+
+            # Add description if present
+            if [ -n "$cat_desc" ] && [ "$cat_desc" != "" ]; then
+                cat_obj=$(echo "$cat_obj" | jq --arg desc "$cat_desc" '. + {description: $desc}')
+            fi
+
+            # Add entrypoint if present
+            if [ -n "$cat_entrypoint" ] && [ "$cat_entrypoint" != "" ]; then
+                cat_obj=$(echo "$cat_obj" | jq --arg entry "$cat_entrypoint" '. + {entrypoint: $entry}')
+            fi
 
             # Add category to JSON
-            if [ -n "$cat_desc" ]; then
-                json_data=$(echo "$json_data" | jq \
-                    --arg name "$cat_name" \
-                    --arg desc "$cat_desc" \
-                    '.categories += [{name: $name, description: $desc}]')
-            else
-                json_data=$(echo "$json_data" | jq \
-                    --arg name "$cat_name" \
-                    '.categories += [{name: $name}]')
-            fi
+            json_data=$(echo "$json_data" | jq --argjson cat "$cat_obj" '.categories += [$cat]')
         fi
     done <<< "$scan_output"
 

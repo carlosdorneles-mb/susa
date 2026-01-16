@@ -11,6 +11,7 @@ IFS=$'\n\t'
 source "$LIB_DIR/internal/registry.sh"
 source "$LIB_DIR/internal/json.sh"
 source "$LIB_DIR/internal/cache.sh"
+source "$LIB_DIR/internal/plugin.sh"
 
 # ============================================================
 # Lock File Functions
@@ -195,6 +196,82 @@ get_category_subcategories() {
     fi
 
     # If lock file doesn't exist, return empty
+    return 1
+}
+
+# Check if a category has an entrypoint script
+category_has_entrypoint() {
+    local category="$1"
+
+    if ! has_valid_lock_file; then
+        return 1
+    fi
+
+    local entrypoint=$(jq -r ".categories[] | select(.name == \"$category\") | .entrypoint // empty" "$CLI_DIR/susa.lock" 2> /dev/null)
+
+    if [ -n "$entrypoint" ] && [ "$entrypoint" != "null" ]; then
+        return 0
+    fi
+
+    return 1
+}
+
+# Get the entrypoint path for a category
+get_category_entrypoint_path() {
+    local category="$1"
+
+    if ! category_has_entrypoint "$category"; then
+        return 1
+    fi
+
+    local lock_file="$CLI_DIR/susa.lock"
+    local entrypoint=$(jq -r ".categories[] | select(.name == \"$category\") | .entrypoint // empty" "$lock_file" 2> /dev/null)
+
+    if [ -z "$entrypoint" ] || [ "$entrypoint" = "null" ]; then
+        return 1
+    fi
+
+    # Check if category belongs to a plugin by looking at commands in that category
+    local plugin_name=$(jq -r ".commands[] | select(.category == \"$category\" or (.category | startswith(\"$category/\"))) | .plugin.name // empty" "$lock_file" 2> /dev/null | head -1)
+
+    if [ -n "$plugin_name" ] && [ "$plugin_name" != "null" ]; then
+        # Category is from a plugin
+        local plugin_source=$(jq -r ".commands[] | select(.category == \"$category\" or (.category | startswith(\"$category/\"))) | .plugin.source // empty" "$lock_file" 2> /dev/null | head -1)
+
+        # Determine plugin directory
+        local plugin_dir=""
+        if [ -n "$plugin_source" ] && [ "$plugin_source" != "null" ] && [ "$plugin_source" != "" ]; then
+            # Dev plugin or plugin with source path
+            plugin_dir="$plugin_source"
+        else
+            # Regular installed plugin
+            plugin_dir="$CLI_DIR/plugins/$plugin_name"
+        fi
+
+        # Check if plugin has a custom commands directory
+        local commands_subdir=$(get_plugin_directory "$plugin_dir")
+        local script_path=""
+
+        if [ -n "$commands_subdir" ] && [ "$commands_subdir" != "" ]; then
+            script_path="$plugin_dir/$commands_subdir/$category/$entrypoint"
+        else
+            script_path="$plugin_dir/$category/$entrypoint"
+        fi
+
+        if [ -f "$script_path" ]; then
+            echo "$script_path"
+            return 0
+        fi
+    else
+        # Category is from commands/
+        local script_path="$CLI_DIR/commands/$category/$entrypoint"
+
+        if [ -f "$script_path" ]; then
+            echo "$script_path"
+            return 0
+        fi
+    fi
+
     return 1
 }
 
