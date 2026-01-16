@@ -521,7 +521,7 @@ BRUNO_DESKTOP_FILE="/usr/share/applications/bruno.desktop"
 BRUNO_BIN_LINK="/usr/local/bin/bruno"
 ```
 
-Para customizar, edite [command.json](../../../../commands/setup/bruno/command.json) antes da instalação.
+Para customizar, edite o arquivo `command.json` no diretório `commands/setup/bruno/` antes da instalação.
 
 ## Conclusão
 

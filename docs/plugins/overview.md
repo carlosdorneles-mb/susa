@@ -293,7 +293,7 @@ susa demo hello
 - ✅ Help complementar com informações extras
 - ❌ Comandos individuais (use comandos normais)
 
-> **📖 Referência completa:** Veja [Categorias com Parâmetros](../guides/subcategories.md#🎨-categorias-com-parâmetros-feature-avançada) para detalhes sobre implementação.
+> **📖 Referência completa:** Veja [Categorias com Parâmetros](../guides/subcategories.md#categorias-com-parametros-feature-avancada) para detalhes sobre implementação.
 
 ## 📝 Boas Práticas
 

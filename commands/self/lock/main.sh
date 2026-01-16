@@ -301,11 +301,25 @@ generate_lock_file() {
     local temp_installations="/tmp/susa_installations_backup_$$"
 
     # Backup existing installations section if lock file exists
+    # Try to use cache first for better performance, fallback to direct file read
     if [ -f "$lock_file" ] && json_is_valid "$lock_file" 2> /dev/null; then
-        local has_installations=$(json_array_length "$lock_file" ".installations" 2> /dev/null)
-        if [ -n "$has_installations" ] && [ "$has_installations" != "0" ] && [ "$has_installations" != "" ]; then
-            log_debug "Fazendo backup da seção de instalações..."
+        log_debug "Fazendo backup da seção de instalações..."
+
+        # Try cache first if available
+        if cache_load 2> /dev/null && [ "$_SUSA_CACHE_LOADED" -eq 1 ]; then
+            local installations_json=$(cache_query '.installations' 2> /dev/null)
+            if [ -n "$installations_json" ] && [ "$installations_json" != "null" ] && [ "$installations_json" != "[]" ]; then
+                echo "$installations_json" > "$temp_installations"
+                log_debug "Instalações obtidas do cache"
+            else
+                # Fallback to direct file read if cache doesn't have installations
+                jq '.installations' "$lock_file" > "$temp_installations" 2> /dev/null
+                log_debug "Instalações obtidas do arquivo de lock"
+            fi
+        else
+            # Cache not available, read directly from file
             jq '.installations' "$lock_file" > "$temp_installations" 2> /dev/null
+            log_debug "Instalações obtidas do arquivo de lock (cache indisponível)"
         fi
     fi
 

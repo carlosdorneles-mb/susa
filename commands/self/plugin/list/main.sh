@@ -44,8 +44,8 @@ main() {
         return 0
     fi
 
-    # Read plugins from registry using jq
-    local plugin_count=$(jq '.plugins | length' "$REGISTRY_FILE" 2> /dev/null || echo 0)
+    # Read plugins from registry using registry functions
+    local plugin_count=$(registry_count_plugins "$REGISTRY_FILE")
     log_debug "Total de plugins no registry: $plugin_count"
 
     if [ "$plugin_count" -eq 0 ]; then
@@ -55,24 +55,30 @@ main() {
         return 0
     fi
 
-    # Iterate through plugins in registry
-    for ((i = 0; i < plugin_count; i++)); do
-        local plugin_name=$(jq -r ".plugins[$i].name // empty" "$REGISTRY_FILE" 2> /dev/null)
+    # Get all plugin names from registry
+    local plugin_names=$(registry_get_all_plugin_names "$REGISTRY_FILE")
 
-        local source_url=$(jq -r ".plugins[$i].source // empty" "$REGISTRY_FILE" 2> /dev/null)
-        local version=$(jq -r ".plugins[$i].version // empty" "$REGISTRY_FILE" 2> /dev/null)
-        local installedAt=$(jq -r ".plugins[$i].installedAt // empty" "$REGISTRY_FILE" 2> /dev/null)
-        local is_dev=$(jq -r ".plugins[$i].dev // empty" "$REGISTRY_FILE" 2> /dev/null)
-        local cmd_count=$(jq -r ".plugins[$i].commands // empty" "$REGISTRY_FILE" 2> /dev/null)
-        local categories=$(jq -r ".plugins[$i].categories // empty" "$REGISTRY_FILE" 2> /dev/null)
+    # Iterate through plugins
+    while IFS= read -r plugin_name; do
+        [ -z "$plugin_name" ] && continue
 
-        # Skip if plugin name is null
-        if [ "$plugin_name" = "null" ]; then
+        local source_url=$(registry_get_plugin_info "$REGISTRY_FILE" "$plugin_name" "source")
+        local version=$(registry_get_plugin_info "$REGISTRY_FILE" "$plugin_name" "version")
+        local installedAt=$(registry_get_plugin_info "$REGISTRY_FILE" "$plugin_name" "installedAt")
+        local is_dev="false"
+        if registry_is_dev_plugin "$REGISTRY_FILE" "$plugin_name"; then
+            is_dev="true"
+        fi
+        local cmd_count=$(registry_get_plugin_info "$REGISTRY_FILE" "$plugin_name" "commands")
+        local categories=$(registry_get_plugin_info "$REGISTRY_FILE" "$plugin_name" "categories")
+
+        # Skip if plugin name is empty
+        if [ -z "$plugin_name" ]; then
             continue
         fi
 
         # If commands not in registry, count from directory (fallback)
-        if [ "$cmd_count" = "null" ] || [ -z "$cmd_count" ]; then
+        if [ -z "$cmd_count" ]; then
             if [ -d "$PLUGINS_DIR/$plugin_name" ]; then
                 cmd_count=$(find "$PLUGINS_DIR/$plugin_name" -name "command.json" -type f | wc -l)
             else
@@ -81,7 +87,7 @@ main() {
         fi
 
         # If categories not in registry, get from directory (fallback)
-        if [ "$categories" = "null" ] || [ -z "$categories" ]; then
+        if [ -z "$categories" ]; then
             if [ -d "$PLUGINS_DIR/$plugin_name" ]; then
                 categories=$(get_plugin_categories "$PLUGINS_DIR/$plugin_name")
             elif [ "$is_dev" = "true" ] && [ -d "$source_url" ]; then
@@ -107,13 +113,13 @@ main() {
         fi
 
         [ -n "$description" ] && log_output "   ${GRAY}$description${NC}"
-        [ "$source_url" != "null" ] && log_output "   Origem: ${GRAY}$source_url${NC}"
-        [ "$version" != "null" ] && log_output "   Versão: ${GRAY}$version${NC}"
+        [ -n "$source_url" ] && log_output "   Origem: ${GRAY}$source_url${NC}"
+        [ -n "$version" ] && log_output "   Versão: ${GRAY}$version${NC}"
         log_output "   Comandos: ${GRAY}$cmd_count${NC}"
         [ -n "$categories" ] && log_output "   Categorias: ${GRAY}$categories${NC}"
-        [ "$installedAt" != "null" ] && log_output "   Instalado: ${GRAY}$installedAt${NC}"
+        [ -n "$installedAt" ] && log_output "   Instalado: ${GRAY}$installedAt${NC}"
         log_output ""
-    done
+    done <<< "$plugin_names"
 
     log_output "${GREEN}Total: $plugin_count plugin(s)${NC}"
 }

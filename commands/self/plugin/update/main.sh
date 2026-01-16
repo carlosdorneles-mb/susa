@@ -52,13 +52,11 @@ main() {
     fi
 
     # Check if plugin exists in registry (could be dev plugin)
-    local plugin_count=$(jq -r ".plugins[] | select(.name == \"$PLUGIN_NAME\") | .name // empty" "$REGISTRY_FILE" 2> /dev/null | wc -l)
-    if [ "$plugin_count" -gt 0 ]; then
-        local dev_flag=$(jq -r ".plugins[] | select(.name == \"$PLUGIN_NAME\") | .dev // false" "$REGISTRY_FILE" 2> /dev/null | head -1)
-        if [ "$dev_flag" = "true" ]; then
+    if registry_plugin_exists "$REGISTRY_FILE" "$PLUGIN_NAME"; then
+        if registry_is_dev_plugin "$REGISTRY_FILE" "$PLUGIN_NAME"; then
             log_info "Plugin ${BOLD}$PLUGIN_NAME${NC} está em modo desenvolvimento."
 
-            local source_path=$(jq -r ".plugins[] | select(.name == \"$PLUGIN_NAME\") | .source // empty" "$REGISTRY_FILE" 2> /dev/null | head -1)
+            local source_path=$(registry_get_plugin_info "$REGISTRY_FILE" "$PLUGIN_NAME" "source" | head -1)
             if [ -z "$source_path" ] || [ ! -d "$source_path" ]; then
                 log_error "Caminho do plugin dev não encontrado: $source_path"
                 exit 1
@@ -330,7 +328,7 @@ if [ -z "$PLUGIN_ARG" ]; then
 
     # Try to find plugin name from registry by matching current directory
     if [ -f "$REGISTRY_FILE" ]; then
-        DETECTED_PLUGIN=$(jq -r ".plugins[] | select(.dev == true and .source == \"$CURRENT_DIR\") | .name // empty" "$REGISTRY_FILE" 2> /dev/null | head -1)
+        DETECTED_PLUGIN=$(registry_get_plugin_by_source "$REGISTRY_FILE" "$CURRENT_DIR")
 
         if [ -n "$DETECTED_PLUGIN" ]; then
             log_debug "Plugin detectado no diretório atual: $DETECTED_PLUGIN"

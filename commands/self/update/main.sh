@@ -4,6 +4,7 @@ IFS=$'\n\t'
 
 # Source libraries
 source "$LIB_DIR/internal/args.sh"
+source "$LIB_DIR/github.sh"
 
 TEMP_DIR=$(mktemp -d)
 TEMP_VERSION_FILE="/tmp/susa_update_check_$$_${RANDOM}"
@@ -56,46 +57,19 @@ show_help() {
 
 # Function to get the current version
 get_current_version() {
-    local version=$(get_config_field "$GLOBAL_CONFIG_FILE" "version")
-    echo "$version"
+    get_config_field "$GLOBAL_CONFIG_FILE" "version"
 }
 
 # Function to get the latest version from the repository
 get_latest_version() {
-    local latest_version=""
-    local temp_file="/tmp/susa_update_$$_${RANDOM}"
+    # Extract repo from URL (remove https:// and .git)
+    local repo="${CLI_REPO_URL#https://github.com/}"
+    repo="${repo%.git}"
 
-    # Try to obtain via GitHub API
-    if curl -sSL --max-time 5 --connect-timeout 3 "$CLI_GITHUB_API_URL" -o "$temp_file" 2> /dev/null; then
-        if [[ -f "$temp_file" ]] && [[ -s "$temp_file" ]]; then
-            latest_version=$(grep '"tag_name":' "$temp_file" 2> /dev/null | head -1 | sed -E 's/.*"v?([^"]+)".*/\1/' || echo "")
-            if [[ -n "$latest_version" ]]; then
-                log_debug "Versão obtida via GitHub API: $latest_version" >&2
-                rm -f "$temp_file"
-                echo "$latest_version|api"
-                return 0
-            fi
-        fi
-    fi
-    rm -f "$temp_file"
+    log_debug "Obtendo última versão de $repo..."
 
-    # If it fails, try to get the version of cli.json from the remote repository
-    log_debug "GitHub API falhou, tentando via raw content..." >&2
-    if curl -sSL --max-time 5 --connect-timeout 3 "${CLI_GITHUB_RAW_URL}/${CLI_REPO_BRANCH}/core/cli.json" -o "$temp_file" 2> /dev/null; then
-        if [[ -f "$temp_file" ]] && [[ -s "$temp_file" ]]; then
-            latest_version=$(jq -r '.version // empty' "$temp_file" 2> /dev/null || echo "")
-            if [[ -n "$latest_version" ]]; then
-                log_debug "Versão obtida via raw content: $latest_version" >&2
-                rm -f "$temp_file"
-                echo "$latest_version|raw"
-                return 0
-            fi
-        fi
-    fi
-    rm -f "$temp_file"
-
-    log_debug "Falha ao obter versão remota por todos os métodos" >&2
-    return 1
+    # Use GitHub library function with fallback
+    github_get_latest_version_with_fallback "$repo" "$CLI_REPO_BRANCH" "core/cli.json" "version"
 }
 
 # Function to compare versions

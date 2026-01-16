@@ -33,6 +33,76 @@ github_get_latest_version() {
     echo "$version"
 }
 
+# Obtém versão de um arquivo JSON raw do GitHub
+# Args: owner/repo branch file_path json_field
+# Exemplo: github_get_version_from_raw "user/repo" "main" "core/cli.json" "version"
+# Retorna: valor do campo JSON
+github_get_version_from_raw() {
+    local repo="$1"
+    local branch="${2:-main}"
+    local file_path="$3"
+    local json_field="${4:-version}"
+    local raw_url="https://raw.githubusercontent.com/${repo}/${branch}/${file_path}"
+    local max_time="${GITHUB_API_MAX_TIME:-10}"
+    local connect_timeout="${GITHUB_API_CONNECT_TIMEOUT:-5}"
+
+    log_debug "Obtendo versão de $file_path (branch: $branch)..."
+
+    local temp_file="/tmp/github_raw_$$_${RANDOM}"
+
+    if curl -sSL \
+        --max-time "$max_time" \
+        --connect-timeout "$connect_timeout" \
+        "$raw_url" -o "$temp_file" 2> /dev/null; then
+
+        if [[ -f "$temp_file" ]] && [[ -s "$temp_file" ]]; then
+            local version=$(jq -r ".$json_field // empty" "$temp_file" 2> /dev/null)
+            rm -f "$temp_file"
+
+            if [[ -n "$version" ]]; then
+                log_debug "Versão obtida via raw content: $version"
+                echo "$version"
+                return 0
+            fi
+        fi
+    fi
+
+    rm -f "$temp_file"
+    log_debug "Falha ao obter versão do arquivo raw"
+    return 1
+}
+
+# Obtém a última versão com fallback (API -> raw content)
+# Args: owner/repo [branch] [file_path] [json_field]
+# Retorna: version|method (ex: "1.0.0|api" ou "1.0.0|raw")
+github_get_latest_version_with_fallback() {
+    local repo="$1"
+    local branch="${2:-main}"
+    local file_path="${3:-core/cli.json}"
+    local json_field="${4:-version}"
+
+    log_debug "Tentando obter última versão de $repo..."
+
+    # Try GitHub API first (for releases)
+    local version=$(github_get_latest_version "$repo" 2> /dev/null)
+    if [ -n "$version" ]; then
+        echo "$version|api"
+        return 0
+    fi
+
+    log_debug "API falhou, tentando via raw content..."
+
+    # Fallback to raw content
+    version=$(github_get_version_from_raw "$repo" "$branch" "$file_path" "$json_field")
+    if [ $? -eq 0 ] && [ -n "$version" ]; then
+        echo "$version|raw"
+        return 0
+    fi
+
+    log_debug "Todos os métodos falharam"
+    return 1
+}
+
 # Detecta sistema operacional e arquitetura para download
 # Retorna: os_name:arch no formato adequado para releases
 github_detect_os_arch() {

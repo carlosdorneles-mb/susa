@@ -8,11 +8,74 @@ IFS=$'\n\t'
 # Functions to track software installations in lock file
 
 source "$LIB_DIR/internal/json.sh"
+source "$LIB_DIR/internal/cache.sh"
 
 # Returns the absolute path to susa.lock file
 # Usage: lock_file=$(get_lock_file_path)
 get_lock_file_path() {
     echo "${CLI_DIR}/susa.lock"
+}
+
+# Internal helper: Query installation data from lock file
+# Args: software_name jq_selector
+# Returns: selected value or empty
+# Usage: _query_installation_field "docker" ".version"
+_query_installation_field() {
+    local software_name="$1"
+    local selector="$2"
+    local lock_file=$(get_lock_file_path)
+
+    if [ ! -f "$lock_file" ]; then
+        return 1
+    fi
+
+    jq -r ".installations[] | select(.name == \"$software_name\") | $selector // empty" "$lock_file" 2> /dev/null
+}
+
+# Gets list of installed software names from cache (performance optimized)
+# Returns: newline-separated list of software names marked as installed
+# Usage: installations=$(get_installed_from_cache)
+get_installed_from_cache() {
+    cache_query '.installations[]? | select(.installed == true) | .name'
+}
+
+# Checks if software is marked as installed (cache-optimized version)
+# Args: software_name
+# Returns: 0 if installed, 1 otherwise
+# Usage: if is_installed_cached "docker"; then ...
+is_installed_cached() {
+    local software_name="$1"
+
+    if [ -z "$software_name" ]; then
+        return 1
+    fi
+
+    # Use cache for fast lookup
+    local installed=$(cache_query ".installations[]? | select(.name == \"$software_name\") | .installed" 2> /dev/null)
+
+    [ "$installed" = "true" ] && return 0
+    return 1
+}
+
+# Gets version from cache (performance optimized)
+# Args: software_name
+# Returns: version string or empty
+# Usage: version=$(get_installed_version_cached "docker")
+get_installed_version_cached() {
+    local software_name="$1"
+
+    if [ -z "$software_name" ]; then
+        return 1
+    fi
+
+    local version=$(cache_query ".installations[]? | select(.name == \"$software_name\") | .version // empty" 2> /dev/null)
+
+    if [ -n "$version" ] && [ "$version" != "null" ]; then
+        echo "$version"
+        return 0
+    fi
+
+    return 1
 }
 
 # Internal: Marks software as installed in lock file with version and timestamp
@@ -143,18 +206,8 @@ is_installed() {
         return 1
     fi
 
-    local lock_file=$(get_lock_file_path)
-
-    if [ ! -f "$lock_file" ]; then
-        return 1
-    fi
-
-    local installed=$(jq -r ".installations[] | select(.name == \"$software_name\") | .installed" "$lock_file" 2> /dev/null)
-
-    if [ "$installed" = "true" ]; then
-        return 0
-    fi
-
+    local installed=$(_query_installation_field "$software_name" ".installed")
+    [ "$installed" = "true" ] && return 0
     return 1
 }
 
@@ -169,13 +222,7 @@ get_installed_version() {
         return 1
     fi
 
-    local lock_file=$(get_lock_file_path)
-
-    if [ ! -f "$lock_file" ]; then
-        return 1
-    fi
-
-    local version=$(jq -r ".installations[] | select(.name == \"$software_name\") | .version" "$lock_file" 2> /dev/null)
+    local version=$(_query_installation_field "$software_name" ".version")
 
     if [ -n "$version" ] && [ "$version" != "null" ]; then
         echo "$version"
@@ -238,6 +285,9 @@ list_installed() {
 
     # Sync installations (hide output)
     sync_installations > /dev/null 2>&1
+
+    # Refresh cache after sync to ensure data is up-to-date
+    cache_refresh 2> /dev/null || true
 
     # Get installed software and format output
     local installed=$(jq -r '.installations[] | select(.installed == true) | .name' "$lock_file" 2> /dev/null)

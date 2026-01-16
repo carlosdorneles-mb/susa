@@ -462,7 +462,7 @@ FLAMESHOT_HOMEBREW_FORMULA="flameshot"
 FLAMESHOT_GITHUB_REPO="flameshot-org/flameshot"
 ```
 
-Para customizar, edite [command.json](../../../../commands/setup/flameshot/command.json) antes da instalação.
+Para customizar, edite o arquivo `command.json` no diretório `commands/setup/flameshot/` antes da instalação.
 
 ## Links Úteis
 

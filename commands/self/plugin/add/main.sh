@@ -216,15 +216,8 @@ check_plugin_source_exists() {
     local plugin_source="$1"
     local registry_file="$PLUGINS_DIR/registry.json"
 
-    if [ ! -f "$registry_file" ]; then
-        return 1
-    fi
-
-    # Normalize paths for comparison
-    local normalized_source="$(cd "$(dirname "$plugin_source")" 2> /dev/null && pwd)/$(basename "$plugin_source")" || normalized_source="$plugin_source"
-
-    # Check if any plugin has this source
-    local existing_plugin=$(jq -r ".plugins[] | select(.source == \"$normalized_source\" or .source == \"$plugin_source\") | .name // empty" "$registry_file" 2> /dev/null | head -1)
+    # Use registry library function
+    local existing_plugin=$(registry_get_plugin_by_source "$registry_file" "$plugin_source")
 
     if [ -n "$existing_plugin" ]; then
         echo "$existing_plugin"
@@ -276,14 +269,10 @@ check_plugin_already_installed() {
     local in_registry=false
     local is_dev=false
 
-    if [ -f "$registry_file" ]; then
-        local plugin_count=$(jq -r ".plugins[] | select(.name == \"$plugin_name\") | .name // empty" "$registry_file" 2> /dev/null | wc -l)
-        if [ "$plugin_count" -gt 0 ]; then
-            in_registry=true
-            local dev_flag=$(jq -r ".plugins[] | select(.name == \"$plugin_name\") | .dev // false" "$registry_file" 2> /dev/null | head -1)
-            if [ "$dev_flag" = "true" ]; then
-                is_dev=true
-            fi
+    if registry_plugin_exists "$registry_file" "$plugin_name"; then
+        in_registry=true
+        if registry_is_dev_plugin "$registry_file" "$plugin_name"; then
+            is_dev=true
         fi
     fi
 
@@ -305,7 +294,7 @@ check_plugin_already_installed() {
 
     if [ "$is_dev" = true ]; then
         dev_mode="true"
-        source_path=$(jq -r ".plugins[] | select(.name == \"$plugin_name\") | .source // empty" "$registry_file" 2> /dev/null | head -1)
+        source_path=$(registry_get_plugin_info "$registry_file" "$plugin_name" "source" | head -1)
     fi
 
     # Show plugin information from registry
@@ -483,28 +472,28 @@ main() {
     # Check if plugin is already installed (before renaming/moving files)
     # Check registry first - if plugin exists there with different source, it's a conflict
     local registry_file="$PLUGINS_DIR/registry.json"
-    if [ -f "$registry_file" ]; then
-        local existing_in_registry=$(jq -r ".plugins[] | select(.name == \"$plugin_name\") | .name // empty" "$registry_file" 2> /dev/null | head -1)
-        if [ -n "$existing_in_registry" ]; then
-            log_warning "Plugin ${BOLD}$plugin_name${NC} já está instalado"
-            log_output ""
+    if registry_plugin_exists "$registry_file" "$plugin_name"; then
+        log_warning "Plugin ${BOLD}$plugin_name${NC} já está instalado"
+        log_output ""
 
-            local current_version=$(registry_get_plugin_info "$registry_file" "$plugin_name" "version" | head -1)
-            local install_date=$(registry_get_plugin_info "$registry_file" "$plugin_name" "installedAt" | head -1)
-            local source_path=$(registry_get_plugin_info "$registry_file" "$plugin_name" "source" | head -1)
-            local is_dev=$(jq -r ".plugins[] | select(.name == \"$plugin_name\") | .dev // false" "$registry_file" 2> /dev/null | head -1)
-
-            show_plugin_details "$plugin_name" "$current_version" "" "" "" "" "$source_path" "$install_date" "$is_dev"
-
-            log_output ""
-            log_output "${LIGHT_YELLOW}Opções disponíveis:${NC}"
-            log_output "  • Atualizar plugin:  ${LIGHT_CYAN}susa self plugin update $plugin_name${NC}"
-            log_output "  • Remover plugin:  ${LIGHT_CYAN}susa self plugin remove $plugin_name${NC}"
-            log_output "  • Listar plugins:   ${LIGHT_CYAN}susa self plugin list${NC}"
-
-            rm -rf "${PLUGINS_DIR:?}/${temp_plugin_name:?}"
-            exit 0
+        local current_version=$(registry_get_plugin_info "$registry_file" "$plugin_name" "version" | head -1)
+        local install_date=$(registry_get_plugin_info "$registry_file" "$plugin_name" "installedAt" | head -1)
+        local source_path=$(registry_get_plugin_info "$registry_file" "$plugin_name" "source" | head -1)
+        local is_dev="false"
+        if registry_is_dev_plugin "$registry_file" "$plugin_name"; then
+            is_dev="true"
         fi
+
+        show_plugin_details "$plugin_name" "$current_version" "" "" "" "" "$source_path" "$install_date" "$is_dev"
+
+        log_output ""
+        log_output "${LIGHT_YELLOW}Opções disponíveis:${NC}"
+        log_output "  • Atualizar plugin:  ${LIGHT_CYAN}susa self plugin update $plugin_name${NC}"
+        log_output "  • Remover plugin:  ${LIGHT_CYAN}susa self plugin remove $plugin_name${NC}"
+        log_output "  • Listar plugins:   ${LIGHT_CYAN}susa self plugin list${NC}"
+
+        rm -rf "${PLUGINS_DIR:?}/${temp_plugin_name:?}"
+        exit 0
     fi
 
     # If temp name differs from actual name, rename the directory

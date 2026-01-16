@@ -132,3 +132,75 @@ registry_get_plugin_info() {
     # Use jq to get the field value
     jq -r ".plugins[] | select(.name == \"$plugin_name\") | .$field // empty" "$registry_file" 2> /dev/null
 }
+
+# Checks if a plugin exists in registry by name
+# Returns: 0 if exists, 1 if not
+registry_plugin_exists() {
+    local registry_file="$1"
+    local plugin_name="$2"
+
+    if [ ! -f "$registry_file" ]; then
+        return 1
+    fi
+
+    local count=$(jq -r ".plugins[] | select(.name == \"$plugin_name\") | .name // empty" "$registry_file" 2> /dev/null | wc -l)
+    [ "$count" -gt 0 ] && return 0
+    return 1
+}
+
+# Finds a plugin by source path (useful for dev plugins)
+# Returns: plugin name if found, empty if not found
+registry_get_plugin_by_source() {
+    local registry_file="$1"
+    local source_path="$2"
+
+    if [ ! -f "$registry_file" ]; then
+        return 1
+    fi
+
+    # Normalize paths for comparison
+    local normalized_source="$(cd "$(dirname "$source_path")" 2> /dev/null && pwd)/$(basename "$source_path")" || normalized_source="$source_path"
+
+    # Find plugin with matching source
+    jq -r ".plugins[] | select(.source == \"$normalized_source\" or .source == \"$source_path\") | .name // empty" "$registry_file" 2> /dev/null | head -1
+}
+
+# Checks if a plugin is in dev mode
+# Returns: 0 if dev mode, 1 if not
+registry_is_dev_plugin() {
+    local registry_file="$1"
+    local plugin_name="$2"
+
+    if [ ! -f "$registry_file" ]; then
+        return 1
+    fi
+
+    local dev_flag=$(jq -r ".plugins[] | select(.name == \"$plugin_name\") | .dev // false" "$registry_file" 2> /dev/null | head -1)
+    [ "$dev_flag" = "true" ] && return 0
+    return 1
+}
+
+# Counts total number of plugins in registry
+# Returns: number of plugins
+registry_count_plugins() {
+    local registry_file="$1"
+
+    if [ ! -f "$registry_file" ]; then
+        echo "0"
+        return 0
+    fi
+
+    jq '.plugins | length' "$registry_file" 2> /dev/null || echo "0"
+}
+
+# Gets all plugin names from registry
+# Returns: newline-separated list of plugin names
+registry_get_all_plugin_names() {
+    local registry_file="$1"
+
+    if [ ! -f "$registry_file" ]; then
+        return 0
+    fi
+
+    jq -r '.plugins[].name // empty' "$registry_file" 2> /dev/null
+}

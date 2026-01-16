@@ -3,6 +3,7 @@ set -euo pipefail
 IFS=$'\n\t'
 
 source "$LIB_DIR/internal/installations.sh"
+source "$LIB_DIR/internal/cache.sh"
 source "$LIB_DIR/sudo.sh"
 
 # Show complement help for the category
@@ -86,8 +87,9 @@ upgrade_all() {
         fi
     fi
 
-    local lock_file="$CLI_DIR/susa.lock"
-    local installations=$(jq -r '.installations[]? | select(.installed == true) | .name' "$lock_file" 2> /dev/null || echo "")
+    # Load cache and get installed software from cache
+    cache_load
+    local installations=$(get_installed_from_cache)
 
     if [ -z "$installations" ]; then
         echo ""

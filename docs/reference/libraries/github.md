@@ -350,7 +350,7 @@ github_install_release \
 
 ## Exemplos de Uso
 
-Veja [github-examples.md](github-examples.md) para exemplos práticos detalhados.
+Consulte os exemplos de código acima para casos práticos detalhados.
 
 ## Tratamento de Erros
 
