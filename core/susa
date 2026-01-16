@@ -113,6 +113,10 @@ show_help() {
     log_output "${LIGHT_GREEN}Comandos:${NC}"
 
     for cat in $categories; do
+        # Skip subcategories (those containing /)
+        if [[ "$cat" == *"/"* ]]; then
+            continue
+        fi
         local cat_desc=$(get_category_info "$GLOBAL_CONFIG_FILE" "$cat" "description")
         printf "  ${LIGHT_CYAN}%-15s${NC} %s\n" "$cat" "$cat_desc"
     done
