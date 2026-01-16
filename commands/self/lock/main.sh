@@ -308,18 +308,16 @@ generate_lock_file() {
             local cat_desc="$field2"
             local cat_source="$field3"
 
-            # Add category to JSON - build inline to avoid parsing issues
+            # Add category to JSON
             if [ -n "$cat_desc" ]; then
                 json_data=$(echo "$json_data" | jq \
                     --arg name "$cat_name" \
-                    --arg source "$cat_source" \
                     --arg desc "$cat_desc" \
-                    '.categories += [{name: $name, description: $desc, source: $source}]')
+                    '.categories += [{name: $name, description: $desc}]')
             else
                 json_data=$(echo "$json_data" | jq \
                     --arg name "$cat_name" \
-                    --arg source "$cat_source" \
-                    '.categories += [{name: $name, source: $source}]')
+                    '.categories += [{name: $name}]')
             fi
         fi
     done <<< "$scan_output"
