@@ -10,6 +10,6 @@
   ],
   "envs": {
     "ASDF_INSTALL_DIR": "$HOME/.asdf",
-    "ASDF_LOCAL_BIN_DIR": "$HOME/.local/bin"
+    "LOCAL_BIN_DIR": "$HOME/.local/bin"
   }
 }

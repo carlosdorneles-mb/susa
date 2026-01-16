@@ -45,21 +45,29 @@ show_help() {
     log_output "  • Geração de dados mock"
 }
 
+# Get latest version (not implemented)
+get_latest_version() {
+    github_get_latest_version "$DBEAVER_GITHUB_REPO"
+}
+
 # Get installed DBeaver version
-get_dbeaver_version() {
+get_current_version() {
     # Check version file first (for GitHub releases)
     if [ -f "$DBEAVER_INSTALL_DIR/version.txt" ]; then
         cat "$DBEAVER_INSTALL_DIR/version.txt"
-    elif command -v dbeaver &> /dev/null; then
+    elif check_installation; then
         local version=$(dbeaver -version 2>&1 | grep -i "Version" | awk '{print $2}' || echo "desconhecida")
         if [ "$version" != "desconhecida" ] && [ -n "$version" ]; then
             echo "$version"
-        else
-            echo "instalada"
         fi
     else
         echo "desconhecida"
     fi
+}
+
+# Check if DBeaver is installed
+check_installation() {
+    command -v dbeaver &> /dev/null || ([ "$(uname)" = "Linux" ] && dpkg -l 2> /dev/null | grep -q dbeaver)
 }
 
 # Detect Linux distribution
@@ -70,25 +78,6 @@ detect_distro() {
     else
         echo "unknown"
     fi
-}
-
-# Check if DBeaver is already installed
-check_existing_installation() {
-    if ! command -v dbeaver &> /dev/null; then
-        log_debug "DBeaver não está instalado"
-        return 0
-    fi
-
-    local current_version=$(get_dbeaver_version)
-    log_info "DBeaver $current_version já está instalado."
-
-    # Mark as installed in lock file
-    mark_installed "dbeaver" "$current_version"
-
-    log_output ""
-    log_output "${YELLOW}Para atualizar, execute:${NC} ${LIGHT_CYAN}susa setup dbeaver --upgrade${NC}"
-
-    return 1
 }
 
 # Install DBeaver on macOS using Homebrew
@@ -330,6 +319,11 @@ install_dbeaver_arch() {
 
 # Main installation function
 install_dbeaver() {
+    if check_installation; then
+        log_info "DBeaver $(get_current_version) já está instalado."
+        exit 0
+    fi
+
     local os_type=$(get_simple_os)
 
     if [ "$os_type" = "mac" ]; then
@@ -360,20 +354,20 @@ install_dbeaver() {
     fi
 
     # Mark as installed
-    local version=$(get_dbeaver_version)
-    mark_installed "dbeaver" "$version"
+    local version=$(get_current_version)
+    register_or_update_software_in_lock "dbeaver" "$version"
 }
 
 # Update DBeaver
 update_dbeaver() {
     log_info "Atualizando DBeaver..."
 
-    if ! command -v dbeaver &> /dev/null; then
+    if ! check_installation; then
         log_warning "DBeaver não está instalado. Execute sem --upgrade para instalar."
         return 1
     fi
 
-    local current_version=$(get_dbeaver_version)
+    local current_version=$(get_current_version)
     log_info "Versão atual: $current_version"
 
     local os_type=$(get_simple_os)
@@ -407,18 +401,18 @@ update_dbeaver() {
         esac
     fi
 
-    local new_version=$(get_dbeaver_version)
+    local new_version=$(get_current_version)
     log_success "DBeaver atualizado para versão $new_version"
 
     # Update lock file
-    mark_installed "dbeaver" "$new_version"
+    register_or_update_software_in_lock "dbeaver" "$new_version"
 }
 
 # Uninstall DBeaver
 uninstall_dbeaver() {
     log_info "Desinstalando DBeaver..."
 
-    if ! command -v dbeaver &> /dev/null; then
+    if ! check_installation; then
         log_warning "DBeaver não está instalado"
         return 0
     fi
@@ -456,7 +450,7 @@ uninstall_dbeaver() {
     log_success "DBeaver desinstalado com sucesso!"
 
     # Remove from lock file
-    mark_uninstalled "dbeaver"
+    remove_software_in_lock "dbeaver"
 }
 
 # Main execution
@@ -471,17 +465,34 @@ main() {
                 show_help
                 exit 0
                 ;;
+            -v | --verbose)
+                log_debug "Modo verbose ativado"
+                export DEBUG=true
+                ;;
+            -q | --quiet)
+                export SILENT=true
+                ;;
+            --info)
+                show_software_info
+                exit 0
+                ;;
+            --get-current-version)
+                get_current_version
+                exit 0
+                ;;
+            --get-latest-version)
+                get_latest_version
+                exit 0
+                ;;
+            --check-installation)
+                check_installation
+                exit $?
+                ;;
             -u | --upgrade)
                 should_update=true
                 ;;
             --uninstall)
                 should_uninstall=true
-                ;;
-            -v | --verbose)
-                # Verbose already handled by CLI framework
-                ;;
-            -q | --quiet)
-                # Quiet already handled by CLI framework
                 ;;
             *)
                 log_error "Opção desconhecida: $arg"
@@ -497,10 +508,7 @@ main() {
     elif [ "$should_update" = true ]; then
         update_dbeaver
     else
-        # Check if already installed before attempting installation
-        if check_existing_installation; then
-            install_dbeaver
-        fi
+        install_dbeaver
     fi
 }
 

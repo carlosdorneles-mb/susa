@@ -19,6 +19,7 @@ show_help() {
     log_output ""
     log_output "${LIGHT_GREEN}Opções:${NC}"
     log_output "  -h, --help        Mostra esta mensagem de ajuda"
+    log_output "  --info            Mostra informações sobre a instalação do ASDF"
     log_output "  --uninstall       Desinstala o ASDF do sistema"
     log_output "  -u, --upgrade     Atualiza o ASDF para a versão mais recente"
     log_output "  -v, --verbose     Habilita saída detalhada para depuração"
@@ -40,26 +41,26 @@ show_help() {
     log_output "  asdf global nodejs latest"
 }
 
-get_latest_asdf_version() {
+get_latest_version() {
     github_get_latest_version "asdf-vm/asdf"
 }
 
 # Get installed ASDF version
-get_asdf_version() {
+get_current_version() {
     local asdf_dir="${1:-$ASDF_INSTALL_DIR}"
 
     if [ -f "$asdf_dir/bin/asdf" ]; then
         "$asdf_dir/bin/asdf" --version 2> /dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' || echo "desconhecida"
-    elif command -v asdf &> /dev/null; then
+    elif check_installation; then
         asdf --version 2> /dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' || echo "desconhecida"
     else
         echo "desconhecida"
     fi
 }
 
-# Get local bin directory path
-get_local_bin_dir() {
-    echo "$ASDF_LOCAL_BIN_DIR"
+# Check if ASDF is installed
+check_installation() {
+    command -v asdf &> /dev/null
 }
 
 # Detect operating system and architecture
@@ -77,36 +78,6 @@ detect_os_and_arch() {
     echo "${os_name}:${arch}"
 }
 
-# Check if ASDF is already installed and ask about update
-check_existing_installation() {
-    local asdf_dir="$ASDF_INSTALL_DIR"
-
-    if [ ! -d "$asdf_dir" ] || [ ! -f "$asdf_dir/bin/asdf" ]; then
-        log_debug "ASDF não está instalado"
-        return 0
-    fi
-
-    local current_version=$(get_asdf_version "$asdf_dir")
-    log_info "ASDF $current_version já está instalado."
-
-    # Mark as installed in lock file
-    mark_installed "asdf" "$current_version"
-
-    # Check for updates
-    local latest_version=$(get_latest_asdf_version)
-    if [ $? -eq 0 ] && [ -n "$latest_version" ]; then
-        if [ "$current_version" != "$latest_version" ]; then
-            log_output ""
-            log_output "${YELLOW}Nova versão disponível ($latest_version).${NC}"
-            log_output "Para atualizar, execute: ${LIGHT_CYAN}susa setup asdf --upgrade${NC}"
-        fi
-    else
-        log_warning "Não foi possível verificar atualizações"
-    fi
-
-    return 1
-}
-
 # Check if ASDF is already configured in shell
 is_asdf_configured() {
     local shell_config="$1"
@@ -120,7 +91,7 @@ add_asdf_to_shell() {
 
     echo "" >> "$shell_config"
     echo "# ASDF Version Manager" >> "$shell_config"
-    echo "export PATH=\"$(get_local_bin_dir):\$PATH\"" >> "$shell_config"
+    echo "export PATH=\"$LOCAL_BIN_DIR:\$PATH\"" >> "$shell_config"
     echo "export ASDF_DATA_DIR=\"$asdf_dir\"" >> "$shell_config"
     echo "export PATH=\"\$ASDF_DATA_DIR/bin:\$ASDF_DATA_DIR/shims:\$PATH\"" >> "$shell_config"
 }
@@ -202,7 +173,7 @@ extract_and_setup_binary() {
 setup_asdf_environment() {
     local asdf_dir="$1"
 
-    export PATH="$(get_local_bin_dir):$PATH"
+    export PATH="$LOCAL_BIN_DIR:$PATH"
     export ASDF_DATA_DIR="$asdf_dir"
     export PATH="$ASDF_DATA_DIR/bin:$ASDF_DATA_DIR/shims:$PATH"
 
@@ -213,7 +184,7 @@ setup_asdf_environment() {
 install_asdf_release() {
     local asdf_dir="$ASDF_INSTALL_DIR"
 
-    local asdf_version=$(get_latest_asdf_version)
+    local asdf_version=$(get_latest_version)
     if [ $? -ne 0 ] || [ -z "$asdf_version" ]; then
         return 1
     fi
@@ -260,30 +231,21 @@ install_asdf_release() {
 }
 
 install_asdf() {
-    local asdf_dir="$ASDF_INSTALL_DIR"
-
-    if ! check_existing_installation; then
+    if check_installation; then
+        log_info "ASDF $(get_current_version) já está instalado."
         exit 0
     fi
-
-    log_info "Iniciando instalação do ASDF..."
 
     install_asdf_release
 
     # Verify installation
-    local shell_config=$(detect_shell_config)
-
-    if command -v asdf &> /dev/null; then
-        local version=$(get_asdf_version)
+    if check_installation; then
+        local version=$(get_current_version)
         log_success "ASDF instalado com sucesso!"
-        mark_installed "asdf" "$version"
-        log_output ""
-        log_output "Próximos passos:"
-        log_output "  1. Reinicie o terminal ou execute: ${LIGHT_CYAN}source $shell_config${NC}"
-        log_output "  2. Liste plugins disponíveis: ${LIGHT_CYAN}asdf plugin list all${NC}"
-        log_output "  3. Use ${LIGHT_CYAN}susa setup asdf --help${NC} para mais informações"
+        register_or_update_software_in_lock "asdf" "$version"
     else
         log_error "ASDF foi instalado mas não está disponível no PATH"
+        local shell_config=$(detect_shell_config)
         log_info "Tente reiniciar o terminal ou executar: source $shell_config"
         return 1
     fi
@@ -292,19 +254,16 @@ install_asdf() {
 update_asdf() {
     local asdf_dir="$ASDF_INSTALL_DIR"
 
-    log_info "Atualizando ASDF..."
-
     # Check if ASDF is installed
     if [ ! -d "$asdf_dir" ] || [ ! -f "$asdf_dir/bin/asdf" ]; then
         log_error "ASDF não está instalado. Use 'susa setup asdf' para instalar."
         return 1
     fi
 
-    local current_version=$(get_asdf_version "$asdf_dir")
-    log_info "Versão atual: $current_version"
+    local current_version=$(get_current_version "$asdf_dir")
 
     # Get latest version
-    local asdf_version=$(get_latest_asdf_version)
+    local asdf_version=$(get_latest_version)
     if [ $? -ne 0 ] || [ -z "$asdf_version" ]; then
         return 1
     fi
@@ -314,7 +273,7 @@ update_asdf() {
         return 0
     fi
 
-    log_info "Atualizando de $current_version para $asdf_version..."
+    log_info "Atualizando ASDF de $current_version para $asdf_version..."
 
     # Detect OS and architecture
     local os_arch=$(detect_os_and_arch)
@@ -328,17 +287,14 @@ update_asdf() {
     mkdir -p "$backup_dir"
 
     if [ -d "$asdf_dir/plugins" ]; then
-        log_debug "Fazendo backup dos plugins..."
         cp -r "$asdf_dir/plugins" "$backup_dir/" 2> /dev/null || true
     fi
 
     if [ -f "$HOME/.tool-versions" ]; then
-        log_debug "Fazendo backup de .tool-versions..."
         cp "$HOME/.tool-versions" "$backup_dir/" 2> /dev/null || true
     fi
 
     # Remove old installation (plugins e versões de ferramentas serão preservados)
-    log_info "Removendo versão anterior (plugins e versões de ferramentas serão preservados)..."
     rm -rf "$asdf_dir"
 
     # Build release URLs
@@ -379,12 +335,10 @@ update_asdf() {
 
     # Restore plugins
     if [ -d "$backup_dir/plugins" ]; then
-        log_debug "Restaurando plugins..."
         cp -r "$backup_dir/plugins" "$asdf_dir/" 2> /dev/null || true
     fi
 
     if [ -f "$backup_dir/.tool-versions" ]; then
-        log_debug "Restaurando .tool-versions..."
         cp "$backup_dir/.tool-versions" "$HOME/" 2> /dev/null || true
     fi
 
@@ -395,12 +349,10 @@ update_asdf() {
     setup_asdf_environment "$asdf_dir"
 
     # Verify update
-    if command -v asdf &> /dev/null; then
-        local new_version=$(get_asdf_version)
-        log_success "ASDF atualizado com sucesso para versão $new_version!"
-        update_version "asdf" "$new_version"
-        log_output ""
-        log_output "Plugins e versões de ferramentas foram preservados."
+    if check_installation; then
+        local new_version=$(get_current_version)
+        log_success "ASDF atualizado para versão $new_version!"
+        register_or_update_software_in_lock "asdf" "$new_version"
     else
         log_error "Falha na atualização do ASDF"
         return 1
@@ -411,13 +363,13 @@ uninstall_asdf() {
     local asdf_dir="$ASDF_INSTALL_DIR"
     local shell_config=$(detect_shell_config)
 
-    log_info "Desinstalando ASDF..."
-
     # Remove ASDF directory
     if [ -d "$asdf_dir" ]; then
+        log_info "Desinstalando ASDF..."
         rm -rf "$asdf_dir"
     else
-        log_debug "ASDF não está instalado em $asdf_dir"
+        log_warning "ASDF não está instalado"
+        return 0
     fi
 
     # Remove shell configurations
@@ -433,16 +385,10 @@ uninstall_asdf() {
         sed -i.tmp '/asdf\.sh/d' "$shell_config"
         sed -i.tmp '/asdf\.bash/d' "$shell_config"
         rm -f "${shell_config}.tmp"
-
-        log_debug "Configurações removidas (backup: $backup_file)"
-    else
-        log_debug "Nenhuma configuração encontrada em $shell_config"
     fi
 
     log_success "ASDF desinstalado com sucesso!"
-    mark_uninstalled "asdf"
-    log_output ""
-    log_info "Reinicie o terminal ou execute: source $shell_config"
+    remove_software_in_lock "asdf"
 }
 
 # Main function
@@ -457,18 +403,35 @@ main() {
                 exit 0
                 ;;
             -v | --verbose)
-                export DEBUG=1
+                log_debug "Modo verbose ativado"
+                export DEBUG=true
                 shift
                 ;;
             -q | --quiet)
-                export SILENT=1
+                export SILENT=true
                 shift
+                ;;
+            --info)
+                show_software_info
+                exit 0
+                ;;
+            --get-current-version)
+                get_current_version
+                exit 0
+                ;;
+            --get-latest-version)
+                get_latest_version
+                exit 0
+                ;;
+            --check-installation)
+                check_installation
+                exit $?
                 ;;
             --uninstall)
                 action="uninstall"
                 shift
                 ;;
-            --update)
+            -u | --upgrade)
                 action="update"
                 shift
                 ;;

@@ -190,7 +190,7 @@ O arquivo `susa.lock` é um arquivo JSON com a seguinte estrutura:
 ```json
 {
   "version": "1.0.0",
-  "generated_at": "2026-01-13T17:13:49Z",
+  "generatedAt": "2026-01-13T17:13:49Z",
   "categories": [
     {
       "name": "self",
@@ -236,8 +236,8 @@ A seção `installations` rastreia automaticamente o software instalado via coma
 - **`name`**: Nome do software (corresponde ao comando setup)
 - **`installed`**: Booleano indicando se está instalado
 - **`version`**: Versão instalada (detectada automaticamente)
-- **`installed_at`**: Timestamp ISO 8601 da instalação
-- **`updated_at`**: Timestamp da última atualização (quando aplicável)
+- **`installedAt`**: Timestamp ISO 8601 da instalação
+- **`updatedAt`**: Timestamp da última atualização (quando aplicável)
 
 Esta seção é gerenciada automaticamente:
 

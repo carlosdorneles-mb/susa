@@ -218,7 +218,7 @@ esac
 # Registrar instalação
 if command -v software &>/dev/null; then
     version=$(software --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
-    mark_installed "software" "$version"
+    _mark_installed_software_in_lock "software" "$version"
     log_success "Concluído!"
 fi
 ```

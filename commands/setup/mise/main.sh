@@ -43,58 +43,27 @@ show_help() {
 }
 
 # Get latest Mise version from GitHub
-get_latest_mise_version() {
+get_latest_version() {
     github_get_latest_version "jdx/mise"
 }
 
 # Get installed Mise version
-get_mise_version() {
-    if command -v mise &> /dev/null; then
+get_current_version() {
+    if check_installation; then
         mise --version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida"
     else
         echo "desconhecida"
     fi
 }
 
-# Get local bin directory path
-get_local_bin_dir() {
-    echo "$MISE_LOCAL_BIN_DIR"
+# Check if Mise is installed
+check_installation() {
+    command -v mise &> /dev/null
 }
 
 # Detect operating system and architecture
 detect_os_and_arch() {
     github_detect_os_arch "standard"
-}
-
-# Check if Mise is already installed
-check_existing_installation() {
-
-    if ! command -v mise &> /dev/null; then
-        log_debug "Mise não está instalado"
-        return 0
-    fi
-
-    local current_version=$(get_mise_version)
-    log_info "Mise $current_version já está instalado."
-
-    # Mark as installed in lock file
-    mark_installed "mise" "$current_version"
-
-    # Check for updates
-    local latest_version=$(get_latest_mise_version)
-    if [ $? -eq 0 ] && [ -n "$latest_version" ]; then
-        # Remove 'v' prefix if present
-        local latest_clean="${latest_version#v}"
-        if [ "$current_version" != "$latest_clean" ]; then
-            echo ""
-            log_output "${YELLOW}Nova versão disponível ($latest_clean).${NC}"
-            log_output "Para atualizar, execute: ${LIGHT_CYAN}susa setup mise --upgrade${NC}"
-        fi
-    else
-        log_warning "Não foi possível verificar atualizações"
-    fi
-
-    return 1
 }
 
 # Check if Mise is already configured in shell
@@ -114,7 +83,7 @@ add_mise_to_shell() {
 
     echo "" >> "$shell_config"
     echo "# Mise (polyglot version manager)" >> "$shell_config"
-    echo "export PATH=\"$(get_local_bin_dir):\$PATH\"" >> "$shell_config"
+    echo "export PATH=\"$LOCAL_BIN_DIR:\$PATH\"" >> "$shell_config"
     echo "eval \"\$(mise activate $shell_type)\"" >> "$shell_config"
 }
 
@@ -142,7 +111,8 @@ download_and_verify_mise() {
     local output_file="/tmp/mise-${version}.tar.gz"
 
     # Build download URL using github library pattern
-    local download_url=$(github_build_download_url "jdx/mise" "$version" "$os_name" "$arch" "mise-{version}-{os}-{arch}.tar.gz")
+    # Note: mise uses version with 'v' prefix in filenames (e.g., mise-v2026.1.2-linux-x64.tar.gz)
+    local download_url=$(github_build_download_url "jdx/mise" "$version" "$os_name" "$arch" "mise-v{version}-{os}-{arch}.tar.gz")
 
     log_info "Baixando e verificando Mise..." >&2
     log_debug "URL: $download_url" >&2
@@ -191,7 +161,7 @@ extract_and_setup_binary() {
 
     log_debug "Binário encontrado: $mise_binary"
 
-    local mise_bin="$(get_local_bin_dir)/mise"
+    local mise_bin="$LOCAL_BIN_DIR/mise"
     mv "$mise_binary" "$mise_bin"
     chmod +x "$mise_bin"
     rm -rf "$temp_dir"
@@ -211,10 +181,10 @@ setup_mise_environment() {
 
 # Main installation function
 install_mise_release() {
-    local bin_dir=$(get_local_bin_dir)
+    local bin_dir="$LOCAL_BIN_DIR"
     local mise_bin="$bin_dir/mise"
 
-    local mise_version=$(get_latest_mise_version)
+    local mise_version=$(get_latest_version)
     if [ $? -ne 0 ] || [ -z "$mise_version" ]; then
         return 1
     fi
@@ -230,7 +200,10 @@ install_mise_release() {
 
     # Download and verify release
     local tar_file=$(download_and_verify_mise "$mise_version" "$os_name" "$arch")
-    [ $? -ne 0 ] && return 1
+    if [ $? -ne 0 ] || [ -z "$tar_file" ]; then
+        log_error "Não foi possível baixar o Mise. Tente novamente mais tarde."
+        return 1
+    fi
 
     # Extract and setup binary
     extract_and_setup_binary "$tar_file" "$bin_dir"
@@ -244,21 +217,21 @@ install_mise_release() {
 }
 
 install_mise() {
-    log_info "Iniciando instalação do Mise..."
-
-    if ! check_existing_installation; then
+    if check_installation; then
+        log_info "Mise $(get_current_version) já está instalado."
         exit 0
     fi
 
+    log_info "Iniciando instalação do Mise..."
     install_mise_release
 
     # Verify installation
     local shell_config=$(detect_shell_config)
 
-    if command -v mise &> /dev/null; then
-        local version=$(get_mise_version)
+    if check_installation; then
+        local version=$(get_current_version)
         log_success "Mise $version instalado com sucesso!"
-        mark_installed "mise" "$version"
+        register_or_update_software_in_lock "mise" "$version"
         echo ""
         echo "Próximos passos:"
         log_output "  1. Reinicie o terminal ou execute: ${LIGHT_CYAN}source $shell_config${NC}"
@@ -280,67 +253,32 @@ update_mise() {
         return 1
     fi
 
-    local current_version=$(get_mise_version)
+    local current_version=$(get_current_version)
     log_info "Versão atual: $current_version"
 
-    # Get latest version
-    local mise_version=$(get_latest_mise_version)
-    if [ $? -ne 0 ] || [ -z "$mise_version" ]; then
+    # Update using Mise's built-in self-update command
+    log_info "Executando atualização do Mise..."
+
+    if mise self-update --yes 2>&1 | while read -r line; do log_debug "mise: $line"; done; then
+        log_debug "Comando de atualização executado com sucesso"
+    else
+        log_error "Falha ao atualizar o Mise"
         return 1
     fi
-    local latest_version=$(echo "$mise_version" | sed 's/^v//')
-
-    if [ "$current_version" = "$latest_version" ]; then
-        log_info "Você já possui a versão mais recente instalada ($current_version)"
-        return 0
-    fi
-
-    log_info "Atualizando de $current_version para $latest_version..."
-
-    # Detect OS and architecture
-    local os_arch=$(detect_os_and_arch)
-    [ $? -ne 0 ] && return 1
-
-    local os_name="${os_arch%:*}"
-    local arch="${os_arch#*:}"
-
-    local bin_dir=$(get_local_bin_dir)
-    local mise_bin="$bin_dir/mise"
-
-    # Download and verify release
-    local tar_file=$(download_and_verify_mise "$mise_version" "$os_name" "$arch")
-    if [ $? -ne 0 ]; then
-        return 1
-    fi
-
-    # Backup current binary
-    if [ -f "$mise_bin" ]; then
-        log_debug "Fazendo backup do binário atual..."
-        cp "$mise_bin" "${mise_bin}.backup"
-    fi
-
-    # Extract and setup binary
-    extract_and_setup_binary "$tar_file" "$bin_dir"
-    if [ $? -ne 0 ]; then
-        # Restore backup on failure
-        if [ -f "${mise_bin}.backup" ]; then
-            mv "${mise_bin}.backup" "$mise_bin"
-        fi
-        return 1
-    fi
-
-    # Remove backup
-    rm -f "${mise_bin}.backup"
-
-    # Setup environment for current session
-    setup_mise_environment "$bin_dir"
 
     # Verify update
-    if command -v mise &> /dev/null; then
-        local new_version=$(get_mise_version)
-        log_success "Mise atualizado com sucesso para versão $new_version!"
-        update_version "mise" "$new_version"
-        log_debug "Atualização concluída"
+    if check_installation; then
+        local new_version=$(get_current_version)
+
+        if [ "$current_version" = "$new_version" ]; then
+            log_info "Mise já está na versão mais recente ($current_version)"
+        else
+            log_success "Mise atualizado de $current_version para $new_version!"
+            register_or_update_software_in_lock "mise" "$new_version"
+            log_debug "Atualização concluída com sucesso"
+        fi
+
+        return 0
     else
         log_error "Falha na atualização do Mise"
         return 1
@@ -348,19 +286,19 @@ update_mise() {
 }
 
 uninstall_mise() {
-    local mise_bin="$(get_local_bin_dir)/mise"
+    local mise_bin="$LOCAL_BIN_DIR/mise"
     local shell_config=$(detect_shell_config)
 
     log_info "Desinstalando Mise..."
 
     # Check if Mise is installed
-    if ! command -v mise &> /dev/null; then
+    if ! check_installation; then
         log_warning "Mise não está instalado"
         log_info "Nada a fazer"
         return 0
     fi
 
-    local version=$(get_mise_version)
+    local version=$(get_current_version)
     log_debug "Versão a ser removida: $version"
 
     # Confirm uninstallation
@@ -409,9 +347,9 @@ uninstall_mise() {
 
     # Verify removal
 
-    if ! command -v mise &> /dev/null; then
+    if ! check_installation; then
         log_success "Mise desinstalado com sucesso!"
-        mark_uninstalled "mise"
+        remove_software_in_lock "mise"
 
         echo ""
         log_info "Reinicie o terminal ou execute: source $shell_config"
@@ -450,18 +388,33 @@ main() {
                 exit 0
                 ;;
             -v | --verbose)
-                export DEBUG=1
-                shift
+                log_debug "Modo verbose ativado"
+                export DEBUG=true
                 ;;
             -q | --quiet)
-                export SILENT=1
-                shift
+                export SILENT=true
+                ;;
+            --info)
+                show_software_info
+                exit 0
+                ;;
+            --get-current-version)
+                get_current_version
+                exit 0
+                ;;
+            --get-latest-version)
+                get_latest_version
+                exit 0
+                ;;
+            --check-installation)
+                check_installation
+                exit $?
                 ;;
             --uninstall)
                 action="uninstall"
                 shift
                 ;;
-            --update)
+            -u | --upgrade)
                 action="update"
                 shift
                 ;;

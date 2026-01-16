@@ -4,6 +4,7 @@ IFS=$'\n\t'
 
 # Source installations library
 source "$LIB_DIR/internal/installations.sh"
+source "$LIB_DIR/github.sh"
 
 # Help function
 show_help() {
@@ -42,22 +43,26 @@ show_help() {
 }
 
 # Get latest Tilix version
-get_latest_tilix_version() {
+get_latest_version() {
     github_get_latest_version "gnunn1/tilix"
 }
 
 # Get installed Tilix version
-get_tilix_version() {
-    if command -v tilix &> /dev/null; then
+get_current_version() {
+    if check_installation; then
         tilix --version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida"
     else
         echo "desconhecida"
     fi
 }
 
+# Check if Tilix is installed
+check_installation() {
+    command -v tilix &> /dev/null || ([ "$(uname)" = "Linux" ] && dpkg -l 2> /dev/null | grep -q tilix)
+}
+
 # Detect package manager
 detect_package_manager() {
-
     if command -v apt-get &> /dev/null; then
         echo "apt"
         log_debug "Gerenciador de pacotes: apt (Debian/Ubuntu)"
@@ -79,38 +84,10 @@ detect_package_manager() {
     fi
 }
 
-# Check if Tilix is already installed
-check_existing_installation() {
-
-    if ! command -v tilix &> /dev/null; then
-        log_debug "Tilix não está instalado"
-        return 0
-    fi
-
-    local current_version=$(get_tilix_version)
-    log_info "Tilix $current_version já está instalado."
-
-    # Mark as installed in lock file
-    mark_installed "tilix" "$current_version"
-
-    # Check for updates
-    local latest_version=$(get_latest_tilix_version)
-    if [ $? -eq 0 ] && [ -n "$latest_version" ]; then
-        if [ "$current_version" != "$latest_version" ]; then
-            echo ""
-            log_output "${YELLOW}Nova versão disponível ($latest_version).${NC}"
-            log_output "Para atualizar, execute: ${LIGHT_CYAN}susa setup tilix --upgrade${NC}"
-        fi
-    else
-        log_warning "Não foi possível verificar atualizações"
-    fi
-
-    return 1
-}
-
 # Install Tilix using system package manager
 install_tilix() {
-    if ! check_existing_installation; then
+    if check_installation; then
+        log_info "Tilix $(get_current_version) já está instalado."
         exit 0
     fi
 
@@ -190,10 +167,10 @@ install_tilix() {
     esac
 
     # Verify installation
-    if command -v tilix &> /dev/null; then
-        local version=$(get_tilix_version)
+    if check_installation; then
+        local version=$(get_current_version)
         log_success "Tilix $version instalado com sucesso!"
-        mark_installed "tilix" "$version"
+        register_or_update_software_in_lock "tilix" "$version"
 
         # Check for VTE configuration
         if [ -f /etc/profile.d/vte.sh ]; then
@@ -218,7 +195,7 @@ update_tilix() {
     log_debug "Gerenciador de pacotes detectado: $pkg_manager"
 
     # Check if Tilix is installed
-    if ! command -v tilix &> /dev/null; then
+    if ! check_installation; then
         log_error "Tilix não está instalado"
         echo ""
         log_output "${YELLOW}Para instalar, execute:${NC}"
@@ -226,7 +203,7 @@ update_tilix() {
         return 1
     fi
 
-    local current_version=$(get_tilix_version)
+    local current_version=$(get_current_version)
     log_debug "Versão atual: $current_version"
 
     # Update package lists
@@ -279,13 +256,13 @@ update_tilix() {
             ;;
     esac
 
-    local new_version=$(get_tilix_version)
+    local new_version=$(get_current_version)
 
     if [ "$current_version" = "$new_version" ]; then
         log_info "Tilix já está na versão mais recente ($current_version)"
     else
         log_success "Tilix atualizado de $current_version para $new_version"
-        update_version "tilix" "$new_version"
+        register_or_update_software_in_lock "tilix" "$new_version"
     fi
 
     log_debug "Atualização concluída"
@@ -299,13 +276,13 @@ uninstall_tilix() {
     log_debug "Gerenciador de pacotes detectado: $pkg_manager"
 
     # Check if Tilix is installed
-    if ! command -v tilix &> /dev/null; then
+    if ! check_installation; then
         log_warning "Tilix não está instalado via gerenciador de pacotes"
         log_info "Nada a fazer"
         return 0
     fi
 
-    local version=$(get_tilix_version)
+    local version=$(get_current_version)
     log_debug "Versão a ser removida: $version"
 
     # Confirm uninstallation
@@ -356,9 +333,9 @@ uninstall_tilix() {
     esac
 
     # Verify removal
-    if ! command -v tilix &> /dev/null; then
+    if ! check_installation; then
         log_success "Tilix desinstalado com sucesso"
-        mark_uninstalled "tilix"
+        remove_software_in_lock "tilix"
     else
         log_warning "Tilix removido do gerenciador de pacotes, mas executável ainda encontrado"
     fi
@@ -385,24 +362,41 @@ main() {
     # Parse arguments
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --help | -h)
+            -h | --help)
                 show_help
                 exit 0
                 ;;
-            --uninstall | -u)
-                action="uninstall"
-                shift
-                ;;
-            --update)
-                action="update"
-                shift
-                ;;
-            --verbose | -v)
+            -v | --verbose)
+                logger_debug "Modo verbose ativado"
                 export DEBUG=1
                 shift
                 ;;
-            --quiet | -q)
+            -q | --quiet)
                 export SILENT=1
+                shift
+                ;;
+            --info)
+                show_software_info
+                exit 0
+                ;;
+            --get-current-version)
+                get_current_version
+                exit 0
+                ;;
+            --get-latest-version)
+                get_latest_version
+                exit 0
+                ;;
+            --check-installation)
+                check_installation
+                exit $?
+                ;;
+            --uninstall)
+                action="uninstall"
+                shift
+                ;;
+            -u | --upgrade)
+                action="update"
                 shift
                 ;;
             *)

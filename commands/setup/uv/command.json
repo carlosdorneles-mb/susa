@@ -7,5 +7,13 @@
   "os": [
     "linux",
     "mac"
-  ]
+  ],
+  "envs": {
+    "UV_GITHUB_REPO": "astral-sh/uv",
+    "LOCAL_BIN_DIR": "$HOME/.local/bin",
+    "UV_DATA_DIR": "$HOME/.local/share/uv",
+    "UV_CACHE_DIR": "$HOME/.cache/uv",
+    "GITHUB_BASE_URL": "https://github.com",
+    "TEMP_DIR": "/tmp"
+  }
 }

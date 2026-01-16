@@ -43,33 +43,39 @@ show_help() {
     log_output "  • Colaboração em equipe"
 }
 
-# Get installed Postman version
-get_postman_version() {
-    if command -v postman &> /dev/null; then
-        # Postman não tem opção de versão via CLI, então verificamos se está instalado
-        echo "instalada"
+# Get latest version (not implemented)
+get_latest_version() {
+    # Postman doesn't provide version API publicly
+    # Return empty for now - version is determined after download
+    echo "N/A"
+}
+
+# Get installed version (not implemented)
+get_current_version() {
+    local os_type=$(get_simple_os)
+
+    if [ "$os_type" = "mac" ]; then
+        # Try to get version via Homebrew
+        if command -v brew &> /dev/null && brew list --cask "$POSTMAN_HOMEBREW_CASK" &> /dev/null; then
+            brew list --cask "$POSTMAN_HOMEBREW_CASK" --versions 2> /dev/null | awk '{print $2}' || echo "desconhecida"
+        else
+            echo "desconhecida"
+        fi
+    elif [ "$os_type" = "linux" ]; then
+        # Try to read version from installed directory
+        if [ -f "$POSTMAN_INSTALL_DIR/app/resources/app/package.json" ]; then
+            grep -oP '"version":\s*"\K[^"]+' "$POSTMAN_INSTALL_DIR/app/resources/app/package.json" 2> /dev/null || echo "desconhecida"
+        else
+            echo "desconhecida"
+        fi
     else
         echo "desconhecida"
     fi
 }
 
-# Check if Postman is already installed
-check_existing_installation() {
-    if ! command -v postman &> /dev/null; then
-        log_debug "Postman não está instalado"
-        return 0
-    fi
-
-    local current_version=$(get_postman_version)
-    log_info "Postman $current_version já está instalado."
-
-    # Mark as installed in lock file
-    mark_installed "postman" "$current_version"
-
-    log_output ""
-    log_output "${YELLOW}Para atualizar, execute:${NC} ${LIGHT_CYAN}susa setup postman --upgrade${NC}"
-
-    return 1
+# Check if Postman is installed
+check_installation() {
+    command -v postman &> /dev/null || { [ "$(uname)" = "Darwin" ] && [ -d "/Applications/Postman.app" ]; }
 }
 
 # Install Postman on macOS using Homebrew
@@ -167,6 +173,11 @@ EOF
 
 # Main installation function
 install_postman() {
+    if check_installation; then
+        log_info "Postman $(get_current_version) já está instalado."
+        exit 0
+    fi
+
     local os_type=$(get_simple_os)
 
     if [ "$os_type" = "mac" ]; then
@@ -179,20 +190,20 @@ install_postman() {
     fi
 
     # Mark as installed
-    local version=$(get_postman_version)
-    mark_installed "postman" "$version"
+    local version=$(get_current_version)
+    register_or_update_software_in_lock "postman" "$version"
 }
 
 # Update Postman
 update_postman() {
     log_info "Atualizando Postman..."
 
-    if ! command -v postman &> /dev/null; then
+    if ! check_installation; then
         log_warning "Postman não está instalado. Execute sem --upgrade para instalar."
         return 1
     fi
 
-    local current_version=$(get_postman_version)
+    local current_version=$(get_current_version)
     log_info "Versão atual: $current_version"
 
     local os_type=$(get_simple_os)
@@ -207,18 +218,18 @@ update_postman() {
         install_postman_linux
     fi
 
-    local new_version=$(get_postman_version)
+    local new_version=$(get_current_version)
     log_success "Postman atualizado para versão $new_version"
 
     # Update lock file
-    mark_installed "postman" "$new_version"
+    register_or_update_software_in_lock "postman" "$new_version"
 }
 
 # Uninstall Postman
 uninstall_postman() {
     log_info "Desinstalando Postman..."
 
-    if ! command -v postman &> /dev/null; then
+    if ! check_installation; then
         log_warning "Postman não está instalado"
         return 0
     fi
@@ -238,7 +249,7 @@ uninstall_postman() {
     log_success "Postman desinstalado com sucesso!"
 
     # Remove from lock file
-    mark_uninstalled "postman"
+    remove_software_in_lock "postman"
 }
 
 # Main execution
@@ -253,17 +264,34 @@ main() {
                 show_help
                 exit 0
                 ;;
+            -v | --verbose)
+                log_debug "Modo verbose ativado"
+                export DEBUG=true
+                ;;
+            -q | --quiet)
+                export SILENT=true
+                ;;
+            --info)
+                show_software_info
+                exit 0
+                ;;
+            --get-current-version)
+                get_current_version
+                exit 0
+                ;;
+            --get-latest-version)
+                get_latest_version
+                exit 0
+                ;;
+            --check-installation)
+                check_installation
+                exit $?
+                ;;
             -u | --upgrade)
                 should_update=true
                 ;;
             --uninstall)
                 should_uninstall=true
-                ;;
-            -v | --verbose)
-                # Verbose already handled by CLI framework
-                ;;
-            -q | --quiet)
-                # Quiet already handled by CLI framework
                 ;;
             *)
                 log_error "Opção desconhecida: $arg"
@@ -279,10 +307,7 @@ main() {
     elif [ "$should_update" = true ]; then
         update_postman
     else
-        # Check if already installed before attempting installation
-        if check_existing_installation; then
-            install_postman
-        fi
+        install_postman
     fi
 }
 

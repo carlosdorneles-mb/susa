@@ -4,6 +4,7 @@ IFS=$'\n\t'
 
 # Source installations library
 source "$LIB_DIR/internal/installations.sh"
+source "$LIB_DIR/github.sh"
 
 # Help function
 show_help() {
@@ -39,52 +40,24 @@ show_help() {
     log_output "  poetry install                      # Instalar dependências"
     log_output "  poetry run python script.py         # Executar script"
 }
+
 # Get latest Poetry version
-get_latest_poetry_version() {
+get_latest_version() {
     github_get_latest_version "python-poetry/poetry"
 }
 
 # Get installed Poetry version
-get_poetry_version() {
-    if command -v poetry &> /dev/null; then
+get_current_version() {
+    if check_installation; then
         poetry --version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida"
     else
         echo "desconhecida"
     fi
 }
 
-# Get Poetry installation path
-get_poetry_home() {
-    echo "$POETRY_HOME"
-}
-
-# Check if Poetry is already installed
-check_existing_installation() {
-
-    if ! command -v poetry &> /dev/null; then
-        log_debug "Poetry não está instalado"
-        return 0
-    fi
-
-    local current_version=$(get_poetry_version)
-    log_info "Poetry $current_version já está instalado."
-
-    # Mark as installed in lock file
-    mark_installed "poetry" "$current_version"
-
-    # Check for updates
-    local latest_version=$(get_latest_poetry_version)
-    if [ $? -eq 0 ] && [ -n "$latest_version" ]; then
-        if [ "$current_version" != "$latest_version" ]; then
-            echo ""
-            log_output "${YELLOW}Nova versão disponível ($latest_version).${NC}"
-            log_output "Para atualizar, execute: ${LIGHT_CYAN}susa setup poetry --upgrade${NC}"
-        fi
-    else
-        log_warning "Não foi possível verificar atualizações"
-    fi
-
-    return 1
+# Check if Poetry is installed
+check_installation() {
+    command -v poetry &> /dev/null
 }
 
 # Configure shell to use Poetry
@@ -124,9 +97,14 @@ setup_poetry_environment() {
 
 # Install Poetry
 install_poetry() {
+    if check_installation; then
+        log_info "Poetry $(get_current_version) já está instalado."
+        exit 0
+    fi
+
     log_info "Iniciando instalação do Poetry..."
 
-    local poetry_home=$(get_poetry_home)
+    local poetry_home="$POETRY_HOME"
 
     # Download and install Poetry using official installer
     log_info "Baixando instalador do Poetry..."
@@ -165,11 +143,11 @@ install_poetry() {
     setup_poetry_environment "$poetry_home"
 
     # Verify installation
-    if command -v poetry &> /dev/null; then
-        local version=$(get_poetry_version)
+    if check_installation; then
+        local version=$(get_current_version)
 
         # Mark as installed in lock file
-        mark_installed "poetry" "$version"
+        register_or_update_software_in_lock "poetry" "$version"
 
         log_success "Poetry $version instalado com sucesso!"
 
@@ -194,14 +172,14 @@ update_poetry() {
     log_info "Atualizando Poetry..."
 
     # Check if Poetry is installed
-    if ! command -v poetry &> /dev/null; then
+    if ! check_installation; then
         log_error "Poetry não está instalado"
         echo ""
         log_output "${YELLOW}Para instalar, execute:${NC} ${LIGHT_CYAN}susa setup poetry${NC}"
         return 1
     fi
 
-    local current_version=$(get_poetry_version)
+    local current_version=$(get_current_version)
     log_info "Versão atual: $current_version"
 
     # Update Poetry using self update command
@@ -215,14 +193,14 @@ update_poetry() {
     fi
 
     # Verify update
-    if command -v poetry &> /dev/null; then
-        local new_version=$(get_poetry_version)
+    if check_installation; then
+        local new_version=$(get_current_version)
 
         if [ "$current_version" = "$new_version" ]; then
             log_info "Poetry já está na versão mais recente ($current_version)"
         else
             # Update version in lock file
-            update_version "poetry" "$new_version"
+            register_or_update_software_in_lock "poetry" "$new_version"
 
             log_success "Poetry atualizado de $current_version para $new_version!"
             log_debug "Atualização concluída com sucesso"
@@ -241,13 +219,13 @@ uninstall_poetry() {
 
     # Check if Poetry is installed
 
-    if ! command -v poetry &> /dev/null; then
+    if ! check_installation; then
         log_warning "Poetry não está instalado"
         log_info "Nada a fazer"
         return 0
     fi
 
-    local version=$(get_poetry_version)
+    local version=$(get_current_version)
     log_debug "Versão a ser removida: $version"
 
     # Confirm uninstallation
@@ -260,7 +238,7 @@ uninstall_poetry() {
         return 1
     fi
 
-    local poetry_home=$(get_poetry_home)
+    local poetry_home="$POETRY_HOME"
 
     # Download uninstaller
     log_info "Baixando desinstalador do Poetry..."
@@ -313,9 +291,9 @@ uninstall_poetry() {
 
     # Verify removal
 
-    if ! command -v poetry &> /dev/null; then
+    if ! check_installation; then
         # Mark as uninstalled in lock file
-        mark_uninstalled "poetry"
+        remove_software_in_lock "poetry"
 
         log_success "Poetry desinstalado com sucesso!"
 
@@ -356,18 +334,33 @@ main() {
                 exit 0
                 ;;
             -v | --verbose)
-                export DEBUG=1
-                shift
+                log_debug "Modo verbose ativado"
+                export DEBUG=true
                 ;;
             -q | --quiet)
-                export SILENT=1
-                shift
+                export SILENT=true
+                ;;
+            --info)
+                show_software_info
+                exit 0
+                ;;
+            --get-current-version)
+                get_current_version
+                exit 0
+                ;;
+            --get-latest-version)
+                get_latest_version
+                exit 0
+                ;;
+            --check-installation)
+                check_installation
+                exit $?
                 ;;
             --uninstall)
                 action="uninstall"
                 shift
                 ;;
-            --update)
+            -u | --upgrade)
                 action="update"
                 shift
                 ;;
@@ -383,9 +376,6 @@ main() {
 
     case "$action" in
         install)
-            if ! check_existing_installation; then
-                exit 0
-            fi
             install_poetry
             ;;
         update)

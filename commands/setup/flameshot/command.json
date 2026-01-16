@@ -2,7 +2,7 @@
   "name": "Flameshot",
   "description": "Instala Flameshot (ferramenta de screenshot com anotações)",
   "entrypoint": "main.sh",
-  "sudo": false,
+  "sudo": true,
   "group": "utility",
   "os": [
     "linux",

@@ -40,23 +40,24 @@ show_help() {
     log_output "  uv sync                             # Instalar dependências"
     log_output "  uv run python script.py             # Executar script"
 }
+
 # Get latest UV version
-get_latest_uv_version() {
-    github_get_latest_version "astral-sh/uv"
+get_latest_version() {
+    github_get_latest_version "$UV_GITHUB_REPO"
 }
 
 # Get installed UV version
-get_uv_version() {
-    if command -v uv &> /dev/null; then
+get_current_version() {
+    if check_installation; then
         uv --version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida"
     else
         echo "desconhecida"
     fi
 }
 
-# Get UV installation path
-get_local_bin_dir() {
-    echo "$HOME/.local/bin"
+# Check if UV is installed
+check_installation() {
+    command -v uv &> /dev/null
 }
 
 # Detect OS and architecture for UV (uses specific naming)
@@ -88,35 +89,6 @@ detect_uv_platform() {
     echo "${arch}-${os_name}"
 }
 
-# Check if UV is already installed
-check_existing_installation() {
-
-    if ! command -v uv &> /dev/null; then
-        log_debug "UV não está instalado"
-        return 0
-    fi
-
-    local current_version=$(get_uv_version)
-    log_info "UV $current_version já está instalado."
-
-    # Mark as installed in lock file
-    mark_installed "uv" "$current_version"
-
-    # Check for updates
-    local latest_version=$(get_latest_uv_version)
-    if [ $? -eq 0 ] && [ -n "$latest_version" ]; then
-        if [ "$current_version" != "$latest_version" ]; then
-            echo ""
-            log_output "${YELLOW}Nova versão disponível ($latest_version).${NC}"
-            log_output "Para atualizar, execute: ${LIGHT_CYAN}susa setup uv --upgrade${NC}"
-        fi
-    else
-        log_warning "Não foi possível verificar atualizações"
-    fi
-
-    return 1
-}
-
 # Configure shell to use UV
 configure_shell() {
     local bin_dir="$1"
@@ -134,7 +106,7 @@ configure_shell() {
 
     echo "" >> "$shell_config"
     echo "# Local binaries PATH" >> "$shell_config"
-    echo "export PATH=\"$(get_local_bin_dir):\$PATH\"" >> "$shell_config"
+    echo "export PATH=\"$LOCAL_BIN_DIR:\$PATH\"" >> "$shell_config"
 
     log_debug "Configuração adicionada ao shell"
 }
@@ -151,10 +123,15 @@ setup_uv_environment() {
 
 # Install UV
 install_uv() {
+    if check_installation; then
+        log_info "UV $(get_current_version) já está instalado."
+        exit 0
+    fi
+
     log_info "Iniciando instalação do UV..."
 
     # Get latest version
-    local uv_version=$(get_latest_uv_version)
+    local uv_version=$(get_latest_version)
     if [ $? -ne 0 ] || [ -z "$uv_version" ]; then
         return 1
     fi
@@ -165,14 +142,14 @@ install_uv() {
         return 1
     fi
 
-    local bin_dir=$(get_local_bin_dir)
+    local bin_dir="$LOCAL_BIN_DIR"
     mkdir -p "$bin_dir"
 
     # Build download URL
     local filename="uv-${platform}.tar.gz"
-    local download_url="https://github.com/astral-sh/uv/releases/download/${uv_version}/${filename}"
+    local download_url="${GITHUB_BASE_URL}/astral-sh/uv/releases/download/${uv_version}/${filename}"
     local checksum_filename="${filename}.sha256"
-    local output_file="/tmp/${filename}"
+    local output_file="${TEMP_DIR}/${filename}"
 
     log_info "Baixando e verificando UV ${uv_version}..."
     log_debug "Plataforma: $platform" >&2
@@ -186,7 +163,7 @@ install_uv() {
 
     # Extract binary
     log_info "Extraindo UV..."
-    local temp_dir="/tmp/uv-extract-$$"
+    local temp_dir="${TEMP_DIR}/uv-extract-$$"
     mkdir -p "$temp_dir"
 
     if ! tar -xzf "$output_file" -C "$temp_dir" 2> /dev/null; then
@@ -226,11 +203,10 @@ install_uv() {
     setup_uv_environment "$bin_dir"
 
     # Verify installation
-
-    if command -v uv &> /dev/null; then
-        local version=$(get_uv_version)
+    if check_installation; then
+        local version=$(get_current_version)
         log_success "UV $version instalado com sucesso!"
-        mark_installed "uv" "$version"
+        register_or_update_software_in_lock "uv" "$version"
 
         echo ""
         echo "Próximos passos:"
@@ -259,18 +235,17 @@ update_uv() {
     log_info "Atualizando UV..."
 
     # Check if UV is installed
-
-    if ! command -v uv &> /dev/null; then
+    if ! check_installation; then
         log_error "UV não está instalado"
         echo ""
         log_output "${YELLOW}Para instalar, execute:${NC} ${LIGHT_CYAN}susa setup uv${NC}"
         return 1
     fi
 
-    local current_version=$(get_uv_version)
+    local current_version=$(get_current_version)
     log_info "Versão atual: $current_version"
 
-    # Update UV using self update command
+    # Update using UV's built-in self update command
     log_info "Executando atualização do UV..."
 
     if uv self update 2>&1 | while read -r line; do log_debug "uv: $line"; done; then
@@ -281,15 +256,14 @@ update_uv() {
     fi
 
     # Verify update
-
-    if command -v uv &> /dev/null; then
-        local new_version=$(get_uv_version)
+    if check_installation; then
+        local new_version=$(get_current_version)
 
         if [ "$current_version" = "$new_version" ]; then
             log_info "UV já está na versão mais recente ($current_version)"
         else
             log_success "UV atualizado de $current_version para $new_version!"
-            update_version "uv" "$new_version"
+            register_or_update_software_in_lock "uv" "$new_version"
             log_debug "Atualização concluída com sucesso"
         fi
 
@@ -306,13 +280,12 @@ uninstall_uv() {
 
     # Check if UV is installed
 
-    if ! command -v uv &> /dev/null; then
+    if ! check_installation; then
         log_warning "UV não está instalado"
-        log_info "Nada a fazer"
         return 0
     fi
 
-    local version=$(get_uv_version)
+    local version=$(get_current_version)
     log_debug "Versão a ser removida: $version"
 
     # Confirm uninstallation
@@ -325,7 +298,7 @@ uninstall_uv() {
         return 1
     fi
 
-    local bin_dir=$(get_local_bin_dir)
+    local bin_dir="$LOCAL_BIN_DIR"
 
     # Remove UV binary and related tools
     log_info "Removendo binários do UV..."
@@ -341,7 +314,7 @@ uninstall_uv() {
     fi
 
     # Remove UV data directory
-    local uv_data_dir="$HOME/.local/share/uv"
+    local uv_data_dir="${UV_DATA_DIR}"
     if [ -d "$uv_data_dir" ]; then
         rm -rf "$uv_data_dir"
     fi
@@ -356,17 +329,18 @@ uninstall_uv() {
     fi
 
     # Verify removal
-
-    if ! command -v uv &> /dev/null; then
+    if ! check_installation; then
         log_success "UV desinstalado com sucesso!"
-        mark_uninstalled "uv"
+        remove_software_in_lock "uv"
 
         echo ""
         log_info "Reinicie o terminal ou execute: source $shell_config"
     else
         log_warning "UV removido, mas executável ainda encontrado no PATH"
-        local uv_path=$(command -v uv 2> /dev/null || echo "desconhecido")
-        log_debug "Pode ser necessário remover manualmente de: $uv_path"
+        if check_installation; then
+            local uv_path=$(command -v uv 2> /dev/null || echo "desconhecido")
+            log_debug "Pode ser necessário remover manualmente de: $uv_path"
+        fi
     fi
 
     # Ask about cache removal
@@ -376,14 +350,14 @@ uninstall_uv() {
 
     if [[ "$cache_response" =~ ^[sSyY]$ ]]; then
 
-        local cache_dir="$HOME/.cache/uv"
+        local cache_dir="${UV_CACHE_DIR}"
         if [ -d "$cache_dir" ]; then
             rm -rf "$cache_dir" 2> /dev/null || true
         fi
 
         log_success "Cache removido"
     else
-        log_info "Cache mantido em ~/.cache/uv"
+        log_info "Cache mantido em ${UV_CACHE_DIR}"
     fi
 }
 
@@ -399,18 +373,33 @@ main() {
                 exit 0
                 ;;
             -v | --verbose)
-                export DEBUG=1
-                shift
+                log_debug "Modo verbose ativado"
+                export DEBUG=true
                 ;;
             -q | --quiet)
-                export SILENT=1
-                shift
+                export SILENT=true
+                ;;
+            --info)
+                show_software_info
+                exit 0
+                ;;
+            --get-current-version)
+                get_current_version
+                exit 0
+                ;;
+            --get-latest-version)
+                get_latest_version
+                exit 0
+                ;;
+            --check-installation)
+                check_installation
+                exit $?
                 ;;
             --uninstall)
                 action="uninstall"
                 shift
                 ;;
-            --update)
+            -u | --upgrade)
                 action="update"
                 shift
                 ;;
@@ -426,9 +415,6 @@ main() {
 
     case "$action" in
         install)
-            if ! check_existing_installation; then
-                exit 0
-            fi
             install_uv
             ;;
         update)

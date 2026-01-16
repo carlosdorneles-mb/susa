@@ -38,7 +38,7 @@ show_help() {
     echo "  3. Instale as IDEs que desejar"
 }
 
-get_latest_toolbox_version() {
+get_latest_version() {
     # Try to get the latest version from JetBrains data service
     local latest_version=$(curl -s --max-time "$TOOLBOX_API_MAX_TIME" --connect-timeout "$TOOLBOX_API_CONNECT_TIMEOUT" "$TOOLBOX_API_URL" 2> /dev/null | grep -oP '"build"\s*:\s*"\K[^"]+' | head -1)
 
@@ -52,6 +52,23 @@ get_latest_toolbox_version() {
     log_error "Não foi possível obter a versão mais recente do JetBrains Toolbox" >&2
     log_error "Verifique sua conexão com a internet e tente novamente" >&2
     return 1
+}
+
+# Get current installed version
+get_current_version() {
+    local install_dir=$(get_install_dir)
+    local version_file="$install_dir/.version"
+
+    if [ -f "$version_file" ]; then
+        cat "$version_file"
+    else
+        echo "desconhecida"
+    fi
+}
+
+# Check if JetBrains Toolbox is installed
+check_installation() {
+    command -v jetbrains-toolbox &> /dev/null || [ -f "$HOME/.local/bin/jetbrains-toolbox" ]
 }
 
 # Detect OS and architecture
@@ -122,47 +139,6 @@ check_toolbox_installed() {
         [ -d "$binary_location" ] && return 0
     else
         [ -f "$binary_location" ] && return 0
-    fi
-
-    return 1
-}
-
-# Get current installed version
-get_installed_version() {
-    local install_dir=$(get_install_dir)
-    local version_file="$install_dir/.version"
-
-    if [ -f "$version_file" ]; then
-        cat "$version_file"
-    else
-        echo "desconhecida"
-    fi
-}
-
-# Check if JetBrains Toolbox is already installed
-check_existing_installation() {
-
-    if ! check_toolbox_installed; then
-        log_debug "JetBrains Toolbox não está instalado"
-        return 0
-    fi
-
-    local current_version=$(get_installed_version)
-    log_info "JetBrains Toolbox $current_version já está instalado."
-
-    # Mark as installed in lock file
-    mark_installed "toolbox" "$current_version"
-
-    # Check for updates
-    local latest_version=$(get_latest_toolbox_version)
-    if [ $? -eq 0 ] && [ -n "$latest_version" ]; then
-        if [ "$current_version" != "$latest_version" ] && [ "$current_version" != "desconhecida" ]; then
-            echo ""
-            log_output "${YELLOW}Nova versão disponível ($latest_version).${NC}"
-            log_output "Para atualizar, execute: ${LIGHT_CYAN}susa setup jetbrains-toolbox --upgrade${NC}"
-        fi
-    else
-        log_warning "Não foi possível verificar atualizações"
     fi
 
     return 1
@@ -363,10 +339,15 @@ EOF
 
 # Main installation function
 install_toolbox() {
+    if check_installation; then
+        log_info "JetBrains Toolbox $(get_current_version) já está instalado."
+        exit 0
+    fi
+
     log_info "Iniciando instalação do JetBrains Toolbox..."
 
     # Get latest version
-    local toolbox_version=$(get_latest_toolbox_version)
+    local toolbox_version=$(get_latest_version)
     if [ $? -ne 0 ] || [ -z "$toolbox_version" ]; then
         return 1
     fi
@@ -399,7 +380,7 @@ install_toolbox() {
 
     if [ $install_result -eq 0 ]; then
         log_success "JetBrains Toolbox $toolbox_version instalado com sucesso!"
-        mark_installed "toolbox" "$toolbox_version"
+        register_or_update_software_in_lock "toolbox" "$toolbox_version"
         log_debug "Instalação concluída"
 
         echo ""
@@ -424,12 +405,12 @@ update_toolbox() {
         return 1
     fi
 
-    local current_version=$(get_installed_version)
+    local current_version=$(get_current_version)
     log_info "Versão atual: $current_version"
     log_debug "Localização: $(get_binary_location)"
 
     # Get latest version
-    local latest_version=$(get_latest_toolbox_version)
+    local latest_version=$(get_latest_version)
     if [ $? -ne 0 ] || [ -z "$latest_version" ]; then
         return 1
     fi
@@ -477,7 +458,7 @@ update_toolbox() {
 
     if [ $install_result -eq 0 ]; then
         log_success "JetBrains Toolbox atualizado com sucesso para versão $latest_version!"
-        update_version "toolbox" "$latest_version"
+        register_or_update_software_in_lock "toolbox" "$latest_version"
         log_debug "Atualização concluída"
     else
         log_error "Falha na atualização do JetBrains Toolbox"
@@ -495,7 +476,7 @@ uninstall_toolbox() {
         return 0
     fi
 
-    local current_version=$(get_installed_version)
+    local current_version=$(get_current_version)
     log_debug "Versão a ser removida: $current_version"
     log_debug "Localização: $(get_binary_location)"
 
@@ -548,7 +529,7 @@ uninstall_toolbox() {
     # Verify removal
     if ! check_toolbox_installed; then
         log_success "JetBrains Toolbox desinstalado com sucesso!"
-        mark_uninstalled "toolbox"
+        remove_software_in_lock "toolbox"
     else
         log_error "Falha ao desinstalar JetBrains Toolbox completamente"
         return 1
@@ -581,18 +562,33 @@ main() {
                 exit 0
                 ;;
             -v | --verbose)
-                export DEBUG=1
-                shift
+                log_debug "Modo verbose ativado"
+                export DEBUG=true
                 ;;
             -q | --quiet)
-                export SILENT=1
-                shift
+                export SILENT=true
+                ;;
+            --info)
+                show_software_info
+                exit 0
+                ;;
+            --get-current-version)
+                get_current_version
+                exit 0
+                ;;
+            --get-latest-version)
+                get_latest_version
+                exit 0
+                ;;
+            --check-installation)
+                check_installation
+                exit $?
                 ;;
             --uninstall)
                 action="uninstall"
                 shift
                 ;;
-            --update)
+            -u | --upgrade)
                 action="update"
                 shift
                 ;;
@@ -608,9 +604,6 @@ main() {
 
     case "$action" in
         install)
-            if ! check_existing_installation; then
-                exit 0
-            fi
             install_toolbox
             ;;
         update)

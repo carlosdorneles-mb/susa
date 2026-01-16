@@ -207,9 +207,16 @@ github_verify_checksum() {
         # É um arquivo de checksum
         log_debug "Lendo checksum de arquivo: $checksum_source"
         local filename=$(basename "$file")
+
+        # Tentar encontrar o hash do arquivo (com ou sem ./ no início)
         expected_hash=$(grep -i "$filename" "$checksum_source" | awk '{print $1}' | head -1)
 
-        # Se não encontrou com nome do arquivo, tenta pegar a primeira linha
+        # Se não encontrou, tenta com ./ no início
+        if [ -z "$expected_hash" ]; then
+            expected_hash=$(grep -i "./$filename" "$checksum_source" | awk '{print $1}' | head -1)
+        fi
+
+        # Se ainda não encontrou, tenta pegar a primeira linha
         if [ -z "$expected_hash" ]; then
             expected_hash=$(head -1 "$checksum_source" | awk '{print $1}')
         fi

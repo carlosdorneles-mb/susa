@@ -9,7 +9,7 @@
     "mac"
   ],
   "envs": {
-    "MISE_LOCAL_BIN_DIR": "$HOME/.local/bin",
+    "LOCAL_BIN_DIR": "$HOME/.local/bin",
     "MISE_CONFIG_DIR": "$HOME/.config/mise"
   }
 }

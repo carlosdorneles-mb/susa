@@ -51,8 +51,13 @@ show_help() {
     log_output "  e colaboração sem depender de sincronização em nuvem."
 }
 
+# Get latest version (not implemented)
+get_latest_version() {
+    github_get_latest_version "$BRUNO_GITHUB_REPO"
+}
+
 # Get installed Bruno version
-get_bruno_version() {
+get_current_version() {
     local os_type=$(get_simple_os)
 
     if [ "$os_type" = "mac" ]; then
@@ -64,14 +69,17 @@ get_bruno_version() {
     elif [ "$os_type" = "linux" ]; then
         if [ -f "$BRUNO_INSTALL_DIR/version.txt" ]; then
             cat "$BRUNO_INSTALL_DIR/version.txt"
-        elif [ -x "$BRUNO_BIN_LINK" ]; then
-            echo "instalada"
         else
             echo "desconhecida"
         fi
     else
         echo "desconhecida"
     fi
+}
+
+# Check if Bruno is installed
+check_installation() {
+    command -v bruno &> /dev/null
 }
 
 # Check if Bruno is already installed
@@ -84,7 +92,7 @@ check_existing_installation() {
             is_installed=true
         fi
     elif [ "$os_type" = "linux" ]; then
-        if command -v bruno &> /dev/null || [ -x "$BRUNO_BIN_LINK" ]; then
+        if check_installation || [ -x "$BRUNO_BIN_LINK" ]; then
             is_installed=true
         fi
     fi
@@ -94,11 +102,11 @@ check_existing_installation() {
         return 0
     fi
 
-    local current_version=$(get_bruno_version)
+    local current_version=$(get_current_version)
     log_info "Bruno $current_version já está instalado."
 
     # Mark as installed in lock file
-    mark_installed "bruno" "$current_version"
+    register_or_update_software_in_lock "bruno" "$current_version"
 
     log_output ""
     log_output "${YELLOW}Para atualizar, execute:${NC} ${LIGHT_CYAN}susa setup bruno --upgrade${NC}"
@@ -226,8 +234,8 @@ install_bruno() {
     fi
 
     # Mark as installed
-    local version=$(get_bruno_version)
-    mark_installed "bruno" "$version"
+    local version=$(get_current_version)
+    register_or_update_software_in_lock "bruno" "$version"
 }
 
 # Update Bruno
@@ -242,7 +250,7 @@ update_bruno() {
             is_installed=true
         fi
     elif [ "$os_type" = "linux" ]; then
-        if command -v bruno &> /dev/null || [ -x "$BRUNO_BIN_LINK" ]; then
+        if check_installation || [ -x "$BRUNO_BIN_LINK" ]; then
             is_installed=true
         fi
     fi
@@ -252,7 +260,7 @@ update_bruno() {
         return 1
     fi
 
-    local current_version=$(get_bruno_version)
+    local current_version=$(get_current_version)
     log_info "Versão atual: $current_version"
 
     if [ "$os_type" = "mac" ]; then
@@ -265,11 +273,11 @@ update_bruno() {
         install_bruno_linux
     fi
 
-    local new_version=$(get_bruno_version)
+    local new_version=$(get_current_version)
     log_success "Bruno atualizado para versão $new_version"
 
     # Update lock file
-    mark_installed "bruno" "$new_version"
+    register_or_update_software_in_lock "bruno" "$new_version"
 }
 
 # Uninstall Bruno
@@ -284,7 +292,7 @@ uninstall_bruno() {
             is_installed=true
         fi
     elif [ "$os_type" = "linux" ]; then
-        if command -v bruno &> /dev/null || [ -x "$BRUNO_BIN_LINK" ]; then
+        if check_installation || [ -x "$BRUNO_BIN_LINK" ]; then
             is_installed=true
         fi
     fi
@@ -314,7 +322,7 @@ uninstall_bruno() {
     log_success "Bruno desinstalado com sucesso!"
 
     # Remove from lock file
-    mark_uninstalled "bruno"
+    remove_software_in_lock "bruno"
 }
 
 # Main execution
@@ -329,17 +337,34 @@ main() {
                 show_help
                 exit 0
                 ;;
+            -v | --verbose)
+                log_debug "Modo verbose ativado"
+                export DEBUG=true
+                ;;
+            -q | --quiet)
+                export SILENT=true
+                ;;
+            --info)
+                show_software_info
+                exit 0
+                ;;
+            --get-current-version)
+                get_current_version
+                exit 0
+                ;;
+            --get-latest-version)
+                get_latest_version
+                exit 0
+                ;;
+            --check-installation)
+                check_installation
+                exit $?
+                ;;
             -u | --upgrade)
                 should_update=true
                 ;;
             --uninstall)
                 should_uninstall=true
-                ;;
-            -v | --verbose)
-                export VERBOSE=true
-                ;;
-            -q | --quiet)
-                export QUIET=true
                 ;;
             *)
                 log_error "Opção desconhecida: $arg"

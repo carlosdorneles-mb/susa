@@ -4,6 +4,7 @@ IFS=$'\n\t'
 
 # Source libraries
 source "$LIB_DIR/internal/installations.sh"
+source "$LIB_DIR/github.sh"
 
 # Help function
 show_help() {
@@ -43,19 +44,48 @@ show_help() {
     log_output "  • Package Control para plugins"
 }
 
+# Get latest version (not implemented)
+get_latest_version() {
+    local os_name=$(uname -s | tr '[:upper:]' '[:lower:]')
+
+    if [ "$os_name" = "darwin" ] && command -v brew &> /dev/null; then
+        # macOS: check via Homebrew
+        brew info --cask "$SUBLIME_HOMEBREW_CASK" 2> /dev/null | grep -oE "[0-9]+\.[0-9]+" | head -1 || echo "N/A"
+    elif [ "$os_name" = "linux" ]; then
+        # Linux: check via package manager
+        if command -v apt-cache &> /dev/null && [ -f /etc/apt/sources.list.d/sublime-text.list ]; then
+            # Debian/Ubuntu: use apt-cache policy
+            apt-cache policy sublime-text 2> /dev/null | grep -A1 "Candidate:" | grep -oE "[0-9]+" | head -1 || echo "N/A"
+        elif command -v dnf &> /dev/null; then
+            # Fedora/RHEL: use dnf info
+            dnf info sublime-text 2> /dev/null | grep "^Version" | awk '{print $3}' || echo "N/A"
+        elif command -v yum &> /dev/null; then
+            # CentOS/RHEL: use yum info
+            yum info sublime-text 2> /dev/null | grep "^Version" | awk '{print $3}' || echo "N/A"
+        else
+            echo "N/A"
+        fi
+    else
+        echo "N/A"
+    fi
+}
+
 # Get installed Sublime Text version
-get_sublime_version() {
-    if command -v subl &> /dev/null; then
+get_current_version() {
+    if check_installation; then
         # Sublime Text doesn't have a --version flag, so we check the binary
         local version=$(subl --version 2> /dev/null | grep -oE '[0-9]+' | head -1 || echo "desconhecida")
         if [ "$version" != "desconhecida" ]; then
-            echo "Build $version"
-        else
-            echo "instalada"
+            echo "$version"
         fi
     else
         echo "desconhecida"
     fi
+}
+
+# Check if Sublime Text is installed
+check_installation() {
+    command -v subl &> /dev/null
 }
 
 # Detect Linux distribution
@@ -66,25 +96,6 @@ detect_distro() {
     else
         echo "unknown"
     fi
-}
-
-# Check if Sublime Text is already installed
-check_existing_installation() {
-    if ! command -v subl &> /dev/null; then
-        log_debug "Sublime Text não está instalado"
-        return 0
-    fi
-
-    local current_version=$(get_sublime_version)
-    log_info "Sublime Text $current_version já está instalado."
-
-    # Mark as installed in lock file
-    mark_installed "sublime-text" "$current_version"
-
-    log_output ""
-    log_output "${YELLOW}Para atualizar, execute:${NC} ${LIGHT_CYAN}susa setup sublime-text --upgrade${NC}"
-
-    return 1
 }
 
 # Install Sublime Text on macOS using Homebrew
@@ -215,7 +226,8 @@ install_sublime_linux() {
 
 # Main installation function
 install_sublime() {
-    if ! check_existing_installation; then
+    if check_installation; then
+        log_info "Sublime Text $(get_current_version) já está instalado."
         exit 0
     fi
 
@@ -241,11 +253,11 @@ install_sublime() {
 
     if [ $install_result -eq 0 ]; then
         # Verify installation
-        if command -v subl &> /dev/null; then
-            local installed_version=$(get_sublime_version)
+        if check_installation; then
+            local installed_version=$(get_current_version)
 
             # Mark as installed in lock file
-            mark_installed "sublime-text" "$installed_version"
+            register_or_update_software_in_lock "sublime-text" "$installed_version"
 
             log_success "Sublime Text $installed_version instalado com sucesso!"
             log_output ""
@@ -269,12 +281,12 @@ update_sublime() {
     log_info "Atualizando Sublime Text..."
 
     # Check if Sublime Text is installed
-    if ! command -v subl &> /dev/null; then
+    if ! check_installation; then
         log_error "Sublime Text não está instalado. Use 'susa setup sublime-text' para instalar."
         return 1
     fi
 
-    local current_version=$(get_sublime_version)
+    local current_version=$(get_current_version)
     log_info "Versão atual: $current_version"
 
     # Detect OS and update
@@ -334,11 +346,11 @@ update_sublime() {
     esac
 
     # Verify update
-    if command -v subl &> /dev/null; then
-        local new_version=$(get_sublime_version)
+    if check_installation; then
+        local new_version=$(get_current_version)
 
         # Update version in lock file
-        update_version "sublime-text" "$new_version"
+        register_or_update_software_in_lock "sublime-text" "$new_version"
 
         if [ "$current_version" = "$new_version" ]; then
             log_info "Sublime Text já estava na versão mais recente ($current_version)"
@@ -356,12 +368,12 @@ uninstall_sublime() {
     log_info "Desinstalando Sublime Text..."
 
     # Check if Sublime Text is installed
-    if ! command -v subl &> /dev/null; then
+    if ! check_installation; then
         log_info "Sublime Text não está instalado"
         return 0
     fi
 
-    local current_version=$(get_sublime_version)
+    local current_version=$(get_current_version)
     log_debug "Versão a ser removida: $current_version"
 
     log_output ""
@@ -423,9 +435,9 @@ uninstall_sublime() {
     esac
 
     # Verify uninstallation
-    if ! command -v subl &> /dev/null; then
+    if ! check_installation; then
         # Mark as uninstalled in lock file
-        mark_uninstalled "sublime-text"
+        remove_software_in_lock "sublime-text"
 
         log_success "Sublime Text desinstalado com sucesso!"
     else
@@ -471,18 +483,33 @@ main() {
                 exit 0
                 ;;
             -v | --verbose)
-                export DEBUG=1
-                shift
+                log_debug "Modo verbose ativado"
+                export DEBUG=true
                 ;;
             -q | --quiet)
-                export SILENT=1
-                shift
+                export SILENT=true
+                ;;
+            --info)
+                show_software_info
+                exit 0
+                ;;
+            --get-current-version)
+                get_current_version
+                exit 0
+                ;;
+            --get-latest-version)
+                get_latest_version
+                exit 0
+                ;;
+            --check-installation)
+                check_installation
+                exit $?
                 ;;
             --uninstall)
                 action="uninstall"
                 shift
                 ;;
-            --update)
+            -u | --upgrade)
                 action="update"
                 shift
                 ;;

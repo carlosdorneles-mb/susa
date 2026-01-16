@@ -363,7 +363,7 @@ O registry mantém controle de todos os plugins:
       "source": "https://github.com/user/backup-tools.git",
       "version": "1.2.0",
       "description": "Ferramentas de backup e restore",
-      "installed_at": "2026-01-11T22:30:00Z",
+      "installedAt": "2026-01-11T22:30:00Z",
       "commands": 4,
       "categories": "backup, restore",
       "dev": false
@@ -378,7 +378,7 @@ O registry mantém controle de todos os plugins:
 - `source`: URL do repositório Git ou caminho local (modo dev)
 - `version`: Versão instalada (do plugin.json)
 - `description`: Descrição do plugin (do plugin.json, opcional)
-- `installed_at`: Data/hora da instalação
+- `installedAt`: Data/hora da instalação
 - `commands`: Quantidade de comandos disponíveis (calculado automaticamente)
 - `categories`: Lista de categorias de comandos (calculado automaticamente)
 - `dev`: Flag indicando se é plugin em desenvolvimento local

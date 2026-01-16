@@ -34,7 +34,7 @@ Comandos:
 
 ### Rastreamento de Instalações
 
-#### `mark_installed()`
+#### `_mark_installed_software_in_lock()`
 
 Marca um software como instalado no lock file.
 
@@ -60,13 +60,13 @@ Marca um software como instalado no lock file.
 source "$LIB_DIR/internal/installations.sh"
 
 # Após instalar Docker
-mark_installed "docker" "24.0.5"
+_mark_installed_software_in_lock "docker" "24.0.5"
 
 # Sem versão específica
-mark_installed "podman"
+_mark_installed_software_in_lock "podman"
 ```
 
-#### `mark_uninstalled()`
+#### `remove_software_in_lock()`
 
 Marca um software como desinstalado no lock file.
 
@@ -89,7 +89,7 @@ Marca um software como desinstalado no lock file.
 
 ```bash
 # Após desinstalar Docker
-mark_uninstalled "docker"
+remove_software_in_lock "docker"
 ```
 
 #### `update_version()`
@@ -187,7 +187,7 @@ get_installation_info "docker"
 #   "name": "docker",
 #   "installed": true,
 #   "version": "24.0.5",
-#   "installed_at": "2026-01-14T15:27:36Z"
+#   "installedAt": "2026-01-14T15:27:36Z"
 # }
 ```
 
@@ -245,7 +245,7 @@ if check_software_installed "docker"; then
 fi
 ```
 
-#### `get_software_version()`
+#### `get_current_software_version()`
 
 Obtém a versão de um software instalado no sistema (sem prompts).
 
@@ -261,7 +261,7 @@ Obtém a versão de um software instalado no sistema (sem prompts).
 **Exemplo:**
 
 ```bash
-version=$(get_software_version "docker")
+version=$(get_current_software_version "docker")
 echo "Docker versão: $version"
 ```
 
@@ -346,7 +346,7 @@ install_docker() {
         log_success "Docker $version instalado com sucesso!"
 
         # Registrar no lock file
-        mark_installed "docker" "$version"
+        _mark_installed_software_in_lock "docker" "$version"
     fi
 }
 
@@ -365,7 +365,7 @@ uninstall_docker() {
     # ... lógica de desinstalação ...
 
     # Marcar como desinstalado
-    mark_uninstalled "docker"
+    remove_software_in_lock "docker"
 }
 ```
 
@@ -406,14 +406,14 @@ main() {
       "name": "docker",
       "installed": true,
       "version": "29.1.4",
-      "installed_at": "2026-01-14T15:27:36Z"
+      "installedAt": "2026-01-14T15:27:36Z"
     },
     {
       "name": "mise",
       "installed": true,
       "version": "2026.1.1",
-      "installed_at": "2026-01-14T15:27:36Z",
-      "updated_at": "2026-01-14T16:00:00Z"
+      "installedAt": "2026-01-14T15:27:36Z",
+      "updatedAt": "2026-01-14T16:00:00Z"
     },
     {
       "name": "fake-app",
@@ -478,7 +478,7 @@ done
 # Comparar lock com sistema
 list_installed | while read software; do
     lock_version=$(get_installed_version "$software")
-    system_version=$(get_software_version "$software")
+    system_version=$(get_current_software_version "$software")
 
     if [ "$lock_version" != "$system_version" ]; then
         echo "DRIFT: $software"

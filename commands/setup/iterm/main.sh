@@ -41,7 +41,7 @@ show_help() {
 }
 
 # Get latest iTerm2 version
-get_latest_iterm_version() {
+get_latest_version() {
     # Check if Homebrew is available
     if ! command -v brew &> /dev/null; then
         log_error "Homebrew não está instalado" >&2
@@ -74,12 +74,17 @@ get_latest_iterm_version() {
 }
 
 # Get installed iTerm2 version
-get_iterm_version() {
+get_current_version() {
     if brew list --cask iterm2 &> /dev/null; then
         brew list --cask iterm2 --versions 2> /dev/null | awk '{print $2}' || echo "desconhecida"
     else
         echo "desconhecida"
     fi
+}
+
+# Check if iTerm2 is installed
+check_installation() {
+    [ "$(uname)" = "Darwin" ] && [ -d "/Applications/iTerm.app" ]
 }
 
 # Check if Homebrew is installed
@@ -92,35 +97,6 @@ check_homebrew() {
     return 0
 }
 
-# Check if iTerm2 is already installed
-check_existing_installation() {
-
-    if ! brew list --cask iterm2 &> /dev/null; then
-        log_debug "iTerm2 não está instalado"
-        return 0
-    fi
-
-    local current_version=$(get_iterm_version)
-    log_info "iTerm2 $current_version já está instalado."
-
-    # Mark as installed in lock file
-    mark_installed "iterm" "$current_version"
-
-    # Check for updates
-    local latest_version=$(get_latest_iterm_version)
-    if [ $? -eq 0 ] && [ -n "$latest_version" ]; then
-        if [ "$current_version" != "$latest_version" ]; then
-            echo ""
-            log_output "${YELLOW}Nova versão disponível ($latest_version).${NC}"
-            log_output "Para atualizar, execute: ${LIGHT_CYAN}susa setup iterm --upgrade${NC}"
-        fi
-    else
-        log_warning "Não foi possível verificar atualizações"
-    fi
-
-    return 1
-}
-
 # Install iTerm2 using Homebrew
 install_iterm() {
     # Check if Homebrew is installed
@@ -131,7 +107,8 @@ install_iterm() {
         return 1
     fi
 
-    if ! check_existing_installation; then
+    if check_installation; then
+        log_info "iTerm2 $(get_current_version) já está instalado."
         exit 0
     fi
 
@@ -148,10 +125,10 @@ install_iterm() {
     brew install --cask iterm2 2>&1 | while read -r line; do log_debug "brew: $line"; done
 
     # Verify installation
-    if [ -d "/Applications/iTerm.app" ]; then
-        local version=$(get_iterm_version)
+    if check_installation; then
+        local version=$(get_current_version)
         log_success "iTerm2 $version instalado com sucesso!"
-        mark_installed "iterm" "$version"
+        register_or_update_software_in_lock "iterm" "$version"
         log_debug "Localização: /Applications/iTerm.app"
         return 0
     else
@@ -178,11 +155,11 @@ update_iterm() {
         return 1
     fi
 
-    local current_version=$(get_iterm_version)
+    local current_version=$(get_current_version)
     log_info "Versão atual: $current_version"
 
     # Get latest version
-    local latest_version=$(get_latest_iterm_version)
+    local latest_version=$(get_latest_version)
     if [ $? -ne 0 ] || [ -z "$latest_version" ]; then
         log_warning "Não foi possível verificar a última versão. Continuando com atualização via Homebrew..."
     elif [ "$current_version" = "$latest_version" ]; then
@@ -202,9 +179,9 @@ update_iterm() {
     log_debug "Executando: brew upgrade --cask iterm2"
     brew upgrade --cask iterm2 2>&1 | while read -r line; do log_debug "brew: $line"; done
 
-    local new_version=$(get_iterm_version)
+    local new_version=$(get_current_version)
     log_success "iTerm2 atualizado de $current_version para $new_version"
-    update_version "iterm" "$new_version"
+    register_or_update_software_in_lock "iterm" "$new_version"
     log_debug "Atualização concluída com sucesso"
 }
 
@@ -222,7 +199,7 @@ uninstall_iterm() {
         log_warning "iTerm2 não está instalado via Homebrew"
 
         # Check if app exists manually
-        if [ -d "/Applications/iTerm.app" ]; then
+        if check_installation; then
             log_warning "iTerm2 encontrado em /Applications mas não via Homebrew"
             echo ""
             log_output "${YELLOW}Deseja remover manualmente? (s/N)${NC}"
@@ -242,7 +219,7 @@ uninstall_iterm() {
         fi
     fi
 
-    local version=$(get_iterm_version)
+    local version=$(get_current_version)
     log_debug "Versão a ser removida: $version"
 
     # Confirm uninstallation
@@ -261,9 +238,9 @@ uninstall_iterm() {
     brew uninstall --cask iterm2 2>&1 | while read -r line; do log_debug "brew: $line"; done
 
     # Verify removal
-    if [ ! -d "/Applications/iTerm.app" ]; then
+    if ! check_installation; then
         log_success "iTerm2 desinstalado com sucesso"
-        mark_uninstalled "iterm"
+        remove_software_in_lock "iterm"
         log_debug "Aplicativo removido de /Applications"
     else
         log_warning "iTerm2 removido do Homebrew, mas arquivos podem permanecer"
@@ -291,24 +268,41 @@ main() {
     # Parse arguments
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --help | -h)
+            -h | --help)
                 show_help
                 exit 0
                 ;;
-            --uninstall | -u)
+            -v | --verbose)
+                log_debug "Modo verbose ativado"
+                export DEBUG=true
+                shift
+                ;;
+            -q | --quiet)
+                export SILENT=true
+                shift
+                ;;
+            --info)
+                show_software_info
+                exit 0
+                ;;
+            --get-current-version)
+                get_current_version
+                exit 0
+                ;;
+            --get-latest-version)
+                get_latest_version
+                exit 0
+                ;;
+            --check-installation)
+                check_installation
+                exit $?
+                ;;
+            --uninstall)
                 action="uninstall"
                 shift
                 ;;
-            --update)
+            -u | --upgrade)
                 action="update"
-                shift
-                ;;
-            --verbose | -v)
-                export DEBUG=1
-                shift
-                ;;
-            --quiet | -q)
-                export SILENT=1
                 shift
                 ;;
             *)

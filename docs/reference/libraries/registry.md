@@ -48,7 +48,7 @@ registry_remove_plugin "$registry_file" "myplugin"
 
 Lista todos os plugins do registry em formato delimitado por `|`.
 
-**Retorno:** Linhas no formato: `nome|source|version|installed_at`
+**Retorno:** Linhas no formato: `nome|source|version|installedAt`
 
 ```bash
 registry_list_plugins "$registry_file" | while IFS='|' read -r name source version installed; do
@@ -67,7 +67,7 @@ Obtém informação específica de um plugin.
 
 - `$1` - Caminho do arquivo registry.json
 - `$2` - Nome do plugin
-- `$3` - Campo (source, version, installed_at)
+- `$3` - Campo (source, version, installedAt)
 
 ```bash
 source=$(registry_get_plugin_info "$registry_file" "myplugin" "source")

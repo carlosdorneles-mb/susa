@@ -351,8 +351,6 @@ validate_command() {
 
     if [ -z "$config_file" ]; then
         log_error "Comando '$command' não encontrado na categoria '$category'"
-        log_output ""
-        list_commands "$category"
         exit 1
     fi
 
@@ -449,6 +447,9 @@ execute_command() {
 
     # Load environment variables from command config
     load_command_envs "$config_file"
+
+    # Export command name for use in scripts
+    export COMMAND_NAME="$command"
 
     source "$script_path" "$@"
 }

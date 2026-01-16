@@ -19,6 +19,7 @@ show_help() {
     log_output ""
     log_output "${LIGHT_GREEN}Opções:${NC}"
     log_output "  -h, --help        Mostra esta mensagem de ajuda"
+    log_output "  --info            Mostra informações sobre a instalação do Docker"
     log_output "  --uninstall       Desinstala o Docker do sistema"
     log_output "  -u, --upgrade     Atualiza o Docker para a versão mais recente"
     log_output "  -v, --verbose     Habilita saída detalhada para depuração"
@@ -33,15 +34,9 @@ show_help() {
     log_output "  Após a instalação, faça logout e login novamente para que"
     log_output "  as permissões do grupo docker sejam aplicadas, ou execute:"
     log_output "    newgrp docker"
-    log_output ""
-    log_output "${LIGHT_GREEN}Próximos passos:${NC}"
-    log_output "  docker --version               # Verifica a instalação"
-    log_output "  docker run hello-world         # Teste com container simples"
-    log_output "  docker images                  # Lista imagens disponíveis"
-    log_output "  docker ps                      # Lista containers em execução"
 }
 
-get_latest_docker_version() {
+get_latest_version() {
     # Get latest version from GitHub releases (format: docker-v29.1.4)
     local version_tag
     version_tag=$(github_get_latest_version "moby/moby")
@@ -59,41 +54,36 @@ get_latest_docker_version() {
 }
 
 # Get installed Docker version
-get_docker_version() {
-    if command -v docker &> /dev/null; then
+get_current_version() {
+    if check_installation; then
         docker --version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida"
     else
         echo "desconhecida"
     fi
 }
 
-# Check if Docker is already installed
-check_existing_installation() {
+# Check if Docker is installed
+check_installation() {
+    command -v docker &> /dev/null
+}
 
-    if ! command -v docker &> /dev/null; then
-        log_debug "Docker não está instalado"
-        return 0
-    fi
-
-    local current_version=$(get_docker_version)
-    log_info "Docker $current_version já está instalado."
-
-    # Mark as installed in lock file
-    mark_installed "docker" "$current_version"
-
-    # Check for updates
-    local latest_version=$(get_latest_docker_version)
-    if [ $? -eq 0 ] && [ -n "$latest_version" ]; then
-        if [ "$current_version" != "$latest_version" ]; then
-            log_output ""
-            log_output "${YELLOW}Nova versão disponível ($latest_version).${NC}"
-            log_output "Para atualizar, execute: ${LIGHT_CYAN}susa setup docker --upgrade${NC}"
-        fi
+# Show additional Docker-specific information
+# It's called by show_software_info() in the base script
+show_additional_info() {
+    # Check if Docker daemon is running
+    if docker info &> /dev/null; then
+        log_output "  ${CYAN}Daemon:${NC} ${GREEN}Executando${NC}"
     else
-        log_warning "Não foi possível verificar atualizações"
+        log_output "  ${CYAN}Daemon:${NC} ${RED}Parado${NC}"
     fi
 
-    return 1
+    # Show Docker Compose version if available
+    if check_installation; then
+        local compose_version=$(docker compose version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+        if [ -n "$compose_version" ]; then
+            log_output "  ${CYAN}Docker Compose:${NC} $compose_version"
+        fi
+    fi
 }
 
 # Detect OS and architecture
@@ -125,8 +115,6 @@ detect_os_and_arch() {
 
 # Configure user to run Docker without sudo
 configure_docker_group() {
-    log_info "Configurando permissões do Docker..."
-
     # Check if docker group exists
     if ! getent group docker &> /dev/null; then
         if ! sudo groupadd docker 2> /dev/null; then
@@ -143,7 +131,6 @@ configure_docker_group() {
             log_error "Falha ao adicionar usuário ao grupo docker"
             return 1
         fi
-        log_info "Usuário adicionado ao grupo docker. Faça logout/login ou execute: newgrp docker"
     else
         log_debug "Usuário já está no grupo docker"
     fi
@@ -153,8 +140,6 @@ configure_docker_group() {
 
 # Install Docker on macOS using Homebrew
 install_docker_macos() {
-    log_info "Instalando Docker no macOS..."
-
     # Check if Homebrew is installed
     if ! command -v brew &> /dev/null; then
         log_error "Homebrew não está instalado. Instale-o primeiro:"
@@ -164,30 +149,21 @@ install_docker_macos() {
 
     # Install or upgrade Docker
     if brew list docker &> /dev/null; then
-        log_info "Atualizando Docker via Homebrew..."
         brew upgrade docker || true
     else
-        log_info "Instalando Docker via Homebrew..."
         brew install docker
     fi
 
     # Install docker-compose if not present
     if ! brew list docker-compose &> /dev/null 2>&1; then
-        log_info "Instalando docker-compose..."
         brew install docker-compose || log_debug "docker-compose não disponível via brew"
     fi
-
-    log_info "Nota: No macOS, você precisará do Docker Desktop ou colima para executar containers."
-    log_info "Para usar sem Docker Desktop, instale colima: brew install colima"
-    log_info "Inicie colima com: colima start"
 
     return 0
 }
 
 # Install Docker on Linux
 install_docker_linux() {
-    log_info "Instalando Docker no Linux..."
-
     # Detect Linux distribution
     if [ -f /etc/os-release ]; then
         . /etc/os-release
@@ -221,7 +197,6 @@ install_docker_linux() {
     fi
 
     # Start and enable Docker service
-    log_info "Habilitando e iniciando serviço Docker..."
     sudo systemctl enable docker > /dev/null 2>&1 || log_debug "Não foi possível habilitar serviço"
     sudo systemctl start docker > /dev/null 2>&1 || log_debug "Não foi possível iniciar serviço"
 
@@ -233,17 +208,13 @@ install_docker_linux() {
 
 # Install Docker on Debian/Ubuntu based systems
 install_docker_debian() {
-
     # Remove old versions
-    log_info "Removendo versões antigas do Docker..."
     sudo apt-get remove -y docker docker-engine docker.io containerd runc > /dev/null 2>&1 || true
 
     # Update package index
-    log_info "Atualizando índice de pacotes..."
     sudo apt-get update > /dev/null 2>&1
 
     # Install dependencies
-    log_info "Instalando dependências..."
     sudo apt-get install -y \
         ca-certificates \
         curl \
@@ -251,7 +222,6 @@ install_docker_debian() {
         lsb-release > /dev/null 2>&1
 
     # Add Docker's official GPG key
-    log_info "Adicionando chave GPG do Docker..."
     sudo install -m 0755 -d /etc/apt/keyrings
     local distro
     distro=$(lsb_release -is | tr '[:upper:]' '[:lower:]')
@@ -259,7 +229,6 @@ install_docker_debian() {
     sudo chmod a+r /etc/apt/keyrings/docker.gpg
 
     # Set up repository
-    log_info "Configurando repositório do Docker..."
     echo \
         "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] $DOCKER_DOWNLOAD_BASE_URL/linux/$(lsb_release -is | tr '[:upper:]' '[:lower:]') \
       $(lsb_release -cs) stable" |
@@ -269,7 +238,6 @@ install_docker_debian() {
     sudo apt-get update > /dev/null 2>&1
 
     # Install Docker Engine
-    log_info "Instalando Docker Engine, CLI e plugins..."
     sudo apt-get install -y \
         docker-ce \
         docker-ce-cli \
@@ -282,9 +250,7 @@ install_docker_debian() {
 
 # Install Docker on RHEL/Fedora based systems
 install_docker_rhel() {
-
     # Remove old versions
-    log_info "Removendo versões antigas do Docker..."
     sudo dnf remove -y docker \
         docker-client \
         docker-client-latest \
@@ -295,15 +261,12 @@ install_docker_rhel() {
         docker-engine > /dev/null 2>&1 || true
 
     # Install dependencies
-    log_info "Instalando dependências..."
     sudo dnf install -y dnf-plugins-core > /dev/null 2>&1
 
     # Add Docker repository
-    log_info "Adicionando repositório do Docker..."
     sudo dnf config-manager --add-repo $DOCKER_DOWNLOAD_BASE_URL/linux/fedora/docker-ce.repo > /dev/null 2>&1
 
     # Install Docker Engine
-    log_info "Instalando Docker Engine, CLI e plugins..."
     sudo dnf install -y \
         docker-ce \
         docker-ce-cli \
@@ -316,9 +279,7 @@ install_docker_rhel() {
 
 # Install Docker on Arch based systems
 install_docker_arch() {
-
     # Install Docker
-    log_info "Instalando Docker via pacman..."
     sudo pacman -S --noconfirm docker docker-compose > /dev/null 2>&1
 
     return $?
@@ -326,7 +287,8 @@ install_docker_arch() {
 
 # Main installation function
 install_docker() {
-    if ! check_existing_installation; then
+    if check_installation; then
+        log_info "Docker $(get_current_version) já está instalado."
         exit 0
     fi
 
@@ -352,25 +314,13 @@ install_docker() {
 
     if [ $install_result -eq 0 ]; then
         # Verify installation
-        if command -v docker &> /dev/null; then
-            local installed_version=$(get_docker_version)
+        if check_installation; then
+            local installed_version=$(get_current_version)
 
             # Mark as installed in lock file
-            mark_installed "docker" "$installed_version"
+            register_or_update_software_in_lock "docker" "$installed_version"
 
             log_success "Docker $installed_version instalado com sucesso!"
-            log_output ""
-            log_output "Próximos passos:"
-
-            if [ "$os_name" = "darwin" ]; then
-                log_output "  1. Instale colima: ${LIGHT_CYAN}brew install colima${NC}"
-                log_output "  2. Inicie colima: ${LIGHT_CYAN}colima start${NC}"
-                log_output "  3. Execute: ${LIGHT_CYAN}docker run hello-world${NC}"
-            else
-                log_output "  1. Faça logout e login novamente, ou execute: ${LIGHT_CYAN}newgrp docker${NC}"
-                log_output "  2. Execute: ${LIGHT_CYAN}docker run hello-world${NC}"
-                log_output "  3. Use ${LIGHT_CYAN}susa setup docker --help${NC} para mais informações"
-            fi
         else
             log_error "Docker foi instalado mas não está disponível no PATH"
             return 1
@@ -382,19 +332,16 @@ install_docker() {
 
 # Update Docker
 update_docker() {
-    log_info "Atualizando Docker..."
-
     # Check if Docker is installed
-    if ! command -v docker &> /dev/null; then
+    if ! check_installation; then
         log_error "Docker não está instalado. Use 'susa setup docker' para instalar."
         return 1
     fi
 
-    local current_version=$(get_docker_version)
-    log_info "Versão atual: $current_version"
+    local current_version=$(get_current_version)
 
     # Get latest version
-    local docker_version=$(get_latest_docker_version)
+    local docker_version=$(get_latest_version)
     if [ $? -ne 0 ] || [ -z "$docker_version" ]; then
         return 1
     fi
@@ -404,7 +351,7 @@ update_docker() {
         return 0
     fi
 
-    log_info "Atualizando de $current_version para $docker_version..."
+    log_info "Atualizando Docker..."
 
     # Detect OS and update
     local os_name=$(uname -s | tr '[:upper:]' '[:lower:]')
@@ -416,7 +363,6 @@ update_docker() {
                 return 1
             fi
 
-            log_info "Atualizando Docker via Homebrew..."
             brew upgrade docker || {
                 log_error "Falha ao atualizar Docker"
                 return 1
@@ -424,7 +370,6 @@ update_docker() {
 
             # Update docker-compose if installed
             if brew list docker-compose &> /dev/null 2>&1; then
-                log_info "Atualizando docker-compose..."
                 brew upgrade docker-compose || log_debug "docker-compose já está atualizado"
             fi
             ;;
@@ -441,7 +386,6 @@ update_docker() {
 
             case "$distro" in
                 ubuntu | debian | pop | linuxmint)
-                    log_info "Atualizando Docker via apt..."
                     sudo apt-get update > /dev/null 2>&1
                     sudo apt-get install --only-upgrade -y \
                         docker-ce \
@@ -451,7 +395,6 @@ update_docker() {
                         docker-compose-plugin > /dev/null 2>&1
                     ;;
                 fedora | rhel | centos | rocky | almalinux)
-                    log_info "Atualizando Docker via dnf..."
                     sudo dnf upgrade -y \
                         docker-ce \
                         docker-ce-cli \
@@ -460,7 +403,6 @@ update_docker() {
                         docker-compose-plugin > /dev/null 2>&1
                     ;;
                 arch | manjaro)
-                    log_info "Atualizando Docker via pacman..."
                     sudo pacman -Syu --noconfirm docker docker-compose > /dev/null 2>&1
                     ;;
                 *)
@@ -476,11 +418,11 @@ update_docker() {
     esac
 
     # Verify update
-    if command -v docker &> /dev/null; then
-        local new_version=$(get_docker_version)
+    if check_installation; then
+        local new_version=$(get_current_version)
 
         # Update version in lock file
-        update_version "docker" "$new_version"
+        register_or_update_software_in_lock "docker" "$new_version"
 
         log_success "Docker atualizado com sucesso para versão $new_version!"
     else
@@ -491,16 +433,13 @@ update_docker() {
 
 # Uninstall Docker
 uninstall_docker() {
-    log_info "Desinstalando Docker..."
-
     # Check if Docker is installed
-    if ! command -v docker &> /dev/null; then
+    if ! check_installation; then
         log_info "Docker não está instalado"
         return 0
     fi
 
-    local current_version=$(get_docker_version)
-    log_debug "Versão a ser removida: $current_version"
+    local current_version=$(get_current_version)
 
     log_output ""
     log_output "${YELLOW}Deseja realmente desinstalar o Docker $current_version? (s/N)${NC}"
@@ -517,7 +456,6 @@ uninstall_docker() {
         darwin)
             # Uninstall via Homebrew
             if command -v brew &> /dev/null; then
-                log_info "Removendo Docker via Homebrew..."
                 brew uninstall docker 2> /dev/null || log_debug "Docker não instalado via Homebrew"
                 brew uninstall docker-compose 2> /dev/null || log_debug "docker-compose não instalado"
             fi
@@ -534,13 +472,11 @@ uninstall_docker() {
             fi
 
             # Stop Docker service
-            log_info "Parando serviço Docker..."
             sudo systemctl stop docker > /dev/null 2>&1 || log_debug "Serviço já parado"
             sudo systemctl disable docker > /dev/null 2>&1 || log_debug "Serviço não estava habilitado"
 
             case "$distro" in
                 ubuntu | debian | pop | linuxmint)
-                    log_info "Removendo Docker via apt..."
                     sudo apt-get purge -y \
                         docker-ce \
                         docker-ce-cli \
@@ -550,7 +486,6 @@ uninstall_docker() {
                     sudo apt-get autoremove -y > /dev/null 2>&1
                     ;;
                 fedora | rhel | centos | rocky | almalinux)
-                    log_info "Removendo Docker via dnf..."
                     sudo dnf remove -y \
                         docker-ce \
                         docker-ce-cli \
@@ -559,7 +494,6 @@ uninstall_docker() {
                         docker-compose-plugin > /dev/null 2>&1
                     ;;
                 arch | manjaro)
-                    log_info "Removendo Docker via pacman..."
                     sudo pacman -Rns --noconfirm docker docker-compose > /dev/null 2>&1
                     ;;
             esac
@@ -573,9 +507,9 @@ uninstall_docker() {
     esac
 
     # Verify uninstallation
-    if ! command -v docker &> /dev/null; then
+    if ! check_installation; then
         # Mark as uninstalled in lock file
-        mark_uninstalled "docker"
+        remove_software_in_lock "docker"
 
         log_success "Docker desinstalado com sucesso!"
     else
@@ -588,11 +522,8 @@ uninstall_docker() {
     read -r response
 
     if [[ "$response" =~ ^[sSyY]$ ]]; then
-        log_info "Removendo dados do Docker..."
-        log_info "Dados removidos"
+        log_debug "Removendo dados do Docker..."
     fi
-
-    log_info "Reinicie o terminal para aplicar as mudanças"
 }
 
 # Main function
@@ -607,18 +538,35 @@ main() {
                 exit 0
                 ;;
             -v | --verbose)
-                export DEBUG=1
+                log_debug "Modo verbose ativado"
+                export DEBUG=true
                 shift
                 ;;
             -q | --quiet)
-                export SILENT=1
+                export SILENT=true
                 shift
+                ;;
+            --info)
+                show_software_info
+                exit 0
+                ;;
+            --get-current-version)
+                get_current_version
+                exit 0
+                ;;
+            --get-latest-version)
+                get_latest_version
+                exit 0
+                ;;
+            --check-installation)
+                check_installation
+                exit $?
                 ;;
             --uninstall)
                 action="uninstall"
                 shift
                 ;;
-            --update)
+            -u | --upgrade)
                 action="update"
                 shift
                 ;;

@@ -50,12 +50,17 @@ show_help() {
     log_output "    flameshot gui"
 }
 
+# Get latest version (not implemented)
+get_latest_version() {
+    github_get_latest_version "$FLAMESHOT_GITHUB_REPO"
+}
+
 # Get installed Flameshot version
-get_flameshot_version() {
+get_current_version() {
     # Check version file first (for GitHub releases)
     if [ -f "$FLAMESHOT_INSTALL_DIR/version.txt" ]; then
         cat "$FLAMESHOT_INSTALL_DIR/version.txt"
-    elif command -v flameshot &> /dev/null; then
+    elif check_installation; then
         local version=$(flameshot --version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "instalada")
         echo "$version"
     else
@@ -63,23 +68,9 @@ get_flameshot_version() {
     fi
 }
 
-# Check if Flameshot is already installed
-check_existing_installation() {
-    if ! command -v flameshot &> /dev/null; then
-        log_debug "Flameshot não está instalado"
-        return 0
-    fi
-
-    local current_version=$(get_flameshot_version)
-    log_info "Flameshot $current_version já está instalado."
-
-    # Mark as installed in lock file
-    mark_installed "flameshot" "$current_version"
-
-    log_output ""
-    log_output "${YELLOW}Para atualizar, execute:${NC} ${LIGHT_CYAN}susa setup flameshot --upgrade${NC}"
-
-    return 1
+# Check if Flameshot is installed
+check_installation() {
+    command -v flameshot &> /dev/null
 }
 
 # Install Flameshot on macOS using Homebrew
@@ -234,7 +225,7 @@ install_flameshot_rhel() {
             if [ -f /etc/os-release ]; then
                 . /etc/os-release
                 # Use fc41 or fc42 based on detected version, default to fc41
-                if [ ! -z "$VERSION_ID" ] && [ "$VERSION_ID" -ge 42 ]; then
+                if [ -n "$VERSION_ID" ] && [ "$VERSION_ID" -ge 42 ]; then
                     rpm_pattern="fc42.x86_64.rpm"
                 else
                     rpm_pattern="fc41.x86_64.rpm"
@@ -372,6 +363,11 @@ install_flameshot_linux() {
 
 # Main installation function
 install_flameshot() {
+    if check_installation; then
+        log_info "Flameshot $(get_current_version) já está instalado."
+        exit 0
+    fi
+
     local os_type=$(get_simple_os)
 
     if [ "$os_type" = "mac" ]; then
@@ -384,20 +380,20 @@ install_flameshot() {
     fi
 
     # Mark as installed
-    local version=$(get_flameshot_version)
-    mark_installed "flameshot" "$version"
+    local version=$(get_current_version)
+    register_or_update_software_in_lock "flameshot" "$version"
 }
 
 # Update Flameshot
 update_flameshot() {
     log_info "Atualizando Flameshot..."
 
-    if ! command -v flameshot &> /dev/null; then
+    if ! check_installation; then
         log_warning "Flameshot não está instalado. Execute sem --upgrade para instalar."
         return 1
     fi
 
-    local current_version=$(get_flameshot_version)
+    local current_version=$(get_current_version)
     log_info "Versão atual: $current_version"
 
     local os_type=$(get_simple_os)
@@ -442,18 +438,18 @@ update_flameshot() {
         esac
     fi
 
-    local new_version=$(get_flameshot_version)
+    local new_version=$(get_current_version)
     log_success "Flameshot atualizado para versão $new_version"
 
     # Update lock file
-    mark_installed "flameshot" "$new_version"
+    register_or_update_software_in_lock "flameshot" "$new_version"
 }
 
 # Uninstall Flameshot
 uninstall_flameshot() {
     log_info "Desinstalando Flameshot..."
 
-    if ! command -v flameshot &> /dev/null; then
+    if ! check_installation; then
         log_warning "Flameshot não está instalado"
         return 0
     fi
@@ -500,7 +496,7 @@ uninstall_flameshot() {
     log_success "Flameshot desinstalado com sucesso!"
 
     # Remove from lock file
-    mark_uninstalled "flameshot"
+    remove_software_in_lock "flameshot"
 }
 
 # Main execution
@@ -515,17 +511,34 @@ main() {
                 show_help
                 exit 0
                 ;;
+            -v | --verbose)
+                log_debug "Modo verbose ativado"
+                export DEBUG=true
+                ;;
+            -q | --quiet)
+                export SILENT=true
+                ;;
+            --info)
+                show_software_info
+                exit 0
+                ;;
+            --get-current-version)
+                get_current_version
+                exit 0
+                ;;
+            --get-latest-version)
+                get_latest_version
+                exit 0
+                ;;
+            --check-installation)
+                check_installation
+                exit $?
+                ;;
             -u | --upgrade)
                 should_update=true
                 ;;
             --uninstall)
                 should_uninstall=true
-                ;;
-            -v | --verbose)
-                export VERBOSE=true
-                ;;
-            -q | --quiet)
-                export QUIET=true
                 ;;
             *)
                 log_error "Opção desconhecida: $arg"
@@ -541,7 +554,6 @@ main() {
     elif [ "$should_update" = true ]; then
         update_flameshot
     else
-        check_existing_installation || exit 0
         install_flameshot
     fi
 }

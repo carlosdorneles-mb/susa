@@ -40,53 +40,22 @@ show_help() {
     log_output "  podman images                      # Lista imagens disponíveis"
 }
 
-get_latest_podman_version() {
+get_latest_version() {
     github_get_latest_version "containers/podman"
 }
 
 # Get installed Podman version
-get_podman_version() {
-    if command -v podman &> /dev/null; then
+get_current_version() {
+    if check_installation; then
         podman --version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida"
     else
         echo "desconhecida"
     fi
 }
 
-# Get local bin directory path
-get_local_bin_dir() {
-    echo "$HOME/.local/bin"
-}
-
-# Check if Podman is already installed and ask about update
-check_existing_installation() {
-
-    if ! command -v podman &> /dev/null; then
-        log_debug "Podman não está instalado"
-        return 0
-    fi
-
-    local current_version=$(get_podman_version)
-    log_info "Podman $current_version já está instalado."
-
-    # Mark as installed in lock file
-    mark_installed "podman" "$current_version"
-
-    # Check for updates
-    local latest_version=$(get_latest_podman_version)
-    if [ $? -eq 0 ] && [ -n "$latest_version" ]; then
-        # Remove 'v' prefix if present
-        local latest_clean="${latest_version#v}"
-        if [ "$current_version" != "$latest_clean" ]; then
-            echo ""
-            log_output "${YELLOW}Nova versão disponível ($latest_clean).${NC}"
-            log_output "Para atualizar, execute: ${LIGHT_CYAN}susa setup podman --upgrade${NC}"
-        fi
-    else
-        log_warning "Não foi possível verificar atualizações"
-    fi
-
-    return 1
+# Check if Podman is installed
+check_installation() {
+    command -v podman &> /dev/null
 }
 
 # Install Podman on macOS using Homebrew
@@ -128,7 +97,7 @@ install_podman_linux() {
     log_info "Instalando Podman no Linux..."
 
     # Get latest version
-    local podman_version=$(get_latest_podman_version)
+    local podman_version=$(get_latest_version)
     if [ $? -ne 0 ] || [ -z "$podman_version" ]; then
         return 1
     fi
@@ -150,7 +119,7 @@ install_podman_linux() {
             ;;
     esac
 
-    local install_dir=$(get_local_bin_dir)
+    local install_dir="$LOCAL_BIN_DIR"
     mkdir -p "$install_dir"
 
     # Build download URL with correct filename for checksum verification
@@ -204,7 +173,7 @@ install_podman_linux() {
 
     log_debug "Binário encontrado: $podman_binary"
 
-    local podman_bin="$(get_local_bin_dir)/podman"
+    local podman_bin="$LOCAL_BIN_DIR/podman"
     mv "$podman_binary" "$podman_bin"
     chmod +x "$podman_bin"
     rm -rf "$temp_dir"
@@ -216,12 +185,12 @@ install_podman_linux() {
     if ! grep -q ".local/bin" "$shell_config" 2> /dev/null; then
         echo "" >> "$shell_config"
         echo "# Local binaries PATH" >> "$shell_config"
-        echo "export PATH=\"$(get_local_bin_dir):\$PATH\"" >> "$shell_config"
+        echo "export PATH=\"$LOCAL_BIN_DIR:\$PATH\"" >> "$shell_config"
         log_debug "PATH configurado em $shell_config"
     fi
 
     # Update current session PATH
-    export PATH="$(get_local_bin_dir):$PATH"
+    export PATH="$LOCAL_BIN_DIR:$PATH"
 
     # Install podman-compose
     log_info "Instalando podman-compose..."
@@ -267,7 +236,8 @@ install_podman_linux() {
 
 # Main installation function
 install_podman() {
-    if ! check_existing_installation; then
+    if check_installation; then
+        log_info "Podman $(get_current_version) já está instalado."
         exit 0
     fi
 
@@ -293,10 +263,10 @@ install_podman() {
 
     if [ $install_result -eq 0 ]; then
         # Verify installation
-        if command -v podman &> /dev/null; then
-            local installed_version=$(get_podman_version)
+        if check_installation; then
+            local installed_version=$(get_current_version)
             log_success "Podman $installed_version instalado com sucesso!"
-            mark_installed "podman" "$installed_version"
+            register_or_update_software_in_lock "podman" "$installed_version"
             echo ""
             echo "Próximos passos:"
 
@@ -323,16 +293,16 @@ update_podman() {
     log_info "Atualizando Podman..."
 
     # Check if Podman is installed
-    if ! command -v podman &> /dev/null; then
+    if ! check_installation; then
         log_error "Podman não está instalado. Use 'susa setup podman' para instalar."
         return 1
     fi
 
-    local current_version=$(get_podman_version)
+    local current_version=$(get_current_version)
     log_info "Versão atual: $current_version"
 
     # Get latest version
-    local podman_version=$(get_latest_podman_version)
+    local podman_version=$(get_latest_version)
     if [ $? -ne 0 ] || [ -z "$podman_version" ]; then
         return 1
     fi
@@ -369,7 +339,7 @@ update_podman() {
             ;;
         linux)
             # Remove old binary
-            local podman_bin="$(get_local_bin_dir)/podman"
+            local podman_bin="$LOCAL_BIN_DIR/podman"
             if [ -f "$podman_bin" ]; then
                 log_info "Removendo versão anterior..."
                 rm -f "$podman_bin"
@@ -386,10 +356,10 @@ update_podman() {
     esac
 
     # Verify update
-    if command -v podman &> /dev/null; then
-        local new_version=$(get_podman_version)
+    if check_installation; then
+        local new_version=$(get_current_version)
         log_success "Podman atualizado com sucesso para versão $new_version!"
-        update_version "podman" "$new_version"
+        register_or_update_software_in_lock "podman" "$new_version"
     else
         log_error "Falha na atualização do Podman"
         return 1
@@ -401,12 +371,12 @@ uninstall_podman() {
     log_info "Desinstalando Podman..."
 
     # Check if Podman is installed
-    if ! command -v podman &> /dev/null; then
+    if ! check_installation; then
         log_warning "Podman não está instalado"
         return 0
     fi
 
-    local version=$(get_podman_version)
+    local version=$(get_current_version)
     log_debug "Versão a ser removida: $version"
 
     # Confirm uninstallation
@@ -425,7 +395,7 @@ uninstall_podman() {
     case "$os_name" in
         darwin)
             # Stop and remove podman machine
-            if command -v podman &> /dev/null; then
+            if check_installation; then
                 log_info "Parando máquina virtual do Podman..."
                 podman machine stop 2> /dev/null || true
                 podman machine rm -f 2> /dev/null || true
@@ -512,7 +482,7 @@ uninstall_podman() {
             fi
 
             # Remove binary from local bin if exists
-            local podman_bin="$(get_local_bin_dir)/podman"
+            local podman_bin="$LOCAL_BIN_DIR/podman"
             if [ -f "$podman_bin" ]; then
                 rm -f "$podman_bin"
                 log_debug "Binário local removido: $podman_bin"
@@ -538,9 +508,9 @@ uninstall_podman() {
     esac
 
     # Verify removal
-    if ! command -v podman &> /dev/null; then
+    if ! check_installation; then
         log_success "Podman desinstalado com sucesso!"
-        mark_uninstalled "podman"
+        remove_software_in_lock "podman"
 
         echo ""
         log_info "Reinicie o terminal ou execute: source $shell_config"
@@ -562,18 +532,33 @@ main() {
                 exit 0
                 ;;
             -v | --verbose)
-                export DEBUG=1
-                shift
+                log_debug "Modo verbose ativado"
+                export DEBUG=true
                 ;;
             -q | --quiet)
-                export SILENT=1
-                shift
+                export SILENT=true
+                ;;
+            --info)
+                show_software_info
+                exit 0
+                ;;
+            --get-current-version)
+                get_current_version
+                exit 0
+                ;;
+            --get-latest-version)
+                get_latest_version
+                exit 0
+                ;;
+            --check-installation)
+                check_installation
+                exit $?
                 ;;
             --uninstall)
                 action="uninstall"
                 shift
                 ;;
-            --update)
+            -u | --upgrade)
                 action="update"
                 shift
                 ;;

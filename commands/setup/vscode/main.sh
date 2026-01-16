@@ -4,6 +4,7 @@ IFS=$'\n\t'
 
 # Source libraries
 source "$LIB_DIR/internal/installations.sh"
+source "$LIB_DIR/github.sh"
 
 # Help function
 show_help() {
@@ -43,18 +44,33 @@ show_help() {
     log_output "  • Remote Development"
 }
 
+# Get latest version
+get_latest_version() {
+    # VS Code releases are available on GitHub
+    local version=$(github_get_latest_version "microsoft/vscode" 2> /dev/null)
+
+    if [ -n "$version" ] && [ "$version" != "null" ]; then
+        echo "$version"
+    else
+        echo "desconhecida"
+    fi
+}
+
 # Get installed VS Code version
-get_vscode_version() {
-    if command -v code &> /dev/null; then
+get_current_version() {
+    if check_installation; then
         local version=$(code --version 2> /dev/null | head -1 || echo "desconhecida")
         if [ "$version" != "desconhecida" ]; then
             echo "$version"
-        else
-            echo "instalada"
         fi
     else
         echo "desconhecida"
     fi
+}
+
+# Check if VS Code is installed
+check_installation() {
+    command -v code &> /dev/null
 }
 
 # Detect Linux distribution
@@ -65,25 +81,6 @@ detect_distro() {
     else
         echo "unknown"
     fi
-}
-
-# Check if VS Code is already installed
-check_existing_installation() {
-    if ! command -v code &> /dev/null; then
-        log_debug "VS Code não está instalado"
-        return 0
-    fi
-
-    local current_version=$(get_vscode_version)
-    log_info "VS Code $current_version já está instalado."
-
-    # Mark as installed in lock file
-    mark_installed "vscode" "$current_version"
-
-    log_output ""
-    log_output "${YELLOW}Para atualizar, execute:${NC} ${LIGHT_CYAN}susa setup vscode --upgrade${NC}"
-
-    return 1
 }
 
 # Install VS Code on macOS using Homebrew
@@ -219,7 +216,8 @@ install_vscode_linux() {
 
 # Main installation function
 install_vscode() {
-    if ! check_existing_installation; then
+    if check_installation; then
+        log_info "VS Code $(get_current_version) já está instalado."
         exit 0
     fi
 
@@ -245,11 +243,11 @@ install_vscode() {
 
     if [ $install_result -eq 0 ]; then
         # Verify installation
-        if command -v code &> /dev/null; then
-            local installed_version=$(get_vscode_version)
+        if check_installation; then
+            local installed_version=$(get_current_version)
 
             # Mark as installed in lock file
-            mark_installed "vscode" "$installed_version"
+            register_or_update_software_in_lock "vscode" "$installed_version"
 
             log_success "VS Code $installed_version instalado com sucesso!"
             log_output ""
@@ -273,12 +271,12 @@ update_vscode() {
     log_info "Atualizando VS Code..."
 
     # Check if VS Code is installed
-    if ! command -v code &> /dev/null; then
+    if ! check_installation; then
         log_error "VS Code não está instalado. Use 'susa setup vscode' para instalar."
         return 1
     fi
 
-    local current_version=$(get_vscode_version)
+    local current_version=$(get_current_version)
     log_info "Versão atual: $current_version"
 
     # Detect OS and update
@@ -338,11 +336,11 @@ update_vscode() {
     esac
 
     # Verify update
-    if command -v code &> /dev/null; then
-        local new_version=$(get_vscode_version)
+    if check_installation; then
+        local new_version=$(get_current_version)
 
         # Update version in lock file
-        update_version "vscode" "$new_version"
+        register_or_update_software_in_lock "vscode" "$new_version"
 
         if [ "$current_version" = "$new_version" ]; then
             log_info "VS Code já estava na versão mais recente ($current_version)"
@@ -360,12 +358,12 @@ uninstall_vscode() {
     log_info "Desinstalando VS Code..."
 
     # Check if VS Code is installed
-    if ! command -v code &> /dev/null; then
+    if ! check_installation; then
         log_info "VS Code não está instalado"
         return 0
     fi
 
-    local current_version=$(get_vscode_version)
+    local current_version=$(get_current_version)
     log_debug "Versão a ser removida: $current_version"
 
     log_output ""
@@ -427,9 +425,9 @@ uninstall_vscode() {
     esac
 
     # Verify uninstallation
-    if ! command -v code &> /dev/null; then
+    if ! check_installation; then
         # Mark as uninstalled in lock file
-        mark_uninstalled "vscode"
+        remove_software_in_lock "vscode"
 
         log_success "VS Code desinstalado com sucesso!"
     else
@@ -476,18 +474,33 @@ main() {
                 exit 0
                 ;;
             -v | --verbose)
-                export DEBUG=1
-                shift
+                log_debug "Modo verbose ativado"
+                export DEBUG=true
                 ;;
             -q | --quiet)
-                export SILENT=1
-                shift
+                export SILENT=true
+                ;;
+            --info)
+                show_software_info
+                exit 0
+                ;;
+            --get-current-version)
+                get_current_version
+                exit 0
+                ;;
+            --get-latest-version)
+                get_latest_version
+                exit 0
+                ;;
+            --check-installation)
+                check_installation
+                exit $?
                 ;;
             --uninstall)
                 action="uninstall"
                 shift
                 ;;
-            --update)
+            -u | --upgrade)
                 action="update"
                 shift
                 ;;

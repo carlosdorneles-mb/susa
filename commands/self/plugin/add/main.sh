@@ -252,7 +252,7 @@ check_plugin_already_installed() {
 
             if [ -f "$registry_file" ]; then
                 current_version=$(registry_get_plugin_info "$registry_file" "$existing_name" "version" | head -1)
-                install_date=$(registry_get_plugin_info "$registry_file" "$existing_name" "installed_at" | head -1)
+                install_date=$(registry_get_plugin_info "$registry_file" "$existing_name" "installedAt" | head -1)
             fi
 
             show_plugin_details "$existing_name" "$current_version" "" "" "" "" "$plugin_source" "$install_date" "true"
@@ -312,7 +312,7 @@ check_plugin_already_installed() {
     if [ -f "$registry_file" ]; then
         log_debug "Lendo informações do registry"
         current_version=$(registry_get_plugin_info "$registry_file" "$plugin_name" "version" | head -1)
-        install_date=$(registry_get_plugin_info "$registry_file" "$plugin_name" "installed_at" | head -1)
+        install_date=$(registry_get_plugin_info "$registry_file" "$plugin_name" "installedAt" | head -1)
     fi
 
     show_plugin_details "$plugin_name" "$current_version" "" "" "" "" "$source_path" "$install_date" "$dev_mode"
@@ -490,7 +490,7 @@ main() {
             log_output ""
 
             local current_version=$(registry_get_plugin_info "$registry_file" "$plugin_name" "version" | head -1)
-            local install_date=$(registry_get_plugin_info "$registry_file" "$plugin_name" "installed_at" | head -1)
+            local install_date=$(registry_get_plugin_info "$registry_file" "$plugin_name" "installedAt" | head -1)
             local source_path=$(registry_get_plugin_info "$registry_file" "$plugin_name" "source" | head -1)
             local is_dev=$(jq -r ".plugins[] | select(.name == \"$plugin_name\") | .dev // false" "$registry_file" 2> /dev/null | head -1)
 

@@ -93,6 +93,7 @@ scan_category_dir() {
                 echo "COMMAND|$category_path|$item_name|$source"
 
                 # Read additional metadata
+                local display_name=$(jq -r '.name // empty' "$item_dir/command.json" 2> /dev/null)
                 local description=$(jq -r '.description // empty' "$item_dir/command.json" 2> /dev/null)
                 local script=$(jq -r '.entrypoint // empty' "$item_dir/command.json" 2> /dev/null)
                 local os=$(jq -c '.os // empty' "$item_dir/command.json" 2> /dev/null)
@@ -104,6 +105,7 @@ scan_category_dir() {
                     script="main.sh"
                 fi
 
+                [ -n "$display_name" ] && echo "META|display_name|${display_name}"
                 [ -n "$description" ] && echo "META|description|${description}"
                 echo "META|entrypoint|${script}"
                 [ -n "$os" ] && echo "META|os|${os}"
@@ -292,10 +294,10 @@ generate_lock_file() {
         --arg timestamp "$timestamp" \
         '. + {
             "_comment": $comment,
-            "_generated_at": $timestamp,
+            "_generatedAt": $timestamp,
             "_note": $generated,
             "version": $version,
-            "generated_at": $timestamp,
+            "generatedAt": $timestamp,
             "categories": [],
             "plugins": [],
             "commands": []
@@ -389,6 +391,13 @@ generate_lock_file() {
         elif [ "$type" = "META" ]; then
             local meta_key="$field1"
             local meta_value="$field2"
+
+            # Convert snake_case keys to camelCase for JSON
+            case "$meta_key" in
+                display_name)
+                    meta_key="displayName"
+                    ;;
+            esac
 
             # Add metadata to command object
             if [ -n "$meta_value" ] && [ "$meta_value" != "" ]; then

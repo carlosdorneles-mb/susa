@@ -61,7 +61,7 @@ EOF
         --arg source "$source_url" \
         --arg version "$version" \
         --arg installed "$timestamp" \
-        '{name: $name, source: $source, version: $version, installed_at: $installed}')
+        '{name: $name, source: $source, version: $version, installedAt: $installed}')
 
     # Add description if provided
     if [ -n "$description" ]; then
@@ -116,14 +116,14 @@ registry_list_plugins() {
     fi
 
     # Use jq to format output
-    jq -r '.plugins[] | "\(.name)|\(.source)|\(.version)|\(.installed_at)"' "$registry_file" 2> /dev/null
+    jq -r '.plugins[] | "\(.name)|\(.source)|\(.version)|\(.installedAt)"' "$registry_file" 2> /dev/null
 }
 
 # Gets information about a specific plugin
 registry_get_plugin_info() {
     local registry_file="$1"
     local plugin_name="$2"
-    local field="$3" # source, version, installed_at
+    local field="$3" # source, version, installedAt
 
     if [ ! -f "$registry_file" ]; then
         return 1

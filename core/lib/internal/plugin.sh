@@ -13,7 +13,7 @@ source "$LIB_DIR/internal/git.sh"
 # --- Plugin Display Functions ---
 
 # Show plugin details in a standardized format
-# Usage: show_plugin_details <name> [version] [commands] [categories] [description] [directory] [source] [installed_at] [dev_mode]
+# Usage: show_plugin_details <name> [version] [commands] [categories] [description] [directory] [source] [installedAt] [dev_mode]
 show_plugin_details() {
     local name="${1:-}"
     local version="${2:-}"
@@ -22,7 +22,7 @@ show_plugin_details() {
     local description="${5:-}"
     local directory="${6:-}"
     local source="${7:-}"
-    local installed_at="${8:-}"
+    local installedAt="${8:-}"
     local dev_mode="${9:-false}"
 
     log_output "Detalhes do plugin:"
@@ -59,8 +59,8 @@ show_plugin_details() {
         fi
     fi
 
-    if [ -n "$installed_at" ]; then
-        log_output "  ${GRAY}Instalado em:${NC} $installed_at"
+    if [ -n "$installedAt" ]; then
+        log_output "  ${GRAY}Instalado em:${NC} $installedAt"
     fi
 }
 

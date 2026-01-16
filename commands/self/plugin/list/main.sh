@@ -61,7 +61,7 @@ main() {
 
         local source_url=$(jq -r ".plugins[$i].source // empty" "$REGISTRY_FILE" 2> /dev/null)
         local version=$(jq -r ".plugins[$i].version // empty" "$REGISTRY_FILE" 2> /dev/null)
-        local installed_at=$(jq -r ".plugins[$i].installed_at // empty" "$REGISTRY_FILE" 2> /dev/null)
+        local installedAt=$(jq -r ".plugins[$i].installedAt // empty" "$REGISTRY_FILE" 2> /dev/null)
         local is_dev=$(jq -r ".plugins[$i].dev // empty" "$REGISTRY_FILE" 2> /dev/null)
         local cmd_count=$(jq -r ".plugins[$i].commands // empty" "$REGISTRY_FILE" 2> /dev/null)
         local categories=$(jq -r ".plugins[$i].categories // empty" "$REGISTRY_FILE" 2> /dev/null)
@@ -111,7 +111,7 @@ main() {
         [ "$version" != "null" ] && log_output "   Versão: ${GRAY}$version${NC}"
         log_output "   Comandos: ${GRAY}$cmd_count${NC}"
         [ -n "$categories" ] && log_output "   Categorias: ${GRAY}$categories${NC}"
-        [ "$installed_at" != "null" ] && log_output "   Instalado: ${GRAY}$installed_at${NC}"
+        [ "$installedAt" != "null" ] && log_output "   Instalado: ${GRAY}$installedAt${NC}"
         log_output ""
     done
 
