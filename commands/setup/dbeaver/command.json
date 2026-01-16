@@ -1,0 +1,18 @@
+{
+  "name": "DBeaver",
+  "description": "Instala DBeaver Community (ferramenta universal de gerenciamento de banco de dados)",
+  "entrypoint": "main.sh",
+  "sudo": true,
+  "group": "database",
+  "os": [
+    "linux",
+    "mac"
+  ],
+  "envs": {
+    "DBEAVER_HOMEBREW_CASK": "dbeaver-community",
+    "DBEAVER_APT_KEY_URL": "https://dbeaver.io/debs/dbeaver.gpg.key",
+    "DBEAVER_APT_REPO": "https://dbeaver.io/debs/dbeaver-ce",
+    "DBEAVER_GITHUB_REPO": "dbeaver/dbeaver",
+    "DBEAVER_PACKAGE_NAME": "dbeaver-ce"
+  }
+}

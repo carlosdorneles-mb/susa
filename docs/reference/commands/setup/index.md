@@ -8,6 +8,10 @@ Comandos para configuração e instalação de ferramentas e ambientes de desenv
 
 Instala e configura o ASDF, um gerenciador de versões para múltiplas linguagens de programação.
 
+### [DBeaver](dbeaver.md)
+
+Instala e configura o DBeaver Community, uma ferramenta universal de gerenciamento de banco de dados gratuita e open-source. Suporta mais de 80 tipos diferentes de bancos de dados incluindo MySQL, PostgreSQL, SQLite, Oracle, SQL Server e muitos outros. **Disponível para Linux e macOS.**
+
 ### [Docker](docker.md)
 
 Instala e configura o Docker CLI e Engine para gerenciamento de containers. Esta instalação inclui apenas o Docker CLI e Engine, sem o Docker Desktop. **Disponível para Linux e macOS.**
