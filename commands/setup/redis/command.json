@@ -1,0 +1,9 @@
+{
+  "name": "Redis CLI",
+  "description": "Instala, atualiza e remove o cliente de linha de comando do Redis (redis-cli)",
+  "entrypoint": "main.sh",
+  "sudo": true,
+  "group": "database",
+  "os": ["linux", "mac"],
+  "envs": {}
+}
