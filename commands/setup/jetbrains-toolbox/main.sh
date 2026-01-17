@@ -569,7 +569,7 @@ main() {
                 export SILENT=true
                 ;;
             --info)
-                show_software_info
+                show_software_info "jetbrains-toolbox"
                 exit 0
                 ;;
             --get-current-version)
