@@ -7,9 +7,5 @@
   "os": [
     "linux",
     "mac"
-  ],
-  "envs": {
-    "DOCKER_DOWNLOAD_BASE_URL": "https://download.docker.com",
-    "DOCKER_HOMEBREW_INSTALL_URL": "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
-  }
+  ]
 }

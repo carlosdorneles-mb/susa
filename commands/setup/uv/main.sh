@@ -1,11 +1,25 @@
 #!/bin/bash
+
 set -euo pipefail
 IFS=$'\n\t'
 
 # Source libraries
 source "$LIB_DIR/internal/installations.sh"
 source "$LIB_DIR/github.sh"
+source "$LIB_DIR/shell.sh"
 
+# Constants
+UV_NAME="UV"
+UV_REPO="astral-sh/uv"
+UV_BIN_NAME="uv"
+UV_BIN_NAME_UVX="uvx"
+GITHUB_BASE_URL="https://github.com"
+LOCAL_BIN_DIR="$HOME/.local/bin"
+TEMP_DIR="/tmp"
+UV_DATA_DIR="$HOME/.local/share/uv"
+UV_CACHE_DIR="$HOME/.cache/uv"
+
+SKIP_CONFIRM=false
 # Help function
 show_help() {
     show_description
@@ -13,21 +27,22 @@ show_help() {
     show_usage
     echo ""
     log_output "${LIGHT_GREEN}O que é:${NC}"
-    log_output "  UV (by Astral) é um gerenciador de pacotes e projetos Python extremamente"
+    log_output "  $UV_NAME (by Astral) é um gerenciador de pacotes e projetos Python extremamente"
     log_output "  rápido, escrito em Rust. Substitui pip, pip-tools, pipx, poetry, pyenv,"
     log_output "  virtualenv e muito mais, com velocidade 10-100x mais rápida."
     echo ""
     log_output "${LIGHT_GREEN}Opções:${NC}"
     log_output "  -h, --help        Mostra esta mensagem de ajuda"
     log_output "  --uninstall       Desinstala o UV do sistema"
+    log_output "  -y, --yes         Pula confirmação (usar com --uninstall)"
     log_output "  -u, --upgrade     Atualiza o UV para a versão mais recente"
     log_output "  -v, --verbose     Habilita saída detalhada para depuração"
     log_output "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
     echo ""
     log_output "${LIGHT_GREEN}Exemplos:${NC}"
-    log_output "  susa setup uv              # Instala o UV"
-    log_output "  susa setup uv --upgrade    # Atualiza o UV"
-    log_output "  susa setup uv --uninstall  # Desinstala o UV"
+    log_output "  susa setup uv              # Instala o $UV_NAME"
+    log_output "  susa setup uv --upgrade    # Atualiza o $UV_NAME"
+    log_output "  susa setup uv --uninstall  # Desinstala o $UV_NAME"
     echo ""
     log_output "${LIGHT_GREEN}Pós-instalação:${NC}"
     log_output "  Após a instalação, reinicie o terminal ou execute:"
@@ -43,13 +58,13 @@ show_help() {
 
 # Get latest UV version
 get_latest_version() {
-    github_get_latest_version "$UV_GITHUB_REPO"
+    github_get_latest_version "$UV_REPO"
 }
 
 # Get installed UV version
 get_current_version() {
     if check_installation; then
-        uv --version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida"
+        $UV_BIN_NAME --version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida"
     else
         echo "desconhecida"
     fi
@@ -206,7 +221,7 @@ install_uv() {
     if check_installation; then
         local version=$(get_current_version)
         log_success "UV $version instalado com sucesso!"
-        register_or_update_software_in_lock "uv" "$version"
+        register_or_update_software_in_lock "$COMMAND_NAME""$version"
 
         echo ""
         echo "Próximos passos:"
@@ -263,7 +278,7 @@ update_uv() {
             log_info "UV já está na versão mais recente ($current_version)"
         else
             log_success "UV atualizado de $current_version para $new_version!"
-            register_or_update_software_in_lock "uv" "$new_version"
+            register_or_update_software_in_lock "$COMMAND_NAME" "$new_version"
             log_debug "Atualização concluída com sucesso"
         fi
 
@@ -289,13 +304,15 @@ uninstall_uv() {
     log_debug "Versão a ser removida: $version"
 
     # Confirm uninstallation
-    echo ""
-    log_output "${YELLOW}Deseja realmente desinstalar o UV $version? (s/N)${NC}"
-    read -r response
+    if [ "$SKIP_CONFIRM" = false ]; then
+        echo ""
+        log_output "${YELLOW}Deseja realmente desinstalar o UV $version? (s/N)${NC}"
+        read -r response
 
-    if [[ ! "$response" =~ ^[sSyY]$ ]]; then
-        log_info "Desinstalação cancelada"
-        return 1
+        if [[ ! "$response" =~ ^[sSyY]$ ]]; then
+            log_info "Desinstalação cancelada"
+            return 0
+        fi
     fi
 
     local bin_dir="$LOCAL_BIN_DIR"
@@ -313,10 +330,30 @@ uninstall_uv() {
         log_debug "Removido: $bin_dir/uvx"
     fi
 
-    # Remove UV data directory
-    local uv_data_dir="${UV_DATA_DIR}"
-    if [ -d "$uv_data_dir" ]; then
-        rm -rf "$uv_data_dir"
+    # Ask about removing installed tools (ruff, black, mypy, etc)
+    if [ "$SKIP_CONFIRM" = false ]; then
+        echo ""
+        log_output "${YELLOW}Deseja remover também as ferramentas instaladas com UV (ruff, black, mypy, etc)? (s/N)${NC}"
+        read -r tools_response
+
+        if [[ "$tools_response" =~ ^[sSyY]$ ]]; then
+            local uv_data_dir="${UV_DATA_DIR}"
+            if [ -d "$uv_data_dir" ]; then
+                rm -rf "$uv_data_dir"
+                log_debug "Ferramentas removidas: $uv_data_dir"
+            fi
+            log_success "Ferramentas instaladas removidas"
+        else
+            log_info "Ferramentas mantidas em ${UV_DATA_DIR}"
+        fi
+    else
+        # Auto-remove when --yes is used
+        local uv_data_dir="${UV_DATA_DIR}"
+        if [ -d "$uv_data_dir" ]; then
+            rm -rf "$uv_data_dir"
+            log_debug "Ferramentas removidas: $uv_data_dir"
+        fi
+        log_info "Ferramentas instaladas removidas automaticamente"
     fi
 
     # Remove shell configurations (only UV-specific, not .local/bin)
@@ -331,7 +368,7 @@ uninstall_uv() {
     # Verify removal
     if ! check_installation; then
         log_success "UV desinstalado com sucesso!"
-        remove_software_in_lock "uv"
+        remove_software_in_lock "$COMMAND_NAME"
 
         echo ""
         log_info "Reinicie o terminal ou execute: source $shell_config"
@@ -344,20 +381,27 @@ uninstall_uv() {
     fi
 
     # Ask about cache removal
-    echo ""
-    log_output "${YELLOW}Deseja remover também o cache do UV? (s/N)${NC}"
-    read -r cache_response
+    if [ "$SKIP_CONFIRM" = false ]; then
+        echo ""
+        log_output "${YELLOW}Deseja remover também o cache do UV? (s/N)${NC}"
+        read -r cache_response
 
-    if [[ "$cache_response" =~ ^[sSyY]$ ]]; then
-
+        if [[ "$cache_response" =~ ^[sSyY]$ ]]; then
+            local cache_dir="${UV_CACHE_DIR}"
+            if [ -d "$cache_dir" ]; then
+                rm -rf "$cache_dir" 2> /dev/null || true
+            fi
+            log_success "Cache removido"
+        else
+            log_info "Cache mantido em ${UV_CACHE_DIR}"
+        fi
+    else
+        # Se --yes foi usado, remove o cache também
         local cache_dir="${UV_CACHE_DIR}"
         if [ -d "$cache_dir" ]; then
             rm -rf "$cache_dir" 2> /dev/null || true
+            log_debug "Cache removido automaticamente"
         fi
-
-        log_success "Cache removido"
-    else
-        log_info "Cache mantido em ${UV_CACHE_DIR}"
     fi
 }
 
@@ -380,7 +424,7 @@ main() {
                 export SILENT=true
                 ;;
             --info)
-                show_software_info
+                show_software_info "$UV_BIN_NAME"
                 exit 0
                 ;;
             --get-current-version)
@@ -397,6 +441,10 @@ main() {
                 ;;
             --uninstall)
                 action="uninstall"
+                shift
+                ;;
+            -y | --yes)
+                SKIP_CONFIRM=true
                 shift
                 ;;
             -u | --upgrade)

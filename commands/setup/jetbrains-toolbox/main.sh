@@ -4,7 +4,22 @@ IFS=$'\n\t'
 
 # Source installations library
 source "$LIB_DIR/internal/installations.sh"
+source "$LIB_DIR/os.sh"
+source "$LIB_DIR/shell.sh"
 
+# Constants
+TOOLBOX_NAME="JetBrains Toolbox"
+TOOLBOX_BIN_NAME="jetbrains-toolbox"
+TOOLBOX_GITHUB_REPO="jetbrains/toolbox-app"
+TOOLBOX_API_URL="https://data.services.jetbrains.com/products/releases?code=TBA&latest=true&type=release"
+TOOLBOX_API_MAX_TIME=10
+TOOLBOX_API_CONNECT_TIMEOUT=5
+TOOLBOX_LINUX_INSTALL_DIR="$HOME/.local/share/JetBrains/Toolbox"
+TOOLBOX_MAC_INSTALL_DIR="$HOME/Library/Application Support/JetBrains/Toolbox"
+TOOLBOX_LOCAL_BIN_DIR="$HOME/.local/bin"
+LOCAL_BIN_DIR="$HOME/.local/bin"
+
+SKIP_CONFIRM=false
 # Help function
 show_help() {
     show_description
@@ -12,21 +27,22 @@ show_help() {
     show_usage
     echo ""
     log_output "${LIGHT_GREEN}O que é:${NC}"
-    log_output "  JetBrains Toolbox é um aplicativo que facilita o gerenciamento"
+    log_output "  $TOOLBOX_NAME é um aplicativo que facilita o gerenciamento"
     log_output "  de todas as IDEs da JetBrains (IntelliJ IDEA, PyCharm, WebStorm,"
     log_output "  GoLand, etc.) a partir de uma única interface."
     echo ""
     log_output "${LIGHT_GREEN}Opções:${NC}"
     log_output "  -h, --help        Mostra esta mensagem de ajuda"
     log_output "  --uninstall       Desinstala o JetBrains Toolbox do sistema"
+    log_output "  -y, --yes         Pula confirmação (usar com --uninstall)"
     log_output "  -u, --upgrade     Atualiza o JetBrains Toolbox para a versão mais recente"
     log_output "  -v, --verbose     Habilita saída detalhada para depuração"
     log_output "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
     echo ""
     log_output "${LIGHT_GREEN}Exemplos:${NC}"
-    log_output "  susa setup jetbrains-toolbox              # Instala o JetBrains Toolbox"
-    log_output "  susa setup jetbrains-toolbox --upgrade    # Atualiza o JetBrains Toolbox"
-    log_output "  susa setup jetbrains-toolbox --uninstall  # Desinstala o JetBrains Toolbox"
+    log_output "  susa setup jetbrains-toolbox              # Instala o $TOOLBOX_NAME"
+    log_output "  susa setup jetbrains-toolbox --upgrade    # Atualiza o $TOOLBOX_NAME"
+    log_output "  susa setup jetbrains-toolbox --uninstall  # Desinstala o $TOOLBOX_NAME"
     echo ""
     log_output "${LIGHT_GREEN}Pós-instalação:${NC}"
     log_output "  O JetBrains Toolbox será iniciado automaticamente."
@@ -39,8 +55,17 @@ show_help() {
 }
 
 get_latest_version() {
-    # Try to get the latest version from JetBrains data service
-    local latest_version=$(curl -s --max-time "$TOOLBOX_API_MAX_TIME" --connect-timeout "$TOOLBOX_API_CONNECT_TIMEOUT" "$TOOLBOX_API_URL" 2> /dev/null | grep -oP '"build"\s*:\s*"\K[^"]+' | head -1)
+    # Fetches the correct version of JetBrains Toolbox from the API response
+    local api_response=$(curl -s --max-time "$TOOLBOX_API_MAX_TIME" --connect-timeout "$TOOLBOX_API_CONNECT_TIMEOUT" "$TOOLBOX_API_URL" 2> /dev/null)
+
+    if [ -z "$api_response" ]; then
+        log_error "Não foi possível obter a versão mais recente do JetBrains Toolbox" >&2
+        log_error "Verifique sua conexão com a internet e tente novamente" >&2
+        return 1
+    fi
+
+    # Extract version (e.g., "3.2.0.65851") - using sed for better compatibility
+    local latest_version=$(echo "$api_response" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p' | head -1)
 
     if [ -n "$latest_version" ]; then
         log_debug "Versão obtida via API JetBrains: $latest_version" >&2
@@ -48,7 +73,7 @@ get_latest_version() {
         return 0
     fi
 
-    # If it fails, notify user
+    # If it fails, notify the user
     log_error "Não foi possível obter a versão mais recente do JetBrains Toolbox" >&2
     log_error "Verifique sua conexão com a internet e tente novamente" >&2
     return 1
@@ -71,19 +96,62 @@ check_installation() {
     command -v jetbrains-toolbox &> /dev/null || [ -f "$HOME/.local/bin/jetbrains-toolbox" ]
 }
 
+# Get download URL from API based on OS and architecture
+get_download_url() {
+    local os_arch="$1"
+    local os_name="${os_arch%:*}"
+    local arch="${os_arch#*:}"
+
+    local api_response=$(curl -s --max-time "$TOOLBOX_API_MAX_TIME" --connect-timeout "$TOOLBOX_API_CONNECT_TIMEOUT" "$TOOLBOX_API_URL" 2> /dev/null)
+
+    if [ -z "$api_response" ]; then
+        log_error "Não foi possível obter informações de download" >&2
+        return 1
+    fi
+
+    local download_key
+    if [ "$os_name" = "linux" ]; then
+        if [ "$arch" = "arm64" ]; then
+            download_key="linuxARM64"
+        else
+            download_key="linux"
+        fi
+    elif [ "$os_name" = "mac" ]; then
+        if [ "$arch" = "arm64" ]; then
+            download_key="macM1"
+        else
+            download_key="mac"
+        fi
+    else
+        log_error "Sistema operacional não suportado" >&2
+        return 1
+    fi
+
+    local download_url=$(echo "$api_response" | sed -n "s/.*\"$download_key\":{[^}]*\"link\":\"\\([^\"]*\\)\".*/\\1/p")
+
+    if [ -n "$download_url" ]; then
+        log_debug "URL de download: $download_url" >&2
+        echo "$download_url"
+        return 0
+    fi
+
+    log_error "Não foi possível obter URL de download para $os_name $arch" >&2
+    return 1
+}
+
 # Detect OS and architecture
 detect_os_and_arch() {
-    local os_name=$(uname -s | tr '[:upper:]' '[:lower:]')
-    local arch=$(uname -m)
+    local os_name
+    if is_mac; then
+        os_name="mac"
+    elif is_linux; then
+        os_name="linux"
+    else
+        log_error "Sistema operacional não suportado: $(uname -s)"
+        return 1
+    fi
 
-    case "$os_name" in
-        linux) os_name="linux" ;;
-        darwin) os_name="mac" ;;
-        *)
-            log_error "Sistema operacional não suportado: $os_name"
-            return 1
-            ;;
-    esac
+    local arch=$(uname -m)
 
     case "$arch" in
         x86_64) arch="x64" ;;
@@ -99,49 +167,20 @@ detect_os_and_arch() {
 
 # Get installation directory based on OS
 get_install_dir() {
-    local os_name=$(uname -s | tr '[:upper:]' '[:lower:]')
-
-    case "$os_name" in
-        linux)
-            echo "$HOME/.local/share/JetBrains/Toolbox"
-            ;;
-        darwin)
-            echo "$HOME/Library/Application Support/JetBrains/Toolbox"
-            ;;
-    esac
+    if is_mac; then
+        echo "$HOME/Library/Application Support/JetBrains/Toolbox"
+    else
+        echo "$HOME/.local/share/JetBrains/Toolbox"
+    fi
 }
 
 # Get binary location
 get_binary_location() {
-    local os_name=$(uname -s | tr '[:upper:]' '[:lower:]')
-
-    case "$os_name" in
-        linux)
-            echo "$(get_local_bin_dir)/jetbrains-toolbox"
-            ;;
-        darwin)
-            echo "/Applications/JetBrains Toolbox.app"
-            ;;
-    esac
-}
-
-# Get local bin directory
-get_local_bin_dir() {
-    echo "$HOME/.local/bin"
-}
-
-# Check if Toolbox is installed
-check_toolbox_installed() {
-    local binary_location=$(get_binary_location)
-    local os_name=$(uname -s | tr '[:upper:]' '[:lower:]')
-
-    if [ "$os_name" = "darwin" ]; then
-        [ -d "$binary_location" ] && return 0
+    if is_mac; then
+        echo "/Applications/JetBrains Toolbox.app"
     else
-        [ -f "$binary_location" ] && return 0
+        echo "$LOCAL_BIN_DIR/jetbrains-toolbox"
     fi
-
-    return 1
 }
 
 # Install Toolbox on Linux
@@ -149,13 +188,17 @@ install_toolbox_linux() {
     local version="$1"
     local os_arch="$2"
 
-    log_info "Instalando JetBrains Toolbox $version no Linux..."
-
     local arch="${os_arch#*:}"
-    local download_url="https://download.jetbrains.com/toolbox/jetbrains-toolbox-${version}.tar.gz"
+    local download_url=$(get_download_url "$os_arch")
+
+    if [ -z "$download_url" ]; then
+        log_error "Falha ao obter URL de download"
+        return 1
+    fi
+
     local temp_dir="/tmp/jetbrains-toolbox-$$"
     local install_dir=$(get_install_dir)
-    local bin_dir=$(get_local_bin_dir)
+    local bin_dir="$LOCAL_BIN_DIR"
 
     # Create temp directory
     mkdir -p "$temp_dir"
@@ -222,7 +265,7 @@ install_toolbox_linux() {
 
     # Configure PATH if needed
     local shell_config=$(detect_shell_config)
-    local local_bin=$(get_local_bin_dir)
+    local local_bin="$LOCAL_BIN_DIR"
     if ! grep -q ".local/bin" "$shell_config" 2> /dev/null; then
         echo "" >> "$shell_config"
         echo "# Local binaries PATH" >> "$shell_config"
@@ -245,10 +288,15 @@ install_toolbox_linux() {
 # Install Toolbox on macOS
 install_toolbox_macos() {
     local version="$1"
+    local os_arch="$2"
 
-    log_info "Instalando JetBrains Toolbox $version no macOS..."
+    local download_url=$(get_download_url "$os_arch")
 
-    local download_url="https://download.jetbrains.com/toolbox/jetbrains-toolbox-${version}.dmg"
+    if [ -z "$download_url" ]; then
+        log_error "Falha ao obter URL de download"
+        return 1
+    fi
+
     local temp_dir="/tmp/jetbrains-toolbox-$$"
     local install_dir=$(get_install_dir)
 
@@ -318,7 +366,7 @@ create_desktop_entry() {
         curl -s -o "$icon_path" "https://resources.jetbrains.com/storage/products/toolbox/img/meta/toolbox_logo_300x300.png" 2> /dev/null || log_debug "Falha ao baixar ícone"
     fi
 
-    local toolbox_bin=$(get_local_bin_dir)/jetbrains-toolbox
+    local toolbox_bin="$LOCAL_BIN_DIR/jetbrains-toolbox"
     cat > "$desktop_file" << EOF
 [Desktop Entry]
 Version=1.0
@@ -368,7 +416,7 @@ install_toolbox() {
             install_toolbox_linux "$toolbox_version" "$os_arch"
             ;;
         mac)
-            install_toolbox_macos "$toolbox_version"
+            install_toolbox_macos "$toolbox_version" "$os_arch"
             ;;
         *)
             log_error "Sistema operacional não suportado: $os_name"
@@ -380,7 +428,7 @@ install_toolbox() {
 
     if [ $install_result -eq 0 ]; then
         log_success "JetBrains Toolbox $toolbox_version instalado com sucesso!"
-        register_or_update_software_in_lock "toolbox" "$toolbox_version"
+        register_or_update_software_in_lock "$COMMAND_NAME" "$toolbox_version"
         log_debug "Instalação concluída"
 
         echo ""
@@ -400,14 +448,18 @@ update_toolbox() {
     log_info "Atualizando JetBrains Toolbox..."
 
     # Check if installed
-    if ! check_toolbox_installed; then
+    if ! check_installation; then
         log_error "JetBrains Toolbox não está instalado. Use 'susa setup jetbrains-toolbox' para instalar."
         return 1
     fi
 
     local current_version=$(get_current_version)
     log_info "Versão atual: $current_version"
-    log_debug "Localização: $(get_binary_location)"
+    if is_mac; then
+        log_debug "Localização: /Applications/JetBrains Toolbox.app"
+    else
+        log_debug "Localização: $LOCAL_BIN_DIR/jetbrains-toolbox"
+    fi
 
     # Get latest version
     local latest_version=$(get_latest_version)
@@ -436,11 +488,11 @@ update_toolbox() {
     sleep 5
 
     # Remove old installation
-    local binary_location=$(get_binary_location)
-
     if [ "$os_name" = "mac" ]; then
+        local binary_location="/Applications/JetBrains Toolbox.app"
         rm -rf "$binary_location"
     else
+        local binary_location="$LOCAL_BIN_DIR/jetbrains-toolbox"
         rm -f "$binary_location"
     fi
 
@@ -450,7 +502,7 @@ update_toolbox() {
             install_toolbox_linux "$latest_version" "$os_arch"
             ;;
         mac)
-            install_toolbox_macos "$latest_version"
+            install_toolbox_macos "$latest_version" "$os_arch"
             ;;
     esac
 
@@ -458,7 +510,7 @@ update_toolbox() {
 
     if [ $install_result -eq 0 ]; then
         log_success "JetBrains Toolbox atualizado com sucesso para versão $latest_version!"
-        register_or_update_software_in_lock "toolbox" "$latest_version"
+        register_or_update_software_in_lock "$COMMAND_NAME" "$latest_version"
         log_debug "Atualização concluída"
     else
         log_error "Falha na atualização do JetBrains Toolbox"
@@ -471,42 +523,48 @@ uninstall_toolbox() {
     log_info "Desinstalando JetBrains Toolbox..."
 
     # Check if installed
-    if ! check_toolbox_installed; then
+    if ! check_installation; then
         log_info "JetBrains Toolbox não está instalado"
         return 0
     fi
 
     local current_version=$(get_current_version)
     log_debug "Versão a ser removida: $current_version"
-    log_debug "Localização: $(get_binary_location)"
-
-    echo ""
-    log_output "${YELLOW}Deseja realmente desinstalar o JetBrains Toolbox $current_version? (s/N)${NC}"
-    read -r response
-
-    if [[ ! "$response" =~ ^[sSyY]$ ]]; then
-        log_info "Desinstalação cancelada"
-        return 0
+    if is_mac; then
+        log_debug "Localização: /Applications/JetBrains Toolbox.app"
+    else
+        log_debug "Localização: $LOCAL_BIN_DIR/jetbrains-toolbox"
     fi
 
-    local os_name=$(uname -s | tr '[:upper:]' '[:lower:]')
+    echo ""
+    if [ "$SKIP_CONFIRM" = false ]; then
+        log_output "${YELLOW}Deseja realmente desinstalar o JetBrains Toolbox $current_version? (s/N)${NC}"
+        read -r response
+
+        if [[ ! "$response" =~ ^[sSyY]$ ]]; then
+            log_info "Desinstalação cancelada"
+            return 0
+        fi
+    fi
 
     # Stop Toolbox if running
     log_debug "Encerrando JetBrains Toolbox..."
-    if [ "$os_name" = "darwin" ]; then
+    if is_mac; then
         osascript -e 'quit app "JetBrains Toolbox"' 2> /dev/null || true
     else
-        pkill -9 -f jetbrains-toolbox 2> /dev/null || true
+        # Kill only the jetbrains-toolbox binary, not this script
+        pkill -9 -f "^$LOCAL_BIN_DIR/jetbrains-toolbox" 2> /dev/null || true
     fi
 
     # Remove binary/app
-    local binary_location=$(get_binary_location)
-    if [ "$os_name" = "darwin" ]; then
+    if is_mac; then
+        local binary_location="/Applications/JetBrains Toolbox.app"
         if [ -d "$binary_location" ]; then
             rm -rf "$binary_location"
             log_debug "Aplicativo removido: $binary_location"
         fi
     else
+        local binary_location="$LOCAL_BIN_DIR/jetbrains-toolbox"
         if [ -f "$binary_location" ]; then
             rm -f "$binary_location"
             log_debug "Binário removido: $binary_location"
@@ -521,32 +579,78 @@ uninstall_toolbox() {
     fi
 
     # Remove installation directory with version file
-    local install_dir=$(get_install_dir)
+    local install_dir
+    if is_mac; then
+        install_dir="$TOOLBOX_MAC_INSTALL_DIR"
+    else
+        install_dir="$TOOLBOX_LINUX_INSTALL_DIR"
+    fi
+
     if [ -d "$install_dir" ]; then
         rm -rf "$install_dir"
     fi
 
     # Verify removal
-    if ! check_toolbox_installed; then
+    if ! check_installation; then
         log_success "JetBrains Toolbox desinstalado com sucesso!"
-        remove_software_in_lock "toolbox"
+        remove_software_in_lock "$COMMAND_NAME"
     else
         log_error "Falha ao desinstalar JetBrains Toolbox completamente"
         return 1
     fi
 
-    echo ""
-    log_output "${YELLOW}Deseja remover também os dados das IDEs instaladas pelo Toolbox? (s/N)${NC}"
-    read -r response
+    # Ask about removing IDEs installed by Toolbox
+    if [ "$SKIP_CONFIRM" = false ]; then
+        echo ""
+        log_output "${YELLOW}Deseja remover também as IDEs instaladas pelo Toolbox (IntelliJ, PyCharm, etc)? (s/N)${NC}"
+        read -r ides_response
 
-    if [[ "$response" =~ ^[sSyY]$ ]]; then
-        log_info "Removendo dados das IDEs..."
+        if [[ "$ides_response" =~ ^[sSyY]$ ]]; then
+            log_info "Removendo IDEs instaladas..."
 
-        if [ "$os_name" = "darwin" ]; then
-            rm -rf "$HOME/Library/Logs/JetBrains" 2> /dev/null || log_debug "Logs não encontrados"
+            if is_mac; then
+                # Remove IDEs directory
+                rm -rf "$HOME/Library/Application Support/JetBrains/Toolbox" 2> /dev/null || true
+                log_debug "IDEs removidas: ~/Library/Application Support/JetBrains/Toolbox"
+
+                # Remove logs
+                rm -rf "$HOME/Library/Logs/JetBrains" 2> /dev/null || true
+                log_debug "Logs removidos: ~/Library/Logs/JetBrains"
+            else
+                # Remove IDEs directory (apps, channels, etc)
+                rm -rf "$HOME/.local/share/JetBrains/Toolbox" 2> /dev/null || true
+                log_debug "IDEs removidas: ~/.local/share/JetBrains/Toolbox"
+
+                # Remove cache
+                rm -rf "$HOME/.cache/JetBrains/Toolbox" 2> /dev/null || true
+                log_debug "Cache removido: ~/.cache/JetBrains/Toolbox"
+
+                # Remove logs
+                rm -rf "$HOME/.local/share/JetBrains/Toolbox/logs" 2> /dev/null || true
+                log_debug "Logs removidos"
+            fi
+
+            log_success "IDEs instaladas removidas"
+        else
+            log_info "IDEs mantidas"
+        fi
+    else
+        # Auto-remove when --yes is used
+        log_info "Removendo IDEs instaladas automaticamente..."
+
+        if is_mac; then
+            rm -rf "$HOME/Library/Application Support/JetBrains/Toolbox" 2> /dev/null || true
+            log_debug "IDEs removidas: ~/Library/Application Support/JetBrains/Toolbox"
+            rm -rf "$HOME/Library/Logs/JetBrains" 2> /dev/null || true
+            log_debug "Logs removidos: ~/Library/Logs/JetBrains"
+        else
+            rm -rf "$HOME/.local/share/JetBrains/Toolbox" 2> /dev/null || true
+            log_debug "IDEs removidas: ~/.local/share/JetBrains/Toolbox"
+            rm -rf "$HOME/.cache/JetBrains/Toolbox" 2> /dev/null || true
+            log_debug "Cache removido: ~/.cache/JetBrains/Toolbox"
         fi
 
-        log_info "Dados removidos"
+        log_info "IDEs instaladas removidas automaticamente"
     fi
 }
 
@@ -569,7 +673,7 @@ main() {
                 export SILENT=true
                 ;;
             --info)
-                show_software_info "jetbrains-toolbox"
+                show_software_info "$TOOLBOX_BIN_NAME"
                 exit 0
                 ;;
             --get-current-version)
@@ -586,6 +690,10 @@ main() {
                 ;;
             --uninstall)
                 action="uninstall"
+                shift
+                ;;
+            -y | --yes)
+                SKIP_CONFIRM=true
                 shift
                 ;;
             -u | --upgrade)

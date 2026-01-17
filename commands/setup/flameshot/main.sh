@@ -7,6 +7,14 @@ source "$LIB_DIR/internal/installations.sh"
 source "$LIB_DIR/os.sh"
 source "$LIB_DIR/github.sh"
 
+# Constants
+FLAMESHOT_NAME="Flameshot"
+FLAMESHOT_BIN_NAME="flameshot"
+FLAMESHOT_GITHUB_REPO="flameshot-org/flameshot"
+FLAMESHOT_INSTALL_DIR="/opt/flameshot"
+FLAMESHOT_HOMEBREW_FORMULA="flameshot"
+
+SKIP_CONFIRM=false
 # Help function
 show_help() {
     show_description
@@ -14,21 +22,22 @@ show_help() {
     show_usage
     log_output ""
     log_output "${LIGHT_GREEN}O que é:${NC}"
-    log_output "  Flameshot é uma ferramenta poderosa e simples de captura de tela."
+    log_output "  $FLAMESHOT_NAME é uma ferramenta poderosa e simples de captura de tela."
     log_output "  Oferece recursos de anotação, edição e compartilhamento de screenshots"
     log_output "  com interface intuitiva e atalhos de teclado customizáveis."
     log_output ""
     log_output "${LIGHT_GREEN}Opções:${NC}"
     log_output "  -h, --help        Mostra esta mensagem de ajuda"
     log_output "  --uninstall       Desinstala o Flameshot do sistema"
+    log_output "  -y, --yes         Pula confirmação (usar com --uninstall)"
     log_output "  -u, --upgrade     Atualiza o Flameshot para a versão mais recente"
     log_output "  -v, --verbose     Habilita saída detalhada para depuração"
     log_output "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
     log_output ""
     log_output "${LIGHT_GREEN}Exemplos:${NC}"
-    log_output "  susa setup flameshot              # Instala o Flameshot"
-    log_output "  susa setup flameshot --upgrade    # Atualiza o Flameshot"
-    log_output "  susa setup flameshot --uninstall  # Desinstala o Flameshot"
+    log_output "  susa setup flameshot              # Instala o $FLAMESHOT_NAME"
+    log_output "  susa setup flameshot --upgrade    # Atualiza o $FLAMESHOT_NAME"
+    log_output "  susa setup flameshot --uninstall  # Desinstala o $FLAMESHOT_NAME"
     log_output ""
     log_output "${LIGHT_GREEN}Pós-instalação:${NC}"
     log_output "  O Flameshot estará disponível no menu de aplicativos ou via:"
@@ -61,7 +70,7 @@ get_current_version() {
     if [ -f "$FLAMESHOT_INSTALL_DIR/version.txt" ]; then
         cat "$FLAMESHOT_INSTALL_DIR/version.txt"
     elif check_installation; then
-        local version=$(flameshot --version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "instalada")
+        local version=$($FLAMESHOT_BIN_NAME --version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "instalada")
         echo "$version"
     else
         echo "desconhecida"
@@ -70,7 +79,7 @@ get_current_version() {
 
 # Check if Flameshot is installed
 check_installation() {
-    command -v flameshot &> /dev/null
+    command -v $FLAMESHOT_BIN_NAME &> /dev/null
 }
 
 # Install Flameshot on macOS using Homebrew
@@ -317,19 +326,9 @@ install_flameshot_arch() {
     log_output "  • Via terminal: ${LIGHT_GREEN}flameshot gui${NC}"
 }
 
-# Detect Linux distribution
-detect_linux_distro() {
-    if [ -f /etc/os-release ]; then
-        . /etc/os-release
-        echo "$ID"
-    else
-        echo "unknown"
-    fi
-}
-
 # Install Flameshot on Linux
 install_flameshot_linux() {
-    local distro=$(detect_linux_distro)
+    local distro=$(get_distro_id)
     log_debug "Distribuição detectada: $distro"
 
     case "$distro" in
@@ -381,7 +380,7 @@ install_flameshot() {
 
     # Mark as installed
     local version=$(get_current_version)
-    register_or_update_software_in_lock "flameshot" "$version"
+    register_or_update_software_in_lock "$COMMAND_NAME" "$version"
 }
 
 # Update Flameshot
@@ -404,45 +403,56 @@ update_flameshot() {
             log_info "Flameshot já está na versão mais recente"
         }
     elif [ "$os_type" = "linux" ]; then
-        local distro=$(detect_linux_distro)
+        # Get latest version from GitHub
+        log_info "Buscando última versão disponível..."
+        local latest_version=$(get_latest_version)
+
+        if [ -z "$latest_version" ]; then
+            log_error "Não foi possível obter a versão mais recente"
+            return 1
+        fi
+
+        # Remove 'v' prefix for comparison
+        local current_clean="${current_version#v}"
+        local latest_clean="${latest_version#v}"
+
+        if [ "$current_clean" = "$latest_clean" ]; then
+            log_info "Flameshot já está na versão mais recente ($current_version)"
+            return 0
+        fi
+
+        log_info "Atualizando de $current_version para $latest_version..."
+
+        # Uninstall current version
+        log_debug "Removendo versão antiga..."
+        local distro=$(get_distro_id)
 
         case "$distro" in
             ubuntu | debian | pop | linuxmint | elementary)
-                log_info "Atualizando via apt-get..."
-                sudo apt-get update -qq
-                sudo apt-get install --only-upgrade -y flameshot
+                sudo dpkg -r flameshot 2> /dev/null || true
                 ;;
             fedora | rhel | centos | rocky | almalinux)
-                if command -v dnf &> /dev/null; then
-                    log_info "Atualizando via dnf..."
-                    sudo dnf upgrade -y flameshot
-                else
-                    log_info "Atualizando via yum..."
-                    sudo yum update -y flameshot
-                fi
+                sudo rpm -e flameshot 2> /dev/null || true
                 ;;
             arch | manjaro | endeavouros)
-                log_info "Atualizando via pacman..."
-                sudo pacman -Syu --noconfirm flameshot
-                ;;
-            *)
-                log_warning "Distribuição não reconhecida, tentando atualização genérica..."
-                if command -v apt-get &> /dev/null; then
-                    sudo apt-get update -qq && sudo apt-get install --only-upgrade -y flameshot
-                elif command -v dnf &> /dev/null; then
-                    sudo dnf upgrade -y flameshot
-                elif command -v pacman &> /dev/null; then
-                    sudo pacman -Syu --noconfirm flameshot
-                fi
+                sudo pacman -R --noconfirm flameshot 2> /dev/null || true
                 ;;
         esac
+
+        # Reinstall with latest version
+        install_flameshot_linux
+
+        if [ $? -ne 0 ]; then
+            log_error "Falha ao instalar nova versão"
+            return 1
+        fi
     fi
 
     local new_version=$(get_current_version)
     log_success "Flameshot atualizado para versão $new_version"
 
     # Update lock file
-    register_or_update_software_in_lock "flameshot" "$new_version"
+    register_or_update_software_in_lock "$COMMAND_NAME" "$new_version"
 }
 
 # Uninstall Flameshot
@@ -454,27 +464,37 @@ uninstall_flameshot() {
         return 0
     fi
 
+    local current_version=$(get_current_version)
+
+    if [ "$SKIP_CONFIRM" = false ]; then
+        log_output ""
+        log_output "${YELLOW}Deseja realmente desinstalar o Flameshot $current_version? (s/N)${NC}"
+        read -r response
+        if [[ ! "$response" =~ ^[sSyY]$ ]]; then
+            log_info "Desinstalação cancelada"
+            return 0
+        fi
+    fi
+
     local os_type=$(get_simple_os)
 
     if [ "$os_type" = "mac" ]; then
         log_info "Desinstalando via Homebrew..."
         brew uninstall "$FLAMESHOT_HOMEBREW_FORMULA"
     elif [ "$os_type" = "linux" ]; then
-        local distro=$(detect_linux_distro)
+        local distro=$(get_distro_id)
 
         case "$distro" in
             ubuntu | debian | pop | linuxmint | elementary)
-                log_info "Desinstalando via apt-get..."
-                sudo apt-get remove -y flameshot
+                log_info "Removendo pacote .deb..."
+                sudo dpkg -r flameshot 2> /dev/null || sudo apt-get remove -y flameshot 2> /dev/null
                 ;;
             fedora | rhel | centos | rocky | almalinux)
-                if command -v dnf &> /dev/null; then
-                    log_info "Desinstalando via dnf..."
-                    sudo dnf remove -y flameshot
-                else
-                    log_info "Desinstalando via yum..."
-                    sudo yum remove -y flameshot
-                fi
+                log_info "Removendo pacote .rpm..."
+                sudo rpm -e flameshot 2> /dev/null || {
+                    local pkg_manager=$(get_redhat_pkg_manager)
+                    sudo $pkg_manager remove -y flameshot 2> /dev/null
+                }
                 ;;
             arch | manjaro | endeavouros)
                 log_info "Desinstalando via pacman..."
@@ -482,21 +502,26 @@ uninstall_flameshot() {
                 ;;
             *)
                 log_warning "Distribuição não reconhecida, tentando desinstalação genérica..."
-                if command -v apt-get &> /dev/null; then
-                    sudo apt-get remove -y flameshot
-                elif command -v dnf &> /dev/null; then
-                    sudo dnf remove -y flameshot
+                if command -v dpkg &> /dev/null; then
+                    sudo dpkg -r flameshot 2> /dev/null || sudo apt-get remove -y flameshot 2> /dev/null
+                elif command -v rpm &> /dev/null; then
+                    sudo rpm -e flameshot 2> /dev/null || sudo dnf remove -y flameshot 2> /dev/null
                 elif command -v pacman &> /dev/null; then
                     sudo pacman -R --noconfirm flameshot
                 fi
                 ;;
         esac
+
+        # Remove version info directory
+        if [ -d "$FLAMESHOT_INSTALL_DIR" ]; then
+            sudo rm -rf "$FLAMESHOT_INSTALL_DIR"
+        fi
     fi
 
     log_success "Flameshot desinstalado com sucesso!"
 
     # Remove from lock file
-    remove_software_in_lock "flameshot"
+    remove_software_in_lock "$COMMAND_NAME"
 }
 
 # Main execution
@@ -519,7 +544,7 @@ main() {
                 export SILENT=true
                 ;;
             --info)
-                show_software_info
+                show_software_info "$FLAMESHOT_BIN_NAME"
                 exit 0
                 ;;
             --get-current-version)
@@ -533,6 +558,10 @@ main() {
             --check-installation)
                 check_installation
                 exit $?
+                ;;
+            -y | --yes)
+                SKIP_CONFIRM=true
+                shift
                 ;;
             -u | --upgrade)
                 should_update=true

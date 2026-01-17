@@ -5,6 +5,15 @@ IFS=$'\n\t'
 # Source libraries
 source "$LIB_DIR/internal/installations.sh"
 source "$LIB_DIR/github.sh"
+source "$LIB_DIR/os.sh"
+
+# Constants
+DOCKER_NAME="Docker"
+DOCKER_REPO="moby/moby"
+DOCKER_BIN_NAME="docker"
+DOCKER_DOWNLOAD_BASE_URL="https://download.docker.com"
+DOCKER_HOMEBREW_INSTALL_URL="https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
+SKIP_CONFIRM=false
 
 # Help function
 show_help() {
@@ -13,22 +22,23 @@ show_help() {
     show_usage
     log_output ""
     log_output "${LIGHT_GREEN}O que é:${NC}"
-    log_output "  Docker é a plataforma líder em containers para desenvolvimento,"
+    log_output "  $DOCKER_NAME é a plataforma líder em containers para desenvolvimento,"
     log_output "  empacotamento e execução de aplicações. Esta instalação inclui"
-    log_output "  apenas o Docker CLI e Engine, sem o Docker Desktop."
+    log_output "  apenas o $DOCKER_NAME CLI e Engine, sem o Docker Desktop."
     log_output ""
     log_output "${LIGHT_GREEN}Opções:${NC}"
     log_output "  -h, --help        Mostra esta mensagem de ajuda"
     log_output "  --info            Mostra informações sobre a instalação do Docker"
     log_output "  --uninstall       Desinstala o Docker do sistema"
+    log_output "  -y, --yes         Pula confirmação (usar com --uninstall)"
     log_output "  -u, --upgrade     Atualiza o Docker para a versão mais recente"
     log_output "  -v, --verbose     Habilita saída detalhada para depuração"
     log_output "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
     log_output ""
     log_output "${LIGHT_GREEN}Exemplos:${NC}"
-    log_output "  susa setup docker              # Instala o Docker"
-    log_output "  susa setup docker --upgrade    # Atualiza o Docker"
-    log_output "  susa setup docker --uninstall  # Desinstala o Docker"
+    log_output "  susa setup docker              # Instala o $DOCKER_NAME"
+    log_output "  susa setup docker --upgrade    # Atualiza o $DOCKER_NAME"
+    log_output "  susa setup docker --uninstall  # Desinstala o $DOCKER_NAME"
     log_output ""
     log_output "${LIGHT_GREEN}Pós-instalação:${NC}"
     log_output "  Após a instalação, faça logout e login novamente para que"
@@ -39,7 +49,7 @@ show_help() {
 get_latest_version() {
     # Get latest version from GitHub releases (format: docker-v29.1.4)
     local version_tag
-    version_tag=$(github_get_latest_version "moby/moby")
+    version_tag=$(github_get_latest_version "$DOCKER_REPO")
 
     if [ $? -eq 0 ] && [ -n "$version_tag" ]; then
         # Remove "docker-v" prefix to get just the version number
@@ -48,7 +58,7 @@ get_latest_version() {
         return 0
     fi
 
-    log_error "Não foi possível obter a versão mais recente do Docker"
+    log_error "Não foi possível obter a versão mais recente do $DOCKER_NAME"
     log_error "Verifique sua conexão com a internet e tente novamente"
     return 1
 }
@@ -56,7 +66,7 @@ get_latest_version() {
 # Get installed Docker version
 get_current_version() {
     if check_installation; then
-        docker --version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida"
+        $DOCKER_BIN_NAME --version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida"
     else
         echo "desconhecida"
     fi
@@ -165,14 +175,8 @@ install_docker_macos() {
 # Install Docker on Linux
 install_docker_linux() {
     # Detect Linux distribution
-    if [ -f /etc/os-release ]; then
-        . /etc/os-release
-        local distro=$ID
-        log_debug "Distribuição detectada: $distro"
-    else
-        log_error "Não foi possível detectar a distribuição Linux"
-        return 1
-    fi
+    local distro=$(get_distro_id)
+    log_debug "Distribuição detectada: $distro"
 
     case "$distro" in
         ubuntu | debian | pop | linuxmint)
@@ -295,18 +299,20 @@ install_docker() {
     log_info "Iniciando instalação do Docker..."
 
     # Detect OS
-    local os_name=$(uname -s | tr '[:upper:]' '[:lower:]')
-
-    case "$os_name" in
-        darwin)
+    case "$OS_TYPE" in
+        macos)
             install_docker_macos
             ;;
-        linux)
+        debian | fedora)
             install_docker_linux
             ;;
         *)
-            log_error "Sistema operacional não suportado: $os_name"
-            return 1
+            if is_arch; then
+                install_docker_linux
+            else
+                log_error "Sistema operacional não suportado: $OS_TYPE"
+                return 1
+            fi
             ;;
     esac
 
@@ -318,7 +324,7 @@ install_docker() {
             local installed_version=$(get_current_version)
 
             # Mark as installed in lock file
-            register_or_update_software_in_lock "docker" "$installed_version"
+            register_or_update_software_in_lock "$COMMAND_NAME" "$installed_version"
 
             log_success "Docker $installed_version instalado com sucesso!"
         else
@@ -354,10 +360,8 @@ update_docker() {
     log_info "Atualizando Docker..."
 
     # Detect OS and update
-    local os_name=$(uname -s | tr '[:upper:]' '[:lower:]')
-
-    case "$os_name" in
-        darwin)
+    case "$OS_TYPE" in
+        macos)
             if ! command -v brew &> /dev/null; then
                 log_error "Homebrew não está instalado"
                 return 1
@@ -373,16 +377,10 @@ update_docker() {
                 brew upgrade docker-compose || log_debug "docker-compose já está atualizado"
             fi
             ;;
-        linux)
+        debian | fedora)
             # Detect Linux distribution
-            if [ -f /etc/os-release ]; then
-                . /etc/os-release
-                local distro=$ID
-                log_debug "Distribuição detectada: $distro"
-            else
-                log_error "Não foi possível detectar a distribuição Linux"
-                return 1
-            fi
+            local distro=$(get_distro_id)
+            log_debug "Distribuição detectada: $distro"
 
             case "$distro" in
                 ubuntu | debian | pop | linuxmint)
@@ -412,8 +410,12 @@ update_docker() {
             esac
             ;;
         *)
-            log_error "Sistema operacional não suportado: $os_name"
-            return 1
+            if is_arch; then
+                sudo pacman -Syu --noconfirm docker docker-compose > /dev/null 2>&1
+            else
+                log_error "Sistema operacional não suportado: $OS_TYPE"
+                return 1
+            fi
             ;;
     esac
 
@@ -422,7 +424,7 @@ update_docker() {
         local new_version=$(get_current_version)
 
         # Update version in lock file
-        register_or_update_software_in_lock "docker" "$new_version"
+        register_or_update_software_in_lock "$COMMAND_NAME" "$new_version"
 
         log_success "Docker atualizado com sucesso para versão $new_version!"
     else
@@ -441,37 +443,29 @@ uninstall_docker() {
 
     local current_version=$(get_current_version)
 
-    log_output ""
-    log_output "${YELLOW}Deseja realmente desinstalar o Docker $current_version? (s/N)${NC}"
-    read -r response
+    if [ "$SKIP_CONFIRM" = false ]; then
+        log_output ""
+        log_output "${YELLOW}Deseja realmente desinstalar o Docker $current_version? (s/N)${NC}"
+        read -r response
 
-    if [[ ! "$response" =~ ^[sSyY]$ ]]; then
-        log_info "Desinstalação cancelada"
-        return 0
+        if [[ ! "$response" =~ ^[sSyY]$ ]]; then
+            log_info "Desinstalação cancelada"
+            return 0
+        fi
     fi
 
-    local os_name=$(uname -s | tr '[:upper:]' '[:lower:]')
-
-    case "$os_name" in
-        darwin)
+    case "$OS_TYPE" in
+        macos)
             # Uninstall via Homebrew
             if command -v brew &> /dev/null; then
                 brew uninstall docker 2> /dev/null || log_debug "Docker não instalado via Homebrew"
                 brew uninstall docker-compose 2> /dev/null || log_debug "docker-compose não instalado"
             fi
             ;;
-        linux)
+        debian | fedora)
             # Detect Linux distribution
-            if [ -f /etc/os-release ]; then
-                . /etc/os-release
-                local distro=$ID
-                log_debug "Distribuição detectada: $distro"
-            else
-                log_error "Não foi possível detectar a distribuição Linux"
-                return 1
-            fi
-
-            # Stop Docker service
+            local distro=$(get_distro_id)
+            log_debug "Distribuição detectada: $distro" # Stop Docker service
             sudo systemctl stop docker > /dev/null 2>&1 || log_debug "Serviço já parado"
             sudo systemctl disable docker > /dev/null 2>&1 || log_debug "Serviço não estava habilitado"
 
@@ -509,7 +503,7 @@ uninstall_docker() {
     # Verify uninstallation
     if ! check_installation; then
         # Mark as uninstalled in lock file
-        remove_software_in_lock "docker"
+        remove_software_in_lock "$COMMAND_NAME"
 
         log_success "Docker desinstalado com sucesso!"
     else
@@ -517,12 +511,45 @@ uninstall_docker() {
         return 1
     fi
 
-    log_output ""
-    log_output "${YELLOW}Deseja remover também as imagens, containers e volumes do Docker? (s/N)${NC}"
-    read -r response
+    # Ask about removing Docker data (images, containers, volumes)
+    if [ "$SKIP_CONFIRM" = false ]; then
+        log_output ""
+        log_output "${YELLOW}Deseja remover também as imagens, containers e volumes do Docker? (s/N)${NC}"
+        read -r response
 
-    if [[ "$response" =~ ^[sSyY]$ ]]; then
-        log_debug "Removendo dados do Docker..."
+        if [[ "$response" =~ ^[sSyY]$ ]]; then
+            log_info "Removendo dados do Docker..."
+
+            # Remove Docker data directories
+            if [ -d "/var/lib/docker" ]; then
+                sudo rm -rf /var/lib/docker 2> /dev/null || log_debug "Não foi possível remover /var/lib/docker"
+                log_debug "Diretório removido: /var/lib/docker"
+            fi
+
+            if [ -d "$HOME/.docker" ]; then
+                rm -rf "$HOME/.docker" 2> /dev/null || true
+                log_debug "Configurações removidas: ~/.docker"
+            fi
+
+            log_success "Dados do Docker removidos"
+        else
+            log_info "Dados do Docker mantidos"
+        fi
+    else
+        # Auto-remove when --yes is used
+        log_info "Removendo dados do Docker automaticamente..."
+
+        if [ -d "/var/lib/docker" ]; then
+            sudo rm -rf /var/lib/docker 2> /dev/null || log_debug "Não foi possível remover /var/lib/docker"
+            log_debug "Diretório removido: /var/lib/docker"
+        fi
+
+        if [ -d "$HOME/.docker" ]; then
+            rm -rf "$HOME/.docker" 2> /dev/null || true
+            log_debug "Configurações removidas: ~/.docker"
+        fi
+
+        log_info "Dados do Docker removidos automaticamente"
     fi
 }
 
@@ -547,7 +574,7 @@ main() {
                 shift
                 ;;
             --info)
-                show_software_info
+                show_software_info "$DOCKER_BIN_NAME"
                 exit 0
                 ;;
             --get-current-version)
@@ -564,6 +591,10 @@ main() {
                 ;;
             --uninstall)
                 action="uninstall"
+                shift
+                ;;
+            -y | --yes)
+                SKIP_CONFIRM=true
                 shift
                 ;;
             -u | --upgrade)

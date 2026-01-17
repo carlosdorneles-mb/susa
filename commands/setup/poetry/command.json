@@ -7,9 +7,5 @@
   "os": [
     "linux",
     "mac"
-  ],
-  "envs": {
-    "POETRY_INSTALL_URL": "https://install.python-poetry.org",
-    "POETRY_HOME": "$HOME/.local/share/pypoetry"
-  }
+  ]
 }

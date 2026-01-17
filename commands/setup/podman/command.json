@@ -7,9 +7,5 @@
   "os": [
     "linux",
     "mac"
-  ],
-  "envs": {
-    "PODMAN_HOMEBREW_INSTALL_URL": "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh",
-    "LOCAL_BIN_DIR": "$HOME/.local/bin"
-  }
+  ]
 }

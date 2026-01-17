@@ -55,3 +55,43 @@ is_linux() {
 is_mac() {
     [[ "$OS_TYPE" == "macos" ]]
 }
+
+# Check if running on Arch-based distro
+# Usage:
+#   if is_arch; then
+#       echo "Running on Arch"
+#   fi
+is_arch() {
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        [[ "$ID" == "arch" || "$ID" == "manjaro" ]]
+    else
+        return 1
+    fi
+}
+
+# Get the appropriate package manager for RedHat-based systems
+# Returns: "dnf" if available, otherwise "yum"
+# Usage:
+#   pkg_manager=$(get_redhat_pkg_manager)
+#   sudo $pkg_manager install package
+get_redhat_pkg_manager() {
+    if command -v dnf &> /dev/null; then
+        echo "dnf"
+    else
+        echo "yum"
+    fi
+}
+
+# Get the Linux distribution ID from /etc/os-release
+# Returns: The $ID value (e.g., "ubuntu", "fedora", "arch")
+# Usage:
+#   distro=$(get_distro_id)
+get_distro_id() {
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        echo "$ID"
+    else
+        echo "unknown"
+    fi
+}

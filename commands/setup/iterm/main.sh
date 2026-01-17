@@ -2,9 +2,17 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-# Source installations library
+# Source libraries
 source "$LIB_DIR/internal/installations.sh"
 
+# Constants
+ITERM_NAME="iTerm2"
+ITERM_BIN_NAME="iterm2"
+ITERM_HOMEBREW_CASK="iterm2"
+ITERM_GITHUB_REPO="gnachman/iTerm2"
+ITERM_HOMEBREW_INSTALL_URL="https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
+
+SKIP_CONFIRM=false
 # Help function
 show_help() {
     show_description
@@ -12,21 +20,22 @@ show_help() {
     show_usage
     log_output ""
     log_output "${LIGHT_GREEN}O que é:${NC}"
-    log_output "  iTerm2 é um substituto para o Terminal do macOS com recursos"
+    log_output "  $ITERM_NAME é um substituto para o Terminal do macOS com recursos"
     log_output "  avançados como split panes, busca, autocompletar, histórico,"
     log_output "  notificações e muito mais."
     log_output ""
     log_output "${LIGHT_GREEN}Opções:${NC}"
     log_output "  -h, --help        Mostra esta mensagem de ajuda"
     log_output "  --uninstall       Desinstala o iTerm2 do sistema"
+    log_output "  -y, --yes         Pula confirmação (usar com --uninstall)"
     log_output "  -u, --upgrade     Atualiza o iTerm2 para a versão mais recente"
     log_output "  -v, --verbose     Habilita saída detalhada para depuração"
     log_output "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
     log_output ""
     log_output "${LIGHT_GREEN}Exemplos:${NC}"
-    log_output "  susa setup iterm              # Instala o iTerm2"
-    log_output "  susa setup iterm --upgrade    # Atualiza o iTerm2"
-    log_output "  susa setup iterm --uninstall  # Desinstala o iTerm2"
+    log_output "  susa setup iterm              # Instala o $ITERM_NAME"
+    log_output "  susa setup iterm --upgrade    # Atualiza o $ITERM_NAME"
+    log_output "  susa setup iterm --uninstall  # Desinstala o $ITERM_NAME"
     log_output ""
     log_output "${LIGHT_GREEN}Pós-instalação:${NC}"
     log_output "  O iTerm2 estará disponível na pasta Aplicativos."
@@ -128,7 +137,7 @@ install_iterm() {
     if check_installation; then
         local version=$(get_current_version)
         log_success "iTerm2 $version instalado com sucesso!"
-        register_or_update_software_in_lock "iterm" "$version"
+        register_or_update_software_in_lock "$COMMAND_NAME" "$version"
         log_debug "Localização: /Applications/iTerm.app"
         return 0
     else
@@ -181,7 +190,7 @@ update_iterm() {
 
     local new_version=$(get_current_version)
     log_success "iTerm2 atualizado de $current_version para $new_version"
-    register_or_update_software_in_lock "iterm" "$new_version"
+    register_or_update_software_in_lock "$COMMAND_NAME" "$new_version"
     log_debug "Atualização concluída com sucesso"
 }
 
@@ -223,13 +232,15 @@ uninstall_iterm() {
     log_debug "Versão a ser removida: $version"
 
     # Confirm uninstallation
-    echo ""
-    log_output "${YELLOW}Deseja realmente desinstalar o iTerm2 $version? (s/N)${NC}"
-    read -r response
+    if [ "$SKIP_CONFIRM" = false ]; then
+        echo ""
+        log_output "${YELLOW}Deseja realmente desinstalar o iTerm2 $version? (s/N)${NC}"
+        read -r response
 
-    if [[ ! "$response" =~ ^[sSyY]$ ]]; then
-        log_info "Desinstalação cancelada"
-        return 1
+        if [[ ! "$response" =~ ^[sSyY]$ ]]; then
+            log_info "Desinstalação cancelada"
+            return 0
+        fi
     fi
 
     # Uninstall iTerm2
@@ -240,24 +251,38 @@ uninstall_iterm() {
     # Verify removal
     if ! check_installation; then
         log_success "iTerm2 desinstalado com sucesso"
-        remove_software_in_lock "iterm"
+        remove_software_in_lock "$COMMAND_NAME"
         log_debug "Aplicativo removido de /Applications"
     else
         log_warning "iTerm2 removido do Homebrew, mas arquivos podem permanecer"
     fi
 
     # Clean up preferences (optional)
-    echo ""
-    log_output "${YELLOW}Deseja remover as preferências e configurações do iTerm2? (s/N)${NC}"
-    read -r response
+    if [ "$SKIP_CONFIRM" = false ]; then
+        echo ""
+        log_output "${YELLOW}Deseja remover as preferências e configurações do iTerm2? (s/N)${NC}"
+        read -r config_response
 
-    if [[ "$response" =~ ^[sSyY]$ ]]; then
-        rm -rf "$HOME/Library/Preferences/com.googlecode.iterm2.plist" 2> /dev/null || true
-        rm -rf "$HOME/Library/Application Support/iTerm2" 2> /dev/null || true
-        rm -rf "$HOME/Library/Saved Application State/com.googlecode.iterm2.savedState" 2> /dev/null || true
-        log_success "Preferências removidas"
+        if [[ "$config_response" =~ ^[sSyY]$ ]]; then
+            rm -rf "$HOME/Library/Preferences/com.googlecode.iterm2.plist" 2> /dev/null || true
+            log_debug "Preferências removidas: ~/Library/Preferences/com.googlecode.iterm2.plist"
+            rm -rf "$HOME/Library/Application Support/iTerm2" 2> /dev/null || true
+            log_debug "Dados removidos: ~/Library/Application Support/iTerm2"
+            rm -rf "$HOME/Library/Saved Application State/com.googlecode.iterm2.savedState" 2> /dev/null || true
+            log_debug "Estado removido"
+            log_success "Preferências removidas"
+        else
+            log_info "Preferências mantidas"
+        fi
     else
-        log_info "Preferências mantidas"
+        # Auto-remove when --yes is used
+        rm -rf "$HOME/Library/Preferences/com.googlecode.iterm2.plist" 2> /dev/null || true
+        log_debug "Preferências removidas: ~/Library/Preferences/com.googlecode.iterm2.plist"
+        rm -rf "$HOME/Library/Application Support/iTerm2" 2> /dev/null || true
+        log_debug "Dados removidos: ~/Library/Application Support/iTerm2"
+        rm -rf "$HOME/Library/Saved Application State/com.googlecode.iterm2.savedState" 2> /dev/null || true
+        log_debug "Estado removido"
+        log_info "Preferências removidas automaticamente"
     fi
 }
 
@@ -282,7 +307,7 @@ main() {
                 shift
                 ;;
             --info)
-                show_software_info
+                show_software_info "$ITERM_BIN_NAME"
                 exit 0
                 ;;
             --get-current-version)
@@ -299,6 +324,10 @@ main() {
                 ;;
             --uninstall)
                 action="uninstall"
+                shift
+                ;;
+            -y | --yes)
+                SKIP_CONFIRM=true
                 shift
                 ;;
             -u | --upgrade)

@@ -7,10 +7,5 @@
   "os": [
     "linux",
     "mac"
-  ],
-  "envs": {
-    "TOOLBOX_API_URL": "https://data.services.jetbrains.com/products/releases?code=TBA&latest=true&type=release",
-    "TOOLBOX_API_MAX_TIME": "10",
-    "TOOLBOX_API_CONNECT_TIMEOUT": "5"
-  }
+  ]
 }

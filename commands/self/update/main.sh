@@ -207,11 +207,11 @@ main() {
         else
             log_success "Nova atualização disponível! ($CURRENT_VERSION → $LATEST_VERSION)"
         fi
-        log_output ""
 
         # Ask if you want to update
         if [ "$auto_confirm" = false ]; then
             if [ -t 0 ]; then
+                log_output ""
                 read -p "Deseja atualizar agora? (s/N): " -n 1 -r
                 log_output ""
 

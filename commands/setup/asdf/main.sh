@@ -6,6 +6,14 @@ IFS=$'\n\t'
 source "$LIB_DIR/internal/installations.sh"
 source "$LIB_DIR/github.sh"
 
+# Constants
+ASDF_NAME="ASDF"
+ASDF_BIN_NAME="asdf"
+ASDF_REPO="asdf-vm/asdf"
+ASDF_INSTALL_DIR="$HOME/.asdf"
+LOCAL_BIN_DIR="$HOME/.local/bin"
+
+SKIP_CONFIRM=false
 # Help function
 show_help() {
     show_description
@@ -13,7 +21,7 @@ show_help() {
     show_usage
     log_output ""
     log_output "${LIGHT_GREEN}O que é:${NC}"
-    log_output "  ASDF é um gerenciador de versões universal que suporta múltiplas"
+    log_output "  $ASDF_NAME é um gerenciador de versões universal que suporta múltiplas"
     log_output "  linguagens de programação através de plugins (Node.js, Python, Ruby,"
     log_output "  Elixir, Java, e muitos outros)."
     log_output ""
@@ -21,14 +29,15 @@ show_help() {
     log_output "  -h, --help        Mostra esta mensagem de ajuda"
     log_output "  --info            Mostra informações sobre a instalação do ASDF"
     log_output "  --uninstall       Desinstala o ASDF do sistema"
+    log_output "  -y, --yes         Pula confirmação (usar com --uninstall)"
     log_output "  -u, --upgrade     Atualiza o ASDF para a versão mais recente"
     log_output "  -v, --verbose     Habilita saída detalhada para depuração"
     log_output "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
     log_output ""
     log_output "${LIGHT_GREEN}Exemplos:${NC}"
-    log_output "  susa setup asdf              # Instala o ASDF"
-    log_output "  susa setup asdf --upgrade    # Atualiza o ASDF"
-    log_output "  susa setup asdf --uninstall  # Desinstala o ASDF"
+    log_output "  susa setup asdf              # Instala o $ASDF_NAME"
+    log_output "  susa setup asdf --upgrade    # Atualiza o $ASDF_NAME"
+    log_output "  susa setup asdf --uninstall  # Desinstala o $ASDF_NAME"
     log_output ""
     log_output "${LIGHT_GREEN}Pós-instalação:${NC}"
     log_output "  Após a instalação, reinicie o terminal ou execute:"
@@ -42,17 +51,17 @@ show_help() {
 }
 
 get_latest_version() {
-    github_get_latest_version "asdf-vm/asdf"
+    github_get_latest_version "$ASDF_REPO"
 }
 
 # Get installed ASDF version
 get_current_version() {
     local asdf_dir="${1:-$ASDF_INSTALL_DIR}"
 
-    if [ -f "$asdf_dir/bin/asdf" ]; then
-        "$asdf_dir/bin/asdf" --version 2> /dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' || echo "desconhecida"
+    if [ -f "$asdf_dir/bin/$ASDF_BIN_NAME" ]; then
+        "$asdf_dir/bin/$ASDF_BIN_NAME" --version 2> /dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' || echo "desconhecida"
     elif check_installation; then
-        asdf --version 2> /dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' || echo "desconhecida"
+        $ASDF_BIN_NAME --version 2> /dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' || echo "desconhecida"
     else
         echo "desconhecida"
     fi
@@ -60,7 +69,7 @@ get_current_version() {
 
 # Check if ASDF is installed
 check_installation() {
-    command -v asdf &> /dev/null
+    command -v $ASDF_BIN_NAME &> /dev/null
 }
 
 # Detect operating system and architecture
@@ -242,7 +251,7 @@ install_asdf() {
     if check_installation; then
         local version=$(get_current_version)
         log_success "ASDF instalado com sucesso!"
-        register_or_update_software_in_lock "asdf" "$version"
+        register_or_update_software_in_lock "$COMMAND_NAME" "$version"
     else
         log_error "ASDF foi instalado mas não está disponível no PATH"
         local shell_config=$(detect_shell_config)
@@ -352,7 +361,7 @@ update_asdf() {
     if check_installation; then
         local new_version=$(get_current_version)
         log_success "ASDF atualizado para versão $new_version!"
-        register_or_update_software_in_lock "asdf" "$new_version"
+        register_or_update_software_in_lock "$COMMAND_NAME" "$new_version"
     else
         log_error "Falha na atualização do ASDF"
         return 1
@@ -363,13 +372,48 @@ uninstall_asdf() {
     local asdf_dir="$ASDF_INSTALL_DIR"
     local shell_config=$(detect_shell_config)
 
-    # Remove ASDF directory
-    if [ -d "$asdf_dir" ]; then
-        log_info "Desinstalando ASDF..."
-        rm -rf "$asdf_dir"
-    else
+    # Check if installed
+    if [ ! -d "$asdf_dir" ]; then
         log_warning "ASDF não está instalado"
         return 0
+    fi
+
+    local current_version="unknown"
+    if command -v asdf &> /dev/null; then
+        current_version=$(asdf --version 2> /dev/null | awk '{print $1}' || echo "unknown")
+    fi
+
+    if [ "$SKIP_CONFIRM" = false ]; then
+        log_output ""
+        log_output "${YELLOW}Deseja realmente desinstalar o ASDF $current_version? (s/N)${NC}"
+        read -r response
+        if [[ ! "$response" =~ ^[sSyY]$ ]]; then
+            log_info "Desinstalação cancelada"
+            return 0
+        fi
+    fi
+
+    log_info "Desinstalando ASDF..."
+
+    # Ask about removing installed tools (Node, Python, Ruby, etc)
+    if [ "$SKIP_CONFIRM" = false ]; then
+        log_output ""
+        log_output "${YELLOW}Deseja remover também as linguagens gerenciadas pelo ASDF (Node, Python, Ruby, etc)? (s/N)${NC}"
+        read -r tools_response
+
+        if [[ "$tools_response" =~ ^[sSyY]$ ]]; then
+            rm -rf "$asdf_dir"
+            log_debug "ASDF e linguagens removidos: $asdf_dir"
+            log_success "ASDF e linguagens gerenciadas removidos"
+        else
+            log_info "Linguagens mantidas em $asdf_dir"
+            log_warning "ASDF desinstalado mas linguagens mantidas (não funcionarão sem ASDF)"
+        fi
+    else
+        # Auto-remove when --yes is used
+        rm -rf "$asdf_dir"
+        log_debug "ASDF e linguagens removidos: $asdf_dir"
+        log_info "ASDF e linguagens gerenciadas removidos automaticamente"
     fi
 
     # Remove shell configurations
@@ -388,7 +432,7 @@ uninstall_asdf() {
     fi
 
     log_success "ASDF desinstalado com sucesso!"
-    remove_software_in_lock "asdf"
+    remove_software_in_lock "$COMMAND_NAME"
 }
 
 # Main function
@@ -412,7 +456,7 @@ main() {
                 shift
                 ;;
             --info)
-                show_software_info
+                show_software_info "$ASDF_BIN_NAME"
                 exit 0
                 ;;
             --get-current-version)
@@ -429,6 +473,10 @@ main() {
                 ;;
             --uninstall)
                 action="uninstall"
+                shift
+                ;;
+            -y | --yes)
+                SKIP_CONFIRM=true
                 shift
                 ;;
             -u | --upgrade)

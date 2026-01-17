@@ -1,11 +1,25 @@
 #!/bin/bash
+
 set -euo pipefail
 IFS=$'\n\t'
 
 # Source libraries
 source "$LIB_DIR/internal/installations.sh"
 source "$LIB_DIR/github.sh"
+source "$LIB_DIR/os.sh"
 
+# Contants
+MYSQL_CLIENT_PKG_DEBIAN="mysql-client"
+MYSQL_CLIENT_PKG_REDHAT="mysql"
+MYSQL_CLIENT_PKG_ARCH="mysql-clients"
+MYSQL_CLIENT_PKG_HOMEBREW="mysql-client"
+MYSQL_UTILS=("mysql" "mysqldump" "mysqladmin" "mysqlimport")
+MYSQL_HOMEBREW_PATH="/opt/homebrew/opt/mysql-client/bin"
+MYSQL_PROMPT_MSG="Deseja realmente desinstalar o MySQL Client"
+MYSQL_PROMPT_CACHE="mysql --version"
+MYSQL_BIN_NAME="mysql"
+
+SKIP_CONFIRM=false
 # Help function
 show_help() {
     show_description
@@ -14,12 +28,13 @@ show_help() {
     log_output ""
     log_output "${LIGHT_GREEN}O que é:${NC}"
     log_output "  MySQL Client é o utilitário de linha de comando para interagir com servidores MySQL."
-    log_output "  Inclui o comando mysql, mysqldump e outros utilitários."
+    log_output "  Inclui o comando ${MYSQL_UTILS[0]}, ${MYSQL_UTILS[1]} e outros utilitários."
     log_output ""
     log_output "${LIGHT_GREEN}Opções:${NC}"
     log_output "  -h, --help        Mostra esta mensagem de ajuda"
     log_output "  --info            Mostra informações sobre a instalação do MySQL Client"
     log_output "  --uninstall       Desinstala o MySQL Client do sistema"
+    log_output "  -y, --yes         Pula confirmação (usar com --uninstall)"
     log_output "  -u, --upgrade     Atualiza o MySQL Client para a versão mais recente"
     log_output "  -v, --verbose     Habilita saída detalhada para depuração"
     log_output "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
@@ -34,9 +49,9 @@ show_help() {
     log_output "    mysql -h hostname -u username -p database"
     log_output ""
     log_output "${LIGHT_GREEN}Utilitários incluídos:${NC}"
-    log_output "  mysql        Cliente interativo"
-    log_output "  mysqldump    Backup de banco de dados"
-    log_output "  mysqladmin   Administração do servidor"
+    log_output "  ${MYSQL_UTILS[0]}        Cliente interativo"
+    log_output "  ${MYSQL_UTILS[1]}    Backup de banco de dados"
+    log_output "  ${MYSQL_UTILS[2]}   Administração do servidor"
 }
 
 # Get latest version from MySQL official repository
@@ -59,7 +74,7 @@ get_latest_version() {
             ;;
         linux)
             # Detect distro
-            local distro="$(detect_linux_distro)"
+            local distro="$(get_distro_id)"
             case "$distro" in
                 ubuntu | debian | pop | linuxmint)
                     # apt
@@ -72,10 +87,7 @@ get_latest_version() {
                     ;;
                 fedora | rhel | centos | rocky | almalinux)
                     # dnf/yum
-                    pkg_manager="dnf"
-                    if ! command -v dnf &> /dev/null; then
-                        pkg_manager="yum"
-                    fi
+                    pkg_manager=$(get_redhat_pkg_manager)
                     version=$($pkg_manager info mysql 2> /dev/null | grep -E '^Version' | awk '{print $2}' | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+')
                     log_debug "Última versão via $pkg_manager: $version"
                     if [ -n "$version" ]; then
@@ -114,27 +126,15 @@ get_latest_version() {
 # Get installed MySQL client version
 get_current_version() {
     if check_installation; then
-        mysql --version 2> /dev/null | grep -oP '\d+(\.\d+){1,2}' | head -1 || echo "desconhecida"
+        ${MYSQL_UTILS[0]} --version 2> /dev/null | grep -oP '\d+(\.\d+){1,2}' | head -1 || echo "desconhecida"
     else
         echo "desconhecida"
     fi
 }
 
 # Check if MySQL client is installed
-detect_linux_distro() {
-    if [ -f /etc/os-release ]; then
-        . /etc/os-release
-        echo "$ID"
-    elif [ -f /etc/redhat-release ]; then
-        echo "rhel"
-    elif [ -f /etc/debian_version ]; then
-        echo "debian"
-    else
-        echo "unknown"
-    fi
-}
 check_installation() {
-    command -v mysql &> /dev/null
+    command -v ${MYSQL_UTILS[0]} &> /dev/null
 }
 
 # Show additional MySQL-specific information
@@ -142,9 +142,8 @@ show_additional_info() {
     if ! check_installation; then
         return
     fi
-    local utils=("mysqldump" "mysqladmin" "mysqlimport")
     local util_lines=""
-    for util in "${utils[@]}"; do
+    for util in "${MYSQL_UTILS[@]}"; do
         if command -v "$util" &> /dev/null; then
             util_lines+="    • $util\n"
         fi
@@ -165,19 +164,19 @@ install_mysql_macos() {
     log_debug "Obtendo versão mais recente do MySQL Client para macOS..."
     local major_version=$(get_latest_version)
     log_debug "Versão mais recente para macOS: $major_version"
-    if brew list mysql-client &> /dev/null 2>&1; then
+    if brew list $MYSQL_CLIENT_PKG_HOMEBREW &> /dev/null 2>&1; then
         log_info "Atualizando MySQL Client via Homebrew..."
-        brew upgrade mysql-client || true
+        brew upgrade $MYSQL_CLIENT_PKG_HOMEBREW || true
     else
-        log_info "Instalando mysql-client via Homebrew..."
-        brew install mysql-client
+        log_info "Instalando $MYSQL_CLIENT_PKG_HOMEBREW via Homebrew..."
+        brew install $MYSQL_CLIENT_PKG_HOMEBREW
     fi
-    if ! command -v mysql &> /dev/null; then
+    if ! command -v ${MYSQL_UTILS[0]} &> /dev/null; then
         log_info "Configurando binários no PATH..."
-        brew link --force mysql-client || {
+        brew link --force $MYSQL_CLIENT_PKG_HOMEBREW || {
             log_warning "Não foi possível criar links automaticamente"
             log_output "Adicione manualmente ao seu PATH:"
-            log_output "  export PATH=\"/opt/homebrew/opt/mysql-client/bin:$PATH\""
+            log_output "  export PATH=\"$MYSQL_HOMEBREW_PATH:$PATH\""
         }
     fi
     return 0
@@ -193,7 +192,7 @@ install_mysql_debian() {
     }
     log_debug "Instalando mysql-client via apt..."
     log_info "Instalando mysql-client..."
-    sudo apt-get install -y mysql-client || {
+    sudo apt-get install -y $MYSQL_CLIENT_PKG_DEBIAN || {
         log_error "Falha ao instalar MySQL Client"
         return 1
     }
@@ -204,13 +203,10 @@ install_mysql_debian() {
 # Install MySQL client on RedHat/CentOS/Fedora
 install_mysql_redhat() {
     log_info "Instalando MySQL Client no RedHat/CentOS/Fedora..."
-    local pkg_manager="dnf"
-    if ! command -v dnf &> /dev/null; then
-        pkg_manager="yum"
-    fi
+    local pkg_manager=$(get_redhat_pkg_manager)
     log_debug "Instalando mysql via $pkg_manager..."
     log_info "Instalando mysql via $pkg_manager..."
-    sudo $pkg_manager install -y mysql || {
+    sudo $pkg_manager install -y $MYSQL_CLIENT_PKG_REDHAT || {
         log_error "Falha ao instalar MySQL Client"
         return 1
     }
@@ -223,7 +219,7 @@ install_mysql_arch() {
     log_info "Instalando MySQL Client no Arch Linux..."
     log_debug "Instalando mysql-clients via pacman..."
     log_info "Instalando mysql-clients via pacman..."
-    sudo pacman -S --noconfirm mysql-clients || {
+    sudo pacman -S --noconfirm $MYSQL_CLIENT_PKG_ARCH || {
         log_error "Falha ao instalar MySQL Client"
         return 1
     }
@@ -235,7 +231,7 @@ install_mysql_arch() {
 install_mysql() {
     if check_installation; then
         log_info "MySQL Client $(get_current_version) já está instalado."
-        log_info "Use 'susa setup mysql --upgrade' para atualizar."
+        log_info "Use 'susa setup $COMMAND_NAME --upgrade' para atualizar."
         exit 0
     fi
     log_info "Iniciando instalação do MySQL Client..."
@@ -247,7 +243,7 @@ install_mysql() {
             install_result=$?
             ;;
         linux)
-            local distro="$(detect_linux_distro)"
+            local distro="$(get_distro_id)"
             log_debug "Distribuição detectada: $distro"
             case "$distro" in
                 ubuntu | debian | pop | linuxmint)
@@ -278,19 +274,19 @@ install_mysql() {
         if check_installation; then
             local installed_version=$(get_current_version)
             log_success "MySQL Client $installed_version instalado com sucesso!"
-            register_or_update_software_in_lock "mysql" "$installed_version"
+            register_or_update_software_in_lock "$COMMAND_NAME" "$installed_version"
             echo ""
             log_output "Teste a instalação com:"
-            log_output "  ${LIGHT_CYAN}mysql --version${NC}"
+            log_output "  ${LIGHT_CYAN}$MYSQL_PROMPT_CACHE${NC}"
             log_output ""
             log_output "Para conectar a um servidor MySQL:"
-            log_output "  ${LIGHT_CYAN}mysql -h hostname -u username -p database${NC}"
+            log_output "  ${LIGHT_CYAN}${MYSQL_UTILS[0]} -h hostname -u username -p database${NC}"
         else
             log_error "MySQL Client foi instalado mas não está disponível no PATH"
             if [ "$os_name" = "darwin" ]; then
                 log_output ""
                 log_output "No macOS, você pode precisar adicionar ao PATH:"
-                log_output "  export PATH=\"/opt/homebrew/opt/mysql-client/bin:$PATH\""
+                log_output "  export PATH=\"$MYSQL_HOMEBREW_PATH:$PATH\""
                 log_output ""
                 log_output "Adicione esta linha ao seu ~/.zshrc ou ~/.bashrc"
             fi
@@ -304,7 +300,7 @@ install_mysql() {
 # Update MySQL client
 update_mysql() {
     if ! check_installation; then
-        log_error "MySQL Client não está instalado. Use 'susa setup mysql' para instalar."
+        log_error "MySQL Client não está instalado. Use 'susa setup $COMMAND_NAME' para instalar."
         return 1
     fi
     local current_version=$(get_current_version)
@@ -315,36 +311,33 @@ update_mysql() {
     case "$os_name" in
         darwin)
             log_info "Atualizando via Homebrew..."
-            brew upgrade mysql-client || {
+            brew upgrade $MYSQL_CLIENT_PKG_HOMEBREW || {
                 log_info "MySQL Client já está na versão mais recente"
             }
             update_result=0
             ;;
         linux)
-            local distro="$(detect_linux_distro)"
+            local distro="$(get_distro_id)"
             case "$distro" in
                 ubuntu | debian | pop | linuxmint)
                     log_info "Atualizando via apt..."
                     sudo apt-get update -qq
-                    sudo apt-get install --only-upgrade -y mysql-client || {
+                    sudo apt-get install --only-upgrade -y $MYSQL_CLIENT_PKG_DEBIAN || {
                         log_info "MySQL Client já está na versão mais recente"
                     }
                     update_result=0
                     ;;
                 fedora | rhel | centos | rocky | almalinux)
-                    local pkg_manager="dnf"
-                    if ! command -v dnf &> /dev/null; then
-                        pkg_manager="yum"
-                    fi
+                    local pkg_manager=$(get_redhat_pkg_manager)
                     log_info "Atualizando via $pkg_manager..."
-                    sudo $pkg_manager upgrade -y mysql || {
+                    sudo $pkg_manager upgrade -y $MYSQL_CLIENT_PKG_REDHAT || {
                         log_info "MySQL Client já está na versão mais recente"
                     }
                     update_result=0
                     ;;
                 arch | manjaro)
                     log_info "Atualizando via pacman..."
-                    sudo pacman -Syu --noconfirm mysql-clients || {
+                    sudo pacman -Syu --noconfirm $MYSQL_CLIENT_PKG_ARCH || {
                         log_info "MySQL Client já está na versão mais recente"
                     }
                     update_result=0
@@ -363,7 +356,7 @@ update_mysql() {
     if [ $update_result -eq 0 ]; then
         if check_installation; then
             local new_version=$(get_current_version)
-            register_or_update_software_in_lock "mysql" "$new_version"
+            register_or_update_software_in_lock "$COMMAND_NAME" "$new_version"
             if [ "$new_version" != "$current_version" ]; then
                 log_success "MySQL Client atualizado de $current_version para $new_version!"
             else
@@ -386,12 +379,15 @@ uninstall_mysql() {
     fi
     local current_version=$(get_current_version)
     log_debug "Versão instalada detectada para remoção: $current_version"
-    log_output ""
-    log_output "${YELLOW}Deseja realmente desinstalar o MySQL Client $current_version? (s/N)${NC}"
-    read -r response
-    if [[ ! "$response" =~ ^[sSyY]$ ]]; then
-        log_info "Desinstalação cancelada"
-        return 0
+
+    if [ "$SKIP_CONFIRM" = false ]; then
+        log_output ""
+        log_output "${YELLOW}$MYSQL_PROMPT_MSG $current_version? (s/N)${NC}"
+        read -r response
+        if [[ ! "$response" =~ ^[sSyY]$ ]]; then
+            log_info "Desinstalação cancelada"
+            return 0
+        fi
     fi
     log_info "Desinstalando MySQL Client..."
     local os_name=$(uname -s | tr '[:upper:]' '[:lower:]')
@@ -399,18 +395,18 @@ uninstall_mysql() {
     case "$os_name" in
         darwin)
             log_info "Desinstalando via Homebrew..."
-            brew uninstall mysql-client || {
+            brew uninstall $MYSQL_CLIENT_PKG_HOMEBREW || {
                 log_error "Falha ao desinstalar via Homebrew"
                 return 1
             }
             uninstall_result=0
             ;;
         linux)
-            local distro="$(detect_linux_distro)"
+            local distro="$(get_distro_id)"
             case "$distro" in
                 ubuntu | debian | pop | linuxmint)
                     log_info "Desinstalando via apt..."
-                    sudo apt-get remove -y mysql-client || {
+                    sudo apt-get remove -y $MYSQL_CLIENT_PKG_DEBIAN || {
                         log_error "Falha ao desinstalar MySQL Client"
                         return 1
                     }
@@ -418,12 +414,9 @@ uninstall_mysql() {
                     uninstall_result=0
                     ;;
                 fedora | rhel | centos | rocky | almalinux)
-                    local pkg_manager="dnf"
-                    if ! command -v dnf &> /dev/null; then
-                        pkg_manager="yum"
-                    fi
+                    local pkg_manager=$(get_redhat_pkg_manager)
                     log_info "Desinstalando via $pkg_manager..."
-                    sudo $pkg_manager remove -y mysql || {
+                    sudo $pkg_manager remove -y $MYSQL_CLIENT_PKG_REDHAT || {
                         log_error "Falha ao desinstalar MySQL Client"
                         return 1
                     }
@@ -431,7 +424,7 @@ uninstall_mysql() {
                     ;;
                 arch | manjaro)
                     log_info "Desinstalando via pacman..."
-                    sudo pacman -R --noconfirm mysql-clients || {
+                    sudo pacman -R --noconfirm $MYSQL_CLIENT_PKG_ARCH || {
                         log_error "Falha ao desinstalar MySQL Client"
                         return 1
                     }
@@ -450,7 +443,7 @@ uninstall_mysql() {
     esac
     if [ $uninstall_result -eq 0 ]; then
         if ! check_installation; then
-            remove_software_in_lock "mysql"
+            remove_software_in_lock "$COMMAND_NAME"
             log_success "MySQL Client desinstalado com sucesso!"
         else
             log_error "Falha ao desinstalar MySQL Client completamente"
@@ -490,7 +483,7 @@ main() {
                 shift
                 ;;
             --info)
-                show_software_info "mysql"
+                show_software_info $MYSQL_BIN_NAME
                 exit 0
                 ;;
             --get-current-version)
@@ -507,6 +500,10 @@ main() {
                 ;;
             --uninstall)
                 action="uninstall"
+                shift
+                ;;
+            -y | --yes)
+                SKIP_CONFIRM=true
                 shift
                 ;;
             -u | --upgrade)

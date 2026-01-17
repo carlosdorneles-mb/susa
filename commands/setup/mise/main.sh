@@ -1,11 +1,26 @@
 #!/bin/bash
+
 set -euo pipefail
 IFS=$'\n\t'
 
 # Source libraries
 source "$LIB_DIR/internal/installations.sh"
 source "$LIB_DIR/github.sh"
+source "$LIB_DIR/shell.sh"
 
+# Constants
+REPO_SLUG="jdx/mise"
+MISCACHE_DIR="$HOME/.cache/mise"
+MISE_DATA_DIR="$HOME/.local/share/mise"
+MISE_BIN_NAME="mise"
+MISE_CONFIG_COMMENT="# Mise (polyglot version manager)"
+MISE_ACTIVATE_PATTERN="mise activate"
+MISE_TAR_PATTERN="mise-v{version}-{os}-{arch}.tar.gz"
+MISE_CHECKSUM_FILE="SHASUMS256.txt"
+LOCAL_BIN_DIR="$HOME/.local/bin"
+MISE_CONFIG_DIR="$HOME/.config/mise"
+
+SKIP_CONFIRM=false
 # Help function
 show_help() {
     show_description
@@ -20,6 +35,7 @@ show_help() {
     log_output "${LIGHT_GREEN}Opções:${NC}"
     log_output "  -h, --help        Mostra esta mensagem de ajuda"
     log_output "  --uninstall       Desinstala o Mise do sistema"
+    log_output "  -y, --yes         Pula confirmação (usar com --uninstall)"
     log_output "  -u, --upgrade     Atualiza o Mise para a versão mais recente"
     log_output "  -v, --verbose     Habilita saída detalhada para depuração"
     log_output "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
@@ -44,13 +60,13 @@ show_help() {
 
 # Get latest Mise version from GitHub
 get_latest_version() {
-    github_get_latest_version "jdx/mise"
+    github_get_latest_version "$REPO_SLUG"
 }
 
 # Get installed Mise version
 get_current_version() {
     if check_installation; then
-        mise --version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida"
+        $MISE_BIN_NAME --version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida"
     else
         echo "desconhecida"
     fi
@@ -58,7 +74,7 @@ get_current_version() {
 
 # Check if Mise is installed
 check_installation() {
-    command -v mise &> /dev/null
+    command -v $MISE_BIN_NAME &> /dev/null
 }
 
 # Detect operating system and architecture
@@ -69,22 +85,20 @@ detect_os_and_arch() {
 # Check if Mise is already configured in shell
 is_mise_configured() {
     local shell_config="$1"
-    grep -q "mise activate" "$shell_config" 2> /dev/null
+    grep -q "$MISE_ACTIVATE_PATTERN" "$shell_config" 2> /dev/null
 }
 
 # Add Mise configuration to shell
 add_mise_to_shell() {
     local shell_config="$1"
     local shell_type="bash"
-
     if [[ "$shell_config" == *"zshrc"* ]]; then
         shell_type="zsh"
     fi
-
     echo "" >> "$shell_config"
-    echo "# Mise (polyglot version manager)" >> "$shell_config"
+    echo "$MISE_CONFIG_COMMENT" >> "$shell_config"
     echo "export PATH=\"$LOCAL_BIN_DIR:\$PATH\"" >> "$shell_config"
-    echo "eval \"\$(mise activate $shell_type)\"" >> "$shell_config"
+    echo "eval \"\$($MISE_BIN_NAME activate $shell_type)\"" >> "$shell_config"
 }
 
 # Configure shell to use Mise
@@ -108,17 +122,14 @@ download_and_verify_mise() {
     local version="$1"
     local os_name="$2"
     local arch="$3"
-    local output_file="/tmp/mise-${version}.tar.gz"
-
-    # Build download URL using github library pattern
-    # Note: mise uses version with 'v' prefix in filenames (e.g., mise-v2026.1.2-linux-x64.tar.gz)
-    local download_url=$(github_build_download_url "jdx/mise" "$version" "$os_name" "$arch" "mise-v{version}-{os}-{arch}.tar.gz")
+    local output_file="/tmp/${MISE_BIN_NAME}-${version}.tar.gz"
+    local download_url=$(github_build_download_url "$REPO_SLUG" "$version" "$os_name" "$arch" "$MISE_TAR_PATTERN")
 
     log_info "Baixando e verificando Mise..." >&2
     log_debug "URL: $download_url" >&2
 
     # Download with checksum verification (SHA256)
-    if ! github_download_and_verify "jdx/mise" "$version" "$download_url" "$output_file" "SHASUMS256.txt" "sha256"; then
+    if ! github_download_and_verify "$REPO_SLUG" "$version" "$download_url" "$output_file" "$MISE_CHECKSUM_FILE" "sha256"; then
         log_error "Falha ao baixar ou verificar Mise" >&2
         return 1
     fi
@@ -151,21 +162,17 @@ extract_and_setup_binary() {
     fi
 
     # Find and move binary
-    local mise_binary=$(find "$temp_dir" -type f -name "mise" | head -1)
-
+    local mise_binary=$(find "$temp_dir" -type f -name "$MISE_BIN_NAME" | head -1)
     if [ -z "$mise_binary" ]; then
         log_error "Binário do Mise não encontrado no arquivo"
         rm -rf "$temp_dir"
         return 1
     fi
-
     log_debug "Binário encontrado: $mise_binary"
-
-    local mise_bin="$LOCAL_BIN_DIR/mise"
+    local mise_bin="$LOCAL_BIN_DIR/$MISE_BIN_NAME"
     mv "$mise_binary" "$mise_bin"
     chmod +x "$mise_bin"
     rm -rf "$temp_dir"
-
     log_debug "Binário instalado em $mise_bin"
 }
 
@@ -174,7 +181,6 @@ setup_mise_environment() {
     local bin_dir="$1"
 
     export PATH="$bin_dir:$PATH"
-
     log_debug "Ambiente configurado para sessão atual"
     log_debug "PATH atualizado com: $bin_dir"
 }
@@ -182,36 +188,28 @@ setup_mise_environment() {
 # Main installation function
 install_mise_release() {
     local bin_dir="$LOCAL_BIN_DIR"
-    local mise_bin="$bin_dir/mise"
-
+    local mise_bin="$bin_dir/$MISE_BIN_NAME"
     local mise_version=$(get_latest_version)
     if [ $? -ne 0 ] || [ -z "$mise_version" ]; then
         return 1
     fi
-
     # Detect OS and architecture
     local os_arch=$(detect_os_and_arch)
     [ $? -ne 0 ] && return 1
-
     local os_name="${os_arch%:*}"
     local arch="${os_arch#*:}"
-
     log_info "Instalando Mise $mise_version..."
-
     # Download and verify release
     local tar_file=$(download_and_verify_mise "$mise_version" "$os_name" "$arch")
     if [ $? -ne 0 ] || [ -z "$tar_file" ]; then
         log_error "Não foi possível baixar o Mise. Tente novamente mais tarde."
         return 1
     fi
-
     # Extract and setup binary
     extract_and_setup_binary "$tar_file" "$bin_dir"
     [ $? -ne 0 ] && return 1
-
     # Configure shell
     configure_shell
-
     # Setup environment for current session
     setup_mise_environment "$bin_dir"
 }
@@ -221,17 +219,14 @@ install_mise() {
         log_info "Mise $(get_current_version) já está instalado."
         exit 0
     fi
-
     log_info "Iniciando instalação do Mise..."
     install_mise_release
-
     # Verify installation
     local shell_config=$(detect_shell_config)
-
     if check_installation; then
         local version=$(get_current_version)
         log_success "Mise $version instalado com sucesso!"
-        register_or_update_software_in_lock "mise" "$version"
+        register_or_update_software_in_lock "$COMMAND_NAME" "$version"
         echo ""
         echo "Próximos passos:"
         log_output "  1. Reinicie o terminal ou execute: ${LIGHT_CYAN}source $shell_config${NC}"
@@ -248,36 +243,30 @@ update_mise() {
     log_info "Atualizando Mise..."
 
     # Check if Mise is installed
-    if ! command -v mise &> /dev/null; then
+    if ! command -v $MISE_BIN_NAME &> /dev/null; then
         log_error "Mise não está instalado. Use 'susa setup mise' para instalar."
         return 1
     fi
-
     local current_version=$(get_current_version)
     log_info "Versão atual: $current_version"
-
     # Update using Mise's built-in self-update command
     log_info "Executando atualização do Mise..."
-
-    if mise self-update --yes 2>&1 | while read -r line; do log_debug "mise: $line"; done; then
+    if $MISE_BIN_NAME self-update --yes 2>&1 | while read -r line; do log_debug "mise: $line"; done; then
         log_debug "Comando de atualização executado com sucesso"
     else
         log_error "Falha ao atualizar o Mise"
         return 1
     fi
-
     # Verify update
     if check_installation; then
         local new_version=$(get_current_version)
-
         if [ "$current_version" = "$new_version" ]; then
             log_info "Mise já está na versão mais recente ($current_version)"
         else
             log_success "Mise atualizado de $current_version para $new_version!"
-            register_or_update_software_in_lock "mise" "$new_version"
+            register_or_update_software_in_lock "$COMMAND_NAME" "$new_version"
             log_debug "Atualização concluída com sucesso"
         fi
-
         return 0
     else
         log_error "Falha na atualização do Mise"
@@ -286,9 +275,8 @@ update_mise() {
 }
 
 uninstall_mise() {
-    local mise_bin="$LOCAL_BIN_DIR/mise"
+    local mise_bin="$LOCAL_BIN_DIR/$MISE_BIN_NAME"
     local shell_config=$(detect_shell_config)
-
     log_info "Desinstalando Mise..."
 
     # Check if Mise is installed
@@ -297,18 +285,18 @@ uninstall_mise() {
         log_info "Nada a fazer"
         return 0
     fi
-
     local version=$(get_current_version)
     log_debug "Versão a ser removida: $version"
 
     # Confirm uninstallation
-    echo ""
-    log_output "${YELLOW}Deseja realmente desinstalar o Mise $version? (s/N)${NC}"
-    read -r response
-
-    if [[ ! "$response" =~ ^[sSyY]$ ]]; then
-        log_info "Desinstalação cancelada"
-        return 1
+    if [ "$SKIP_CONFIRM" = false ]; then
+        echo ""
+        log_output "${YELLOW}Deseja realmente desinstalar o Mise $version? (s/N)${NC}"
+        read -r response
+        if [[ ! "$response" =~ ^[sSyY]$ ]]; then
+            log_info "Desinstalação cancelada"
+            return 0
+        fi
     fi
 
     # Remove Mise binary
@@ -317,62 +305,84 @@ uninstall_mise() {
         log_debug "Binário removido: $mise_bin"
     fi
 
-    # Remove Mise data directory
-    local mise_data_dir="$HOME/.local/share/mise"
-    if [ -d "$mise_data_dir" ]; then
-        rm -rf "$mise_data_dir"
+    # Ask about removing managed tools (Node, Python, etc)
+    if [ "$SKIP_CONFIRM" = false ]; then
+        echo ""
+        log_output "${YELLOW}Deseja remover também as ferramentas gerenciadas pelo Mise (Node, Python, Go, etc)? (s/N)${NC}"
+        read -r tools_response
+
+        if [[ "$tools_response" =~ ^[sSyY]$ ]]; then
+            if [ -d "$MISE_DATA_DIR" ]; then
+                rm -rf "$MISE_DATA_DIR"
+                log_debug "Ferramentas removidas: $MISE_DATA_DIR"
+            fi
+            log_success "Ferramentas gerenciadas removidas"
+        else
+            log_info "Ferramentas mantidas em $MISE_DATA_DIR"
+        fi
+    else
+        # Auto-remove when --yes is used
+        if [ -d "$MISE_DATA_DIR" ]; then
+            rm -rf "$MISE_DATA_DIR"
+            log_debug "Ferramentas removidas: $MISE_DATA_DIR"
+        fi
+        log_info "Ferramentas gerenciadas removidas automaticamente"
     fi
 
+    # Remove Mise config directory
     local mise_config_dir="$MISE_CONFIG_DIR"
     if [ -d "$mise_config_dir" ]; then
         rm -rf "$mise_config_dir"
+        log_debug "Configurações removidas: $mise_config_dir"
     fi
 
     # Remove shell configurations
     if [ -f "$shell_config" ] && is_mise_configured "$shell_config"; then
         local backup_file="${shell_config}.backup.$(date +%Y%m%d%H%M%S)"
-
         # Create backup
         cp "$shell_config" "$backup_file"
-
         # Remove Mise lines
-        sed -i.tmp '/# Mise (polyglot version manager)/d' "$shell_config"
-        sed -i.tmp '/mise activate/d' "$shell_config"
+        sed -i.tmp "/$MISE_CONFIG_COMMENT/d" "$shell_config"
+        sed -i.tmp "/$MISE_ACTIVATE_PATTERN/d" "$shell_config"
         rm -f "${shell_config}.tmp"
-
         log_debug "Configurações removidas (backup: $backup_file)"
     else
         log_debug "Nenhuma configuração encontrada em $shell_config"
     fi
 
     # Verify removal
-
     if ! check_installation; then
         log_success "Mise desinstalado com sucesso!"
-        remove_software_in_lock "mise"
-
+        remove_software_in_lock "$COMMAND_NAME"
         echo ""
         log_info "Reinicie o terminal ou execute: source $shell_config"
     else
         log_warning "Mise removido, mas executável ainda encontrado no PATH"
-        log_debug "Pode ser necessário remover manualmente de: $(which mise)"
+        log_debug "Pode ser necessário remover manualmente de: $(which $MISE_BIN_NAME)"
     fi
 
     # Ask about cache removal
-    echo ""
-    log_output "${YELLOW}Deseja remover também o cache do Mise? (s/N)${NC}"
-    read -r cache_response
+    if [ "$SKIP_CONFIRM" = false ]; then
+        echo ""
+        log_output "${YELLOW}Deseja remover também o cache do Mise? (s/N)${NC}"
+        read -r cache_response
 
-    if [[ "$cache_response" =~ ^[sSyY]$ ]]; then
-
-        local cache_dir="$HOME/.cache/mise"
-        if [ -d "$cache_dir" ]; then
-            rm -rf "$cache_dir" 2> /dev/null || true
+        if [[ "$cache_response" =~ ^[sSyY]$ ]]; then
+            if [ -d "$MISCACHE_DIR" ]; then
+                rm -rf "$MISCACHE_DIR" 2> /dev/null || true
+                log_debug "Cache removido: $MISCACHE_DIR"
+            fi
+            log_success "Cache removido"
+        else
+            log_info "Cache mantido em $MISCACHE_DIR"
         fi
-
-        log_success "Cache removido"
     else
-        log_info "Cache mantido em ~/.cache/mise"
+        # Auto-remove cache when --yes is used
+        if [ -d "$MISCACHE_DIR" ]; then
+            rm -rf "$MISCACHE_DIR" 2> /dev/null || true
+            log_debug "Cache removido: $MISCACHE_DIR"
+        fi
+        log_info "Cache removido automaticamente"
     fi
 }
 
@@ -395,7 +405,7 @@ main() {
                 export SILENT=true
                 ;;
             --info)
-                show_software_info
+                show_software_info "$MISE_BIN_NAME"
                 exit 0
                 ;;
             --get-current-version)
@@ -412,6 +422,10 @@ main() {
                 ;;
             --uninstall)
                 action="uninstall"
+                shift
+                ;;
+            -y | --yes)
+                SKIP_CONFIRM=true
                 shift
                 ;;
             -u | --upgrade)

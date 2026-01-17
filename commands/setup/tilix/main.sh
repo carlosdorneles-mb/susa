@@ -2,10 +2,20 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-# Source installations library
+# Source libraries
 source "$LIB_DIR/internal/installations.sh"
 source "$LIB_DIR/github.sh"
 
+# Constants
+TILIX_NAME="Tilix"
+TILIX_REPO="gnunn1/tilix"
+TILIX_BIN_NAME="tilix"
+TILIX_PKG_DEB="tilix"
+TILIX_PKG_RPM="tilix"
+TILIX_PKG_ARCH="tilix"
+TILIX_PKG_ZYPPER="tilix"
+
+SKIP_CONFIRM=false
 # Help function
 show_help() {
     show_description
@@ -13,21 +23,22 @@ show_help() {
     show_usage
     echo ""
     log_output "${LIGHT_GREEN}O que é:${NC}"
-    log_output "  Tilix é um emulador de terminal avançado para Linux usando GTK+ 3."
+    log_output "  $TILIX_NAME é um emulador de terminal avançado para Linux usando GTK+ 3."
     log_output "  Oferece recursos como tiles (painéis lado a lado), notificações,"
     log_output "  transparência, temas personalizáveis e muito mais."
     echo ""
     log_output "${LIGHT_GREEN}Opções:${NC}"
     log_output "  -h, --help        Mostra esta mensagem de ajuda"
     log_output "  --uninstall       Desinstala o Tilix do sistema"
+    log_output "  -y, --yes         Pula confirmação (usar com --uninstall)"
     log_output "  -u, --upgrade     Atualiza o Tilix para a versão mais recente"
     log_output "  -v, --verbose     Habilita saída detalhada para depuração"
     log_output "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
     echo ""
     log_output "${LIGHT_GREEN}Exemplos:${NC}"
-    log_output "  susa setup tilix              # Instala o Tilix"
-    log_output "  susa setup tilix --upgrade    # Atualiza o Tilix"
-    log_output "  susa setup tilix --uninstall  # Desinstala o Tilix"
+    log_output "  susa setup tilix              # Instala o $TILIX_NAME"
+    log_output "  susa setup tilix --upgrade    # Atualiza o $TILIX_NAME"
+    log_output "  susa setup tilix --uninstall  # Desinstala o $TILIX_NAME"
     echo ""
     log_output "${LIGHT_GREEN}Pós-instalação:${NC}"
     log_output "  O Tilix estará disponível no menu de aplicativos."
@@ -44,22 +55,24 @@ show_help() {
 
 # Get latest Tilix version
 get_latest_version() {
-    github_get_latest_version "gnunn1/tilix"
+    github_get_latest_version "$TILIX_REPO"
 }
 
 # Get installed Tilix version
 get_current_version() {
     if check_installation; then
         # Try to get version from package manager instead of executing binary
-        if command -v dpkg &> /dev/null && dpkg -l tilix 2> /dev/null | grep -q '^ii'; then
-            dpkg -l tilix 2> /dev/null | grep '^ii' | awk '{print $3}' | cut -d'-' -f1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida"
-        elif command -v rpm &> /dev/null && rpm -q tilix &> /dev/null; then
-            rpm -q --queryformat '%{VERSION}' tilix 2> /dev/null || echo "desconhecida"
-        elif command -v pacman &> /dev/null && pacman -Q tilix &> /dev/null; then
-            pacman -Q tilix 2> /dev/null | awk '{print $2}' | cut -d'-' -f1 || echo "desconhecida"
+        if command -v dpkg &> /dev/null && dpkg -l $TILIX_PKG_DEB 2> /dev/null | grep -q '^ii'; then
+            dpkg -l $TILIX_PKG_DEB 2> /dev/null | grep '^ii' | awk '{print $3}' | cut -d'-' -f1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida"
+        elif command -v rpm &> /dev/null && rpm -q $TILIX_PKG_RPM &> /dev/null; then
+            rpm -q --queryformat '%{VERSION}' $TILIX_PKG_RPM 2> /dev/null || echo "desconhecida"
+        elif command -v pacman &> /dev/null && pacman -Q $TILIX_PKG_ARCH &> /dev/null; then
+            pacman -Q $TILIX_PKG_ARCH 2> /dev/null | awk '{print $2}' | cut -d'-' -f1 || echo "desconhecida"
+        elif command -v zypper &> /dev/null && zypper se --installed-only $TILIX_PKG_ZYPPER &> /dev/null; then
+            zypper info $TILIX_PKG_ZYPPER 2> /dev/null | grep -E '^Version' | awk '{print $2}' || echo "desconhecida"
         else
             # Fallback: try executing binary (may fail)
-            tilix --version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida"
+            $TILIX_BIN_NAME --version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida"
         fi
     else
         echo "desconhecida"
@@ -68,7 +81,7 @@ get_current_version() {
 
 # Check if Tilix is installed
 check_installation() {
-    command -v tilix &> /dev/null || ([ "$(uname)" = "Linux" ] && dpkg -l 2> /dev/null | grep -q tilix)
+    command -v $TILIX_BIN_NAME &> /dev/null || ([ "$(uname)" = "Linux" ] && dpkg -l 2> /dev/null | grep -q $TILIX_PKG_DEB)
 }
 
 # Detect package manager
@@ -145,32 +158,32 @@ install_tilix() {
 
     case "$pkg_manager" in
         apt)
-            log_debug "Executando: sudo apt-get install -y tilix"
-            if sudo apt-get install -y tilix 2>&1 | while read -r line; do log_debug "apt: $line"; done; then
+            log_debug "Executando: sudo apt-get install -y $TILIX_PKG_DEB"
+            if sudo apt-get install -y $TILIX_PKG_DEB 2>&1 | while read -r line; do log_debug "apt: $line"; done; then
                 install_success=true
             fi
             ;;
         dnf)
-            log_debug "Executando: sudo dnf install -y tilix"
-            if sudo dnf install -y tilix 2>&1 | while read -r line; do log_debug "dnf: $line"; done; then
+            log_debug "Executando: sudo dnf install -y $TILIX_PKG_RPM"
+            if sudo dnf install -y $TILIX_PKG_RPM 2>&1 | while read -r line; do log_debug "dnf: $line"; done; then
                 install_success=true
             fi
             ;;
         yum)
-            log_debug "Executando: sudo yum install -y tilix"
-            if sudo yum install -y tilix 2>&1 | while read -r line; do log_debug "yum: $line"; done; then
+            log_debug "Executando: sudo yum install -y $TILIX_PKG_RPM"
+            if sudo yum install -y $TILIX_PKG_RPM 2>&1 | while read -r line; do log_debug "yum: $line"; done; then
                 install_success=true
             fi
             ;;
         pacman)
-            log_debug "Executando: sudo pacman -S --noconfirm tilix"
-            if sudo pacman -S --noconfirm tilix 2>&1 | while read -r line; do log_debug "pacman: $line"; done; then
+            log_debug "Executando: sudo pacman -S --noconfirm $TILIX_PKG_ARCH"
+            if sudo pacman -S --noconfirm $TILIX_PKG_ARCH 2>&1 | while read -r line; do log_debug "pacman: $line"; done; then
                 install_success=true
             fi
             ;;
         zypper)
-            log_debug "Executando: sudo zypper install -y tilix"
-            if sudo zypper install -y tilix 2>&1 | while read -r line; do log_debug "zypper: $line"; done; then
+            log_debug "Executando: sudo zypper install -y $TILIX_PKG_ZYPPER"
+            if sudo zypper install -y $TILIX_PKG_ZYPPER 2>&1 | while read -r line; do log_debug "zypper: $line"; done; then
                 install_success=true
             fi
             ;;
@@ -180,7 +193,7 @@ install_tilix() {
     if check_installation; then
         local version=$(get_current_version)
         log_success "Tilix $version instalado com sucesso!"
-        register_or_update_software_in_lock "tilix" "$version"
+        register_or_update_software_in_lock "$COMMAND_NAME" "$version"
 
         # Check for VTE configuration
         if [ -f /etc/profile.d/vte.sh ]; then
@@ -245,24 +258,24 @@ update_tilix() {
     log_info "Atualizando Tilix via $pkg_manager..."
     case "$pkg_manager" in
         apt)
-            log_debug "Executando: sudo apt-get upgrade -y tilix"
-            sudo apt-get upgrade -y tilix 2>&1 | while read -r line; do log_debug "apt: $line"; done
+            log_debug "Executando: sudo apt-get upgrade -y $TILIX_PKG_DEB"
+            sudo apt-get upgrade -y $TILIX_PKG_DEB 2>&1 | while read -r line; do log_debug "apt: $line"; done
             ;;
         dnf)
-            log_debug "Executando: sudo dnf upgrade -y tilix"
-            sudo dnf upgrade -y tilix 2>&1 | while read -r line; do log_debug "dnf: $line"; done
+            log_debug "Executando: sudo dnf upgrade -y $TILIX_PKG_RPM"
+            sudo dnf upgrade -y $TILIX_PKG_RPM 2>&1 | while read -r line; do log_debug "dnf: $line"; done
             ;;
         yum)
-            log_debug "Executando: sudo yum update -y tilix"
-            sudo yum update -y tilix 2>&1 | while read -r line; do log_debug "yum: $line"; done
+            log_debug "Executando: sudo yum update -y $TILIX_PKG_RPM"
+            sudo yum update -y $TILIX_PKG_RPM 2>&1 | while read -r line; do log_debug "yum: $line"; done
             ;;
         pacman)
-            log_debug "Executando: sudo pacman -S tilix"
-            sudo pacman -S tilix 2>&1 | while read -r line; do log_debug "pacman: $line"; done
+            log_debug "Executando: sudo pacman -S $TILIX_PKG_ARCH"
+            sudo pacman -S $TILIX_PKG_ARCH 2>&1 | while read -r line; do log_debug "pacman: $line"; done
             ;;
         zypper)
-            log_debug "Executando: sudo zypper update -y tilix"
-            sudo zypper update -y tilix 2>&1 | while read -r line; do log_debug "zypper: $line"; done
+            log_debug "Executando: sudo zypper update -y $TILIX_PKG_ZYPPER"
+            sudo zypper update -y $TILIX_PKG_ZYPPER 2>&1 | while read -r line; do log_debug "zypper: $line"; done
             ;;
     esac
 
@@ -272,7 +285,7 @@ update_tilix() {
         log_info "Tilix já está na versão mais recente ($current_version)"
     else
         log_success "Tilix atualizado de $current_version para $new_version"
-        register_or_update_software_in_lock "tilix" "$new_version"
+        register_or_update_software_in_lock "$COMMAND_NAME" "$new_version"
     fi
 
     log_debug "Atualização concluída"
@@ -296,56 +309,66 @@ uninstall_tilix() {
     log_debug "Versão a ser removida: $version"
 
     # Confirm uninstallation
-    echo ""
-    log_output "${YELLOW}Deseja realmente desinstalar o Tilix $version? (s/N)${NC}"
-    read -r response
+    if [ "$SKIP_CONFIRM" = false ]; then
+        echo ""
+        log_output "${YELLOW}Deseja realmente desinstalar o Tilix $version? (s/N)${NC}"
+        read -r response
 
-    if [[ ! "$response" =~ ^[sSyY]$ ]]; then
-        log_info "Desinstalação cancelada"
-        return 1
+        if [[ ! "$response" =~ ^[sSyY]$ ]]; then
+            log_info "Desinstalação cancelada"
+            return 0
+        fi
     fi
 
     # Uninstall Tilix
     log_info "Removendo Tilix via $pkg_manager..."
     case "$pkg_manager" in
         apt)
-            log_debug "Executando: sudo apt-get remove -y tilix"
-            sudo apt-get remove -y tilix 2>&1 | while read -r line; do log_debug "apt: $line"; done
+            log_debug "Executando: sudo apt-get remove -y $TILIX_PKG_DEB"
+            sudo apt-get remove -y $TILIX_PKG_DEB 2>&1 | while read -r line; do log_debug "apt: $line"; done
 
             # Ask about purge
-            echo ""
-            log_output "${YELLOW}Deseja remover também os arquivos de configuração? (s/N)${NC}"
-            read -r purge_response
+            if [ "$SKIP_CONFIRM" = false ]; then
+                echo ""
+                log_output "${YELLOW}Deseja remover também os arquivos de configuração? (s/N)${NC}"
+                read -r purge_response
 
-            if [[ "$purge_response" =~ ^[sSyY]$ ]]; then
-                log_debug "Executando: sudo apt-get purge -y tilix"
-                sudo apt-get purge -y tilix 2>&1 | while read -r line; do log_debug "apt: $line"; done
+                if [[ "$purge_response" =~ ^[sSyY]$ ]]; then
+                    log_debug "Executando: sudo apt-get purge -y $TILIX_PKG_DEB"
+                    sudo apt-get purge -y $TILIX_PKG_DEB 2>&1 | while read -r line; do log_debug "apt: $line"; done
+                    log_debug "Executando: sudo apt-get autoremove -y"
+                    sudo apt-get autoremove -y 2>&1 | while read -r line; do log_debug "apt: $line"; done
+                fi
+            else
+                # Auto-purge when --yes is used
+                log_debug "Executando: sudo apt-get purge -y $TILIX_PKG_DEB"
+                sudo apt-get purge -y $TILIX_PKG_DEB 2>&1 | while read -r line; do log_debug "apt: $line"; done
                 log_debug "Executando: sudo apt-get autoremove -y"
                 sudo apt-get autoremove -y 2>&1 | while read -r line; do log_debug "apt: $line"; done
             fi
             ;;
         dnf)
-            log_debug "Executando: sudo dnf remove -y tilix"
-            sudo dnf remove -y tilix 2>&1 | while read -r line; do log_debug "dnf: $line"; done
+            log_debug "Executando: sudo dnf remove -y $TILIX_PKG_RPM"
+            sudo dnf remove -y $TILIX_PKG_RPM 2>&1 | while read -r line; do log_debug "dnf: $line"; done
             ;;
         yum)
-            log_debug "Executando: sudo yum remove -y tilix"
-            sudo yum remove -y tilix 2>&1 | while read -r line; do log_debug "yum: $line"; done
+            log_debug "Executando: sudo yum remove -y $TILIX_PKG_RPM"
+            sudo yum remove -y $TILIX_PKG_RPM 2>&1 | while read -r line; do log_debug "yum: $line"; done
             ;;
         pacman)
-            log_debug "Executando: sudo pacman -R tilix"
-            sudo pacman -R tilix 2>&1 | while read -r line; do log_debug "pacman: $line"; done
+            log_debug "Executando: sudo pacman -R $TILIX_PKG_ARCH"
+            sudo pacman -R $TILIX_PKG_ARCH 2>&1 | while read -r line; do log_debug "pacman: $line"; done
             ;;
         zypper)
-            log_debug "Executando: sudo zypper remove -y tilix"
-            sudo zypper remove -y tilix 2>&1 | while read -r line; do log_debug "zypper: $line"; done
+            log_debug "Executando: sudo zypper remove -y $TILIX_PKG_ZYPPER"
+            sudo zypper remove -y $TILIX_PKG_ZYPPER 2>&1 | while read -r line; do log_debug "zypper: $line"; done
             ;;
     esac
 
     # Verify removal
     if ! check_installation; then
         log_success "Tilix desinstalado com sucesso"
-        remove_software_in_lock "tilix"
+        remove_software_in_lock "$COMMAND_NAME"
     else
         log_warning "Tilix removido do gerenciador de pacotes, mas executável ainda encontrado"
     fi
@@ -386,7 +409,7 @@ main() {
                 shift
                 ;;
             --info)
-                show_software_info
+                show_software_info "$TILIX_BIN_NAME"
                 exit 0
                 ;;
             --get-current-version)
@@ -403,6 +426,10 @@ main() {
                 ;;
             --uninstall)
                 action="uninstall"
+                shift
+                ;;
+            -y | --yes)
+                SKIP_CONFIRM=true
                 shift
                 ;;
             -u | --upgrade)
@@ -425,7 +452,6 @@ main() {
     log_debug "Sistema operacional: Linux $(uname -r)"
 
     # Execute action
-
     case "$action" in
         install)
             install_tilix

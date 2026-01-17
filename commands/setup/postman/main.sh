@@ -1,4 +1,5 @@
 #!/bin/bash
+
 set -euo pipefail
 IFS=$'\n\t'
 
@@ -6,6 +7,19 @@ IFS=$'\n\t'
 source "$LIB_DIR/internal/installations.sh"
 source "$LIB_DIR/os.sh"
 
+# Constants
+POSTMAN_BIN_NAME="postman"
+POSTMAN_HOMEBREW_CASK="postman"
+POSTMAN_INSTALL_DIR="/opt/Postman"
+POSTMAN_DESKTOP_FILE="/usr/share/applications/postman.desktop"
+POSTMAN_DOWNLOAD_URL="https://dl.pstmn.io/download/latest/linux64"
+POSTMAN_HOMEBREW_CASK="postman"
+POSTMAN_DOWNLOAD_URL="https://dl.pstmn.io/download/latest/linux64"
+POSTMAN_INSTALL_DIR="/opt/Postman"
+POSTMAN_DESKTOP_FILE="/usr/share/applications/postman.desktop"
+POSTMAN_ICON_URL="https://www.postman.com/_ar-assets/images/favicon-1-48.png"
+
+SKIP_CONFIRM=false
 # Help function
 show_help() {
     show_description
@@ -20,6 +34,7 @@ show_help() {
     log_output "${LIGHT_GREEN}Opções:${NC}"
     log_output "  -h, --help        Mostra esta mensagem de ajuda"
     log_output "  --uninstall       Desinstala o Postman do sistema"
+    log_output "  -y, --yes         Pula confirmação (usar com --uninstall)"
     log_output "  -u, --upgrade     Atualiza o Postman para a versão mais recente"
     log_output "  -v, --verbose     Habilita saída detalhada para depuração"
     log_output "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
@@ -75,7 +90,7 @@ get_current_version() {
 
 # Check if Postman is installed
 check_installation() {
-    command -v postman &> /dev/null || { [ "$(uname)" = "Darwin" ] && [ -d "/Applications/Postman.app" ]; }
+    command -v $POSTMAN_BIN_NAME &> /dev/null || { [ "$(uname)" = "Darwin" ] && [ -d "/Applications/Postman.app" ]; }
 }
 
 # Install Postman on macOS using Homebrew
@@ -114,7 +129,7 @@ install_postman_linux() {
 
     # Create temporary directory
     local temp_dir=$(mktemp -d)
-    local tarball="$temp_dir/postman.tar.gz"
+    local tarball="$temp_dir/$POSTMAN_BIN_NAME.tar.gz"
 
     # Download Postman
     log_info "Baixando Postman..."
@@ -142,7 +157,7 @@ install_postman_linux() {
 
     # Create symbolic link
     log_info "Criando link simbólico..."
-    sudo ln -sf "$POSTMAN_INSTALL_DIR/Postman" /usr/local/bin/postman
+    sudo ln -sf "$POSTMAN_INSTALL_DIR/Postman" /usr/local/bin/$POSTMAN_BIN_NAME
 
     # Create desktop entry
     log_info "Criando entrada no menu de aplicativos..."
@@ -174,7 +189,7 @@ EOF
 # Main installation function
 install_postman() {
     if check_installation; then
-        log_info "Postman $(get_current_version) já está instalado."
+        log_info "$POSTMAN_BIN_NAME $(get_current_version) já está instalado."
         exit 0
     fi
 
@@ -191,7 +206,7 @@ install_postman() {
 
     # Mark as installed
     local version=$(get_current_version)
-    register_or_update_software_in_lock "postman" "$version"
+    register_or_update_software_in_lock "$COMMAND_NAME" "$version"
 }
 
 # Update Postman
@@ -199,7 +214,7 @@ update_postman() {
     log_info "Atualizando Postman..."
 
     if ! check_installation; then
-        log_warning "Postman não está instalado. Execute sem --upgrade para instalar."
+        log_warning "$POSTMAN_BIN_NAME não está instalado. Execute sem --upgrade para instalar."
         return 1
     fi
 
@@ -211,18 +226,18 @@ update_postman() {
     if [ "$os_type" = "mac" ]; then
         log_info "Atualizando via Homebrew..."
         brew upgrade --cask "$POSTMAN_HOMEBREW_CASK" || {
-            log_info "Postman já está na versão mais recente"
+            log_info "$POSTMAN_BIN_NAME já está na versão mais recente"
         }
     elif [ "$os_type" = "linux" ]; then
-        log_info "Reinstalando Postman com a versão mais recente..."
+        log_info "Reinstalando $POSTMAN_BIN_NAME com a versão mais recente..."
         install_postman_linux
     fi
 
     local new_version=$(get_current_version)
-    log_success "Postman atualizado para versão $new_version"
+    log_success "$POSTMAN_BIN_NAME atualizado para versão $new_version"
 
     # Update lock file
-    register_or_update_software_in_lock "postman" "$new_version"
+    register_or_update_software_in_lock "$COMMAND_NAME" "$new_version"
 }
 
 # Uninstall Postman
@@ -230,8 +245,20 @@ uninstall_postman() {
     log_info "Desinstalando Postman..."
 
     if ! check_installation; then
-        log_warning "Postman não está instalado"
+        log_warning "$POSTMAN_BIN_NAME não está instalado"
         return 0
+    fi
+
+    local current_version=$(get_current_version 2> /dev/null || echo "unknown")
+
+    if [ "$SKIP_CONFIRM" = false ]; then
+        log_output ""
+        log_output "${YELLOW}Deseja realmente desinstalar o Postman $current_version? (s/N)${NC}"
+        read -r response
+        if [[ ! "$response" =~ ^[sSyY]$ ]]; then
+            log_info "Desinstalação cancelada"
+            return 0
+        fi
     fi
 
     local os_type=$(get_simple_os)
@@ -240,16 +267,16 @@ uninstall_postman() {
         log_info "Desinstalando via Homebrew..."
         brew uninstall --cask "$POSTMAN_HOMEBREW_CASK"
     elif [ "$os_type" = "linux" ]; then
-        log_info "Removendo arquivos do Postman..."
+        log_info "Removendo arquivos do $POSTMAN_BIN_NAME..."
         sudo rm -rf "$POSTMAN_INSTALL_DIR"
-        sudo rm -f /usr/local/bin/postman
+        sudo rm -f /usr/local/bin/$POSTMAN_BIN_NAME
         sudo rm -f "$POSTMAN_DESKTOP_FILE"
     fi
 
-    log_success "Postman desinstalado com sucesso!"
+    log_success "$POSTMAN_BIN_NAME desinstalado com sucesso!"
 
     # Remove from lock file
-    remove_software_in_lock "postman"
+    remove_software_in_lock "$COMMAND_NAME"
 }
 
 # Main execution
@@ -272,7 +299,7 @@ main() {
                 export SILENT=true
                 ;;
             --info)
-                show_software_info
+                show_software_info "$POSTMAN_BIN_NAME"
                 exit 0
                 ;;
             --get-current-version)
@@ -286,6 +313,10 @@ main() {
             --check-installation)
                 check_installation
                 exit $?
+                ;;
+            -y | --yes)
+                SKIP_CONFIRM=true
+                shift
                 ;;
             -u | --upgrade)
                 should_update=true

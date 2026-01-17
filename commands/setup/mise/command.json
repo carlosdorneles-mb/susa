@@ -7,9 +7,5 @@
   "os": [
     "linux",
     "mac"
-  ],
-  "envs": {
-    "LOCAL_BIN_DIR": "$HOME/.local/bin",
-    "MISE_CONFIG_DIR": "$HOME/.config/mise"
-  }
+  ]
 }

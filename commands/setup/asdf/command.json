@@ -7,9 +7,5 @@
   "os": [
     "linux",
     "mac"
-  ],
-  "envs": {
-    "ASDF_INSTALL_DIR": "$HOME/.asdf",
-    "LOCAL_BIN_DIR": "$HOME/.local/bin"
-  }
+  ]
 }

@@ -7,10 +7,5 @@
   "os": [
     "linux",
     "mac"
-  ],
-  "envs": {
-    "FLAMESHOT_HOMEBREW_FORMULA": "flameshot",
-    "FLAMESHOT_GITHUB_REPO": "flameshot-org/flameshot",
-    "FLAMESHOT_INSTALL_DIR": "/opt/flameshot"
-  }
+  ]
 }

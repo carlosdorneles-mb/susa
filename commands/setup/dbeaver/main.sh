@@ -7,6 +7,17 @@ source "$LIB_DIR/internal/installations.sh"
 source "$LIB_DIR/github.sh"
 source "$LIB_DIR/os.sh"
 
+# Constants
+DBEAVER_NAME="DBeaver"
+DBEAVER_BIN_NAME="dbeaver"
+DBEAVER_GITHUB_REPO="dbeaver/dbeaver"
+DBEAVER_INSTALL_DIR="/opt/dbeaver"
+DBEAVER_PACKAGE_NAME="dbeaver-ce"
+DBEAVER_HOMEBREW_CASK="dbeaver-community"
+DBEAVER_APT_REPO="https://dbeaver.io/debs/dbeaver-ce"
+DBEAVER_APT_KEY_URL="https://dbeaver.io/debs/dbeaver.gpg.key"
+
+SKIP_CONFIRM=false
 # Help function
 show_help() {
     show_description
@@ -14,7 +25,7 @@ show_help() {
     show_usage
     log_output ""
     log_output "${LIGHT_GREEN}O que é:${NC}"
-    log_output "  DBeaver é uma ferramenta universal de gerenciamento de banco de dados,"
+    log_output "  $DBEAVER_NAME é uma ferramenta universal de gerenciamento de banco de dados,"
     log_output "  gratuita e open-source. Suporta MySQL, PostgreSQL, SQLite, Oracle,"
     log_output "  SQL Server, DB2, Sybase, MS Access, Teradata, Firebird, Apache Hive,"
     log_output "  Phoenix, Presto e mais de 80 tipos de bancos de dados."
@@ -22,14 +33,15 @@ show_help() {
     log_output "${LIGHT_GREEN}Opções:${NC}"
     log_output "  -h, --help        Mostra esta mensagem de ajuda"
     log_output "  --uninstall       Desinstala o DBeaver do sistema"
+    log_output "  -y, --yes         Pula confirmação (usar com --uninstall)"
     log_output "  -u, --upgrade     Atualiza o DBeaver para a versão mais recente"
     log_output "  -v, --verbose     Habilita saída detalhada para depuração"
     log_output "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
     log_output ""
     log_output "${LIGHT_GREEN}Exemplos:${NC}"
-    log_output "  susa setup dbeaver              # Instala o DBeaver"
-    log_output "  susa setup dbeaver --upgrade    # Atualiza o DBeaver"
-    log_output "  susa setup dbeaver --uninstall  # Desinstala o DBeaver"
+    log_output "  susa setup dbeaver              # Instala o $DBEAVER_NAME"
+    log_output "  susa setup dbeaver --upgrade    # Atualiza o $DBEAVER_NAME"
+    log_output "  susa setup dbeaver --uninstall  # Desinstala o $DBEAVER_NAME"
     log_output ""
     log_output "${LIGHT_GREEN}Pós-instalação:${NC}"
     log_output "  O DBeaver estará disponível no menu de aplicativos ou via:"
@@ -58,7 +70,7 @@ get_current_version() {
     elif check_installation; then
         # Don't execute dbeaver directly as it may open the GUI
         # Try to get version from package manager or files
-        if [ "$(uname)" = "Darwin" ]; then
+        if is_mac; then
             # macOS - get from app bundle
             local app_path="/Applications/DBeaver.app/Contents/Info.plist"
             if [ -f "$app_path" ]; then
@@ -66,7 +78,7 @@ get_current_version() {
             else
                 echo "desconhecida"
             fi
-        elif [ "$(uname)" = "Linux" ]; then
+        elif is_linux; then
             # Linux - get from dpkg or rpm
             if command -v dpkg &> /dev/null; then
                 dpkg -l dbeaver-ce 2> /dev/null | grep '^ii' | awk '{print $3}' | cut -d'-' -f1 || echo "desconhecida"
@@ -86,16 +98,6 @@ get_current_version() {
 # Check if DBeaver is installed
 check_installation() {
     command -v dbeaver &> /dev/null || ([ "$(uname)" = "Linux" ] && dpkg -l 2> /dev/null | grep -q dbeaver)
-}
-
-# Detect Linux distribution
-detect_distro() {
-    if [ -f /etc/os-release ]; then
-        . /etc/os-release
-        echo "$ID"
-    else
-        echo "unknown"
-    fi
 }
 
 # Install DBeaver on macOS using Homebrew
@@ -347,7 +349,7 @@ install_dbeaver() {
     if [ "$os_type" = "mac" ]; then
         install_dbeaver_macos
     elif [ "$os_type" = "linux" ]; then
-        local distro=$(detect_distro)
+        local distro=$(get_distro_id)
         log_debug "Distribuição detectada: $distro"
 
         case "$distro" in
@@ -373,7 +375,7 @@ install_dbeaver() {
 
     # Mark as installed
     local version=$(get_current_version)
-    register_or_update_software_in_lock "dbeaver" "$version"
+    register_or_update_software_in_lock "$COMMAND_NAME" "$version"
 }
 
 # Update DBeaver
@@ -396,7 +398,7 @@ update_dbeaver() {
             log_info "DBeaver já está na versão mais recente"
         }
     elif [ "$os_type" = "linux" ]; then
-        local distro=$(detect_distro)
+        local distro=$(get_distro_id)
 
         case "$distro" in
             ubuntu | debian | pop | linuxmint | elementary)
@@ -423,7 +425,7 @@ update_dbeaver() {
     log_success "DBeaver atualizado para versão $new_version"
 
     # Update lock file
-    register_or_update_software_in_lock "dbeaver" "$new_version"
+    register_or_update_software_in_lock "$COMMAND_NAME" "$new_version"
 }
 
 # Uninstall DBeaver
@@ -435,13 +437,25 @@ uninstall_dbeaver() {
         return 0
     fi
 
+    local current_version=$(get_current_version)
+
+    if [ "$SKIP_CONFIRM" = false ]; then
+        log_output ""
+        log_output "${YELLOW}Deseja realmente desinstalar o DBeaver $current_version? (s/N)${NC}"
+        read -r response
+        if [[ ! "$response" =~ ^[sSyY]$ ]]; then
+            log_info "Desinstalação cancelada"
+            return 0
+        fi
+    fi
+
     local os_type=$(get_simple_os)
 
     if [ "$os_type" = "mac" ]; then
         log_info "Desinstalando via Homebrew..."
         brew uninstall --cask "$DBEAVER_HOMEBREW_CASK"
     elif [ "$os_type" = "linux" ]; then
-        local distro=$(detect_distro)
+        local distro=$(get_distro_id)
 
         case "$distro" in
             ubuntu | debian | pop | linuxmint | elementary)
@@ -468,7 +482,7 @@ uninstall_dbeaver() {
     log_success "DBeaver desinstalado com sucesso!"
 
     # Remove from lock file
-    remove_software_in_lock "dbeaver"
+    remove_software_in_lock "$COMMAND_NAME"
 }
 
 # Main execution
@@ -491,7 +505,7 @@ main() {
                 export SILENT=true
                 ;;
             --info)
-                show_software_info
+                show_software_info "$DBEAVER_BIN_NAME"
                 exit 0
                 ;;
             --get-current-version)
@@ -505,6 +519,10 @@ main() {
             --check-installation)
                 check_installation
                 exit $?
+                ;;
+            -y | --yes)
+                SKIP_CONFIRM=true
+                shift
                 ;;
             -u | --upgrade)
                 should_update=true

@@ -7,12 +7,5 @@
   "os": [
     "linux",
     "mac"
-  ],
-  "envs": {
-    "POSTMAN_HOMEBREW_CASK": "postman",
-    "POSTMAN_DOWNLOAD_URL": "https://dl.pstmn.io/download/latest/linux64",
-    "POSTMAN_INSTALL_DIR": "/opt/Postman",
-    "POSTMAN_DESKTOP_FILE": "/usr/share/applications/postman.desktop",
-    "POSTMAN_ICON_URL": "https://www.postman.com/_ar-assets/images/favicon-1-48.png"
-  }
+  ]
 }

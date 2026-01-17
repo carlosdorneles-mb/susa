@@ -6,8 +6,5 @@
   "group": "terminal",
   "os": [
     "mac"
-  ],
-  "envs": {
-    "ITERM_HOMEBREW_INSTALL_URL": "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
-  }
+  ]
 }

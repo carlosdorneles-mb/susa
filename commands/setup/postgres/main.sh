@@ -1,11 +1,23 @@
 #!/bin/bash
+
 set -euo pipefail
 IFS=$'\n\t'
 
 # Source libraries
 source "$LIB_DIR/internal/installations.sh"
 source "$LIB_DIR/github.sh"
+source "$LIB_DIR/os.sh"
 
+# COntants
+POSTGRES_BIN_NAME="psql"
+POSTGRES_CLIENT_PKG_DEBIAN="postgresql-client"
+POSTGRES_CLIENT_PKG_REDHAT="postgresql"
+POSTGRES_CLIENT_PKG_ARCH="postgresql-libs"
+POSTGRES_CLIENT_PKG_HOMEBREW="libpq"
+POSTGRES_UTILS=("psql" "pg_dump" "pg_restore" "createdb" "dropdb" "pg_isready")
+POSTGRES_HOMEBREW_PATH="/opt/homebrew/opt/libpq/bin"
+
+SKIP_CONFIRM=false
 # Help function
 show_help() {
     show_description
@@ -21,6 +33,7 @@ show_help() {
     log_output "  -h, --help        Mostra esta mensagem de ajuda"
     log_output "  --info            Mostra informações sobre a instalação do PostgreSQL Client"
     log_output "  --uninstall       Desinstala o PostgreSQL Client do sistema"
+    log_output "  -y, --yes         Pula confirmação (usar com --uninstall)"
     log_output "  -u, --upgrade     Atualiza o PostgreSQL Client para a versão mais recente"
     log_output "  -v, --verbose     Habilita saída detalhada para depuração"
     log_output "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
@@ -35,11 +48,11 @@ show_help() {
     log_output "    psql -h hostname -U username -d database"
     log_output ""
     log_output "${LIGHT_GREEN}Utilitários incluídos:${NC}"
-    log_output "  psql         Cliente interativo"
-    log_output "  pg_dump      Backup de banco de dados"
-    log_output "  pg_restore   Restauração de backup"
-    log_output "  createdb     Criar banco de dados"
-    log_output "  dropdb       Remover banco de dados"
+    log_output "  ${POSTGRES_UTILS[0]}         Cliente interativo"
+    log_output "  ${POSTGRES_UTILS[1]}      Backup de banco de dados"
+    log_output "  ${POSTGRES_UTILS[2]}   Restauração de backup"
+    log_output "  ${POSTGRES_UTILS[3]}     Criar banco de dados"
+    log_output "  ${POSTGRES_UTILS[4]}       Remover banco de dados"
 }
 
 # Get latest version from PostgreSQL official repository
@@ -67,7 +80,7 @@ get_latest_version() {
 # Get installed PostgreSQL client version
 get_current_version() {
     if check_installation; then
-        psql --version 2> /dev/null | grep -oP '\d+(\.\d+)?' | head -1 || echo "desconhecida"
+        ${POSTGRES_UTILS[0]} --version 2> /dev/null | grep -oP '\d+(\.\d+)?' | head -1 || echo "desconhecida"
     else
         echo "desconhecida"
     fi
@@ -75,7 +88,7 @@ get_current_version() {
 
 # Check if PostgreSQL client is installed
 check_installation() {
-    command -v psql &> /dev/null
+    command -v ${POSTGRES_UTILS[0]} &> /dev/null
 }
 
 # Show additional PostgreSQL-specific information
@@ -86,29 +99,14 @@ show_additional_info() {
     fi
 
     # Show available utilities
-    local utils=("pg_dump" "pg_restore" "createdb" "dropdb" "pg_isready")
     local util_lines=""
-    for util in "${utils[@]}"; do
+    for util in "${POSTGRES_UTILS[@]}"; do
         if command -v "$util" &> /dev/null; then
             util_lines+="    • $util\n"
         fi
     done
     if [ -n "$util_lines" ]; then
         log_output "  ${CYAN}Utilitários:${NC}\n$util_lines"
-    fi
-}
-
-# Detect Linux distribution
-detect_linux_distro() {
-    if [ -f /etc/os-release ]; then
-        . /etc/os-release
-        echo "$ID"
-    elif [ -f /etc/redhat-release ]; then
-        echo "rhel"
-    elif [ -f /etc/debian_version ]; then
-        echo "debian"
-    else
-        echo "unknown"
     fi
 }
 
@@ -129,21 +127,21 @@ install_postgres_macos() {
     log_debug "Versão mais recente para macOS: $major_version"
 
     # Install or upgrade postgresql client
-    if brew list libpq &> /dev/null 2>&1; then
+    if brew list $POSTGRES_CLIENT_PKG_HOMEBREW &> /dev/null 2>&1; then
         log_info "Atualizando PostgreSQL Client via Homebrew..."
-        brew upgrade libpq || true
+        brew upgrade $POSTGRES_CLIENT_PKG_HOMEBREW || true
     else
-        log_info "Instalando libpq (PostgreSQL Client) via Homebrew..."
-        brew install libpq
+        log_info "Instalando $POSTGRES_CLIENT_PKG_HOMEBREW (PostgreSQL Client) via Homebrew..."
+        brew install $POSTGRES_CLIENT_PKG_HOMEBREW
     fi
 
     # Link binaries to PATH (Homebrew doesn't link libpq by default)
-    if ! command -v psql &> /dev/null; then
+    if ! command -v ${POSTGRES_UTILS[0]} &> /dev/null; then
         log_info "Configurando binários no PATH..."
-        brew link --force libpq || {
+        brew link --force $POSTGRES_CLIENT_PKG_HOMEBREW || {
             log_warning "Não foi possível criar links automaticamente"
             log_output "Adicione manualmente ao seu PATH:"
-            log_output "  export PATH=\"/opt/homebrew/opt/libpq/bin:\$PATH\""
+            log_output "  export PATH=\"$POSTGRES_HOMEBREW_PATH:\$PATH\""
         }
     fi
 
@@ -164,7 +162,7 @@ install_postgres_debian() {
     # Install PostgreSQL client
     log_debug "Instalando postgresql-client via apt..."
     log_info "Instalando postgresql-client..."
-    sudo apt-get install -y postgresql-client || {
+    sudo apt-get install -y $POSTGRES_CLIENT_PKG_DEBIAN || {
         log_error "Falha ao instalar PostgreSQL Client"
         return 1
     }
@@ -177,17 +175,12 @@ install_postgres_debian() {
 install_postgres_redhat() {
     log_info "Instalando PostgreSQL Client no RedHat/CentOS/Fedora..."
 
-    local pkg_manager="dnf"
-
-    # Check if dnf is available, otherwise use yum
-    if ! command -v dnf &> /dev/null; then
-        pkg_manager="yum"
-    fi
+    local pkg_manager=$(get_redhat_pkg_manager)
 
     log_debug "Instalando postgresql via $pkg_manager..."
     # Install PostgreSQL client
     log_info "Instalando postgresql via $pkg_manager..."
-    sudo $pkg_manager install -y postgresql || {
+    sudo $pkg_manager install -y $POSTGRES_CLIENT_PKG_REDHAT || {
         log_error "Falha ao instalar PostgreSQL Client"
         return 1
     }
@@ -203,7 +196,7 @@ install_postgres_arch() {
     log_debug "Instalando postgresql-libs via pacman..."
     # Install PostgreSQL client
     log_info "Instalando postgresql-libs via pacman..."
-    sudo pacman -S --noconfirm postgresql-libs || {
+    sudo pacman -S --noconfirm $POSTGRES_CLIENT_PKG_ARCH || {
         log_error "Falha ao instalar PostgreSQL Client"
         return 1
     }
@@ -232,7 +225,7 @@ install_postgres() {
             install_result=$?
             ;;
         linux)
-            local distro=$(detect_linux_distro)
+            local distro=$(get_distro_id)
             log_debug "Distribuição detectada: $distro"
 
             case "$distro" in
@@ -266,7 +259,7 @@ install_postgres() {
         if check_installation; then
             local installed_version=$(get_current_version)
             log_success "PostgreSQL Client $installed_version instalado com sucesso!"
-            register_or_update_software_in_lock "postgres" "$installed_version"
+            register_or_update_software_in_lock "$COMMAND_NAME" "$installed_version"
 
             echo ""
             log_output "Teste a instalação com:"
@@ -316,7 +309,7 @@ update_postgres() {
             update_result=0
             ;;
         linux)
-            local distro=$(detect_linux_distro)
+            local distro=$(get_distro_id)
 
             case "$distro" in
                 ubuntu | debian | pop | linuxmint)
@@ -328,10 +321,7 @@ update_postgres() {
                     update_result=0
                     ;;
                 fedora | rhel | centos | rocky | almalinux)
-                    local pkg_manager="dnf"
-                    if ! command -v dnf &> /dev/null; then
-                        pkg_manager="yum"
-                    fi
+                    local pkg_manager=$(get_redhat_pkg_manager)
 
                     log_info "Atualizando via $pkg_manager..."
                     sudo $pkg_manager upgrade -y postgresql || {
@@ -361,7 +351,7 @@ update_postgres() {
     if [ $update_result -eq 0 ]; then
         if check_installation; then
             local new_version=$(get_current_version)
-            register_or_update_software_in_lock "postgres" "$new_version"
+            register_or_update_software_in_lock "$COMMAND_NAME" "$new_version"
 
             if [ "$new_version" != "$current_version" ]; then
                 log_success "PostgreSQL Client atualizado de $current_version para $new_version!"
@@ -388,12 +378,14 @@ uninstall_postgres() {
     log_debug "Versão instalada detectada para remoção: $current_version"
 
     log_output ""
-    log_output "${YELLOW}Deseja realmente desinstalar o PostgreSQL Client $current_version? (s/N)${NC}"
-    read -r response
+    if [ "$SKIP_CONFIRM" = false ]; then
+        log_output "${YELLOW}Deseja realmente desinstalar o PostgreSQL Client $current_version? (s/N)${NC}"
+        read -r response
 
-    if [[ ! "$response" =~ ^[sSyY]$ ]]; then
-        log_info "Desinstalação cancelada"
-        return 0
+        if [[ ! "$response" =~ ^[sSyY]$ ]]; then
+            log_info "Desinstalação cancelada"
+            return 0
+        fi
     fi
 
     log_info "Desinstalando PostgreSQL Client..."
@@ -412,7 +404,7 @@ uninstall_postgres() {
             uninstall_result=0
             ;;
         linux)
-            local distro=$(detect_linux_distro)
+            local distro=$(get_distro_id)
 
             case "$distro" in
                 ubuntu | debian | pop | linuxmint)
@@ -425,10 +417,7 @@ uninstall_postgres() {
                     uninstall_result=0
                     ;;
                 fedora | rhel | centos | rocky | almalinux)
-                    local pkg_manager="dnf"
-                    if ! command -v dnf &> /dev/null; then
-                        pkg_manager="yum"
-                    fi
+                    local pkg_manager=$(get_redhat_pkg_manager)
 
                     log_info "Desinstalando via $pkg_manager..."
                     sudo $pkg_manager remove -y postgresql || {
@@ -459,7 +448,7 @@ uninstall_postgres() {
 
     if [ $uninstall_result -eq 0 ]; then
         if ! check_installation; then
-            remove_software_in_lock "postgres"
+            remove_software_in_lock "$COMMAND_NAME"
             log_success "PostgreSQL Client desinstalado com sucesso!"
         else
             log_error "Falha ao desinstalar PostgreSQL Client completamente"
@@ -491,7 +480,7 @@ main() {
                 shift
                 ;;
             --info)
-                show_software_info "psql"
+                show_software_info "$POSTGRES_BIN_NAME"
                 exit 0
                 ;;
             --get-current-version)
@@ -508,6 +497,10 @@ main() {
                 ;;
             --uninstall)
                 action="uninstall"
+                shift
+                ;;
+            -y | --yes)
+                SKIP_CONFIRM=true
                 shift
                 ;;
             -u | --upgrade)

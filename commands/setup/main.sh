@@ -6,6 +6,19 @@ source "$LIB_DIR/internal/installations.sh"
 source "$LIB_DIR/internal/cache.sh"
 source "$LIB_DIR/sudo.sh"
 
+show_help() {
+    echo ""
+    log_output "${LIGHT_GREEN}Comandos disponíveis para a categoria 'setup':${NC}"
+    log_output "  --group                Agrupa a saída por status de atualização"
+    log_output "  --list                 Lista todos os softwares instalados"
+    log_output "  --check-updates        Lista e verifica atualizações disponíveis dos softwares"
+    log_output "  -u, --upgrade          Atualiza todos os softwares instalados ${YELLOW}[sudo]${NC}"
+    log_output "  -us, --update-system   Atualiza também dependências do sistema operacional ${YELLOW}[sudo]${NC}"
+    echo ""
+    log_output "Use ${LIGHT_CYAN}susa setup <comando> --help${NC} para ver mais detalhes sobre um comando específico."
+    echo ""
+}
+
 # Show complement help for the category
 # This function is called by the CLI when user runs `susa setup`
 # It shows additional options related to the category itself

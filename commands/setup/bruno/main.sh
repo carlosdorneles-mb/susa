@@ -7,6 +7,17 @@ source "$LIB_DIR/internal/installations.sh"
 source "$LIB_DIR/os.sh"
 source "$LIB_DIR/github.sh"
 
+# Constants
+BRUNO_NAME="Bruno"
+BRUNO_REPO="usebruno/bruno"
+BRUNO_BIN_NAME="bruno"
+BRUNO_HOMEBREW_CASK="bruno"
+BRUNO_GITHUB_REPO="usebruno/bruno"
+BRUNO_INSTALL_DIR="/opt/bruno"
+BRUNO_DESKTOP_FILE="/usr/share/applications/bruno.desktop"
+BRUNO_BIN_NAME_LINK="/usr/local/bin/bruno"
+
+SKIP_CONFIRM=false
 # Help function
 show_help() {
     show_description
@@ -14,7 +25,7 @@ show_help() {
     show_usage
     log_output ""
     log_output "${LIGHT_GREEN}O que é:${NC}"
-    log_output "  Bruno é um cliente de API open-source rápido e amigável para Git."
+    log_output "  $BRUNO_NAME é um cliente de API open-source rápido e amigável para Git."
     log_output "  Alternativa ao Postman/Insomnia, armazena coleções diretamente"
     log_output "  em uma pasta no seu sistema de arquivos. Usa linguagem de"
     log_output "  marcação própria (Bru) para salvar informações sobre requisições API."
@@ -22,14 +33,15 @@ show_help() {
     log_output "${LIGHT_GREEN}Opções:${NC}"
     log_output "  -h, --help        Mostra esta mensagem de ajuda"
     log_output "  --uninstall       Desinstala o Bruno do sistema"
+    log_output "  -y, --yes         Pula confirmação (usar com --uninstall)"
     log_output "  -u, --upgrade     Atualiza o Bruno para a versão mais recente"
     log_output "  -v, --verbose     Habilita saída detalhada para depuração"
     log_output "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
     log_output ""
     log_output "${LIGHT_GREEN}Exemplos:${NC}"
-    log_output "  susa setup bruno              # Instala o Bruno"
-    log_output "  susa setup bruno --upgrade    # Atualiza o Bruno"
-    log_output "  susa setup bruno --uninstall  # Desinstala o Bruno"
+    log_output "  susa setup bruno              # Instala o $BRUNO_NAME"
+    log_output "  susa setup bruno --upgrade    # Atualiza o $BRUNO_NAME"
+    log_output "  susa setup bruno --uninstall  # Desinstala o $BRUNO_NAME"
     log_output ""
     log_output "${LIGHT_GREEN}Pós-instalação:${NC}"
     log_output "  O Bruno estará disponível no menu de aplicativos ou via:"
@@ -53,7 +65,7 @@ show_help() {
 
 # Get latest version (not implemented)
 get_latest_version() {
-    github_get_latest_version "$BRUNO_GITHUB_REPO"
+    github_get_latest_version "$BRUNO_REPO"
 }
 
 # Get installed Bruno version
@@ -99,7 +111,7 @@ check_existing_installation() {
             is_installed=true
         fi
     elif [ "$os_type" = "linux" ]; then
-        if check_installation || [ -x "$BRUNO_BIN_LINK" ]; then
+        if check_installation || [ -x "$BRUNO_BIN_NAME_LINK" ]; then
             is_installed=true
         fi
     fi
@@ -113,7 +125,7 @@ check_existing_installation() {
     log_info "Bruno $current_version já está instalado."
 
     # Mark as installed in lock file
-    register_or_update_software_in_lock "bruno" "$current_version"
+    register_or_update_software_in_lock "$COMMAND_NAME" "$current_version"
 
     log_output ""
     log_output "${YELLOW}Para atualizar, execute:${NC} ${LIGHT_CYAN}susa setup bruno --upgrade${NC}"
@@ -242,7 +254,7 @@ install_bruno() {
 
     # Mark as installed
     local version=$(get_current_version)
-    register_or_update_software_in_lock "bruno" "$version"
+    register_or_update_software_in_lock "$COMMAND_NAME" "$version"
 }
 
 # Update Bruno
@@ -257,7 +269,7 @@ update_bruno() {
             is_installed=true
         fi
     elif [ "$os_type" = "linux" ]; then
-        if check_installation || [ -x "$BRUNO_BIN_LINK" ]; then
+        if check_installation || [ -x "$BRUNO_BIN_NAME_LINK" ]; then
             is_installed=true
         fi
     fi
@@ -284,7 +296,7 @@ update_bruno() {
     log_success "Bruno atualizado para versão $new_version"
 
     # Update lock file
-    register_or_update_software_in_lock "bruno" "$new_version"
+    register_or_update_software_in_lock "$COMMAND_NAME" "$new_version"
 }
 
 # Uninstall Bruno
@@ -299,7 +311,7 @@ uninstall_bruno() {
             is_installed=true
         fi
     elif [ "$os_type" = "linux" ]; then
-        if check_installation || [ -x "$BRUNO_BIN_LINK" ]; then
+        if check_installation || [ -x "$BRUNO_BIN_NAME_LINK" ]; then
             is_installed=true
         fi
     fi
@@ -307,6 +319,18 @@ uninstall_bruno() {
     if [ "$is_installed" = false ]; then
         log_warning "Bruno não está instalado"
         return 0
+    fi
+
+    local current_version=$(get_current_version 2> /dev/null || echo "unknown")
+
+    if [ "$SKIP_CONFIRM" = false ]; then
+        log_output ""
+        log_output "${YELLOW}Deseja realmente desinstalar o Bruno $current_version? (s/N)${NC}"
+        read -r response
+        if [[ ! "$response" =~ ^[sSyY]$ ]]; then
+            log_info "Desinstalação cancelada"
+            return 0
+        fi
     fi
 
     if [ "$os_type" = "mac" ]; then
@@ -329,7 +353,7 @@ uninstall_bruno() {
     log_success "Bruno desinstalado com sucesso!"
 
     # Remove from lock file
-    remove_software_in_lock "bruno"
+    remove_software_in_lock "$COMMAND_NAME"
 }
 
 # Main execution
@@ -352,7 +376,7 @@ main() {
                 export SILENT=true
                 ;;
             --info)
-                show_software_info
+                show_software_info "$BRUNO_BIN_NAME"
                 exit 0
                 ;;
             --get-current-version)
@@ -366,6 +390,10 @@ main() {
             --check-installation)
                 check_installation
                 exit $?
+                ;;
+            -y | --yes)
+                SKIP_CONFIRM=true
+                shift
                 ;;
             -u | --upgrade)
                 should_update=true

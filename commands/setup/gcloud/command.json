@@ -7,8 +7,5 @@
   "os": [
     "linux",
     "mac"
-  ],
-  "envs": {
-    "GCLOUD_SDK_BASE_URL": "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads"
-  }
+  ]
 }

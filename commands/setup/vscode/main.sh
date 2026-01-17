@@ -5,7 +5,23 @@ IFS=$'\n\t'
 # Source libraries
 source "$LIB_DIR/internal/installations.sh"
 source "$LIB_DIR/github.sh"
+source "$LIB_DIR/os.sh"
 
+# Constants
+VSCODE_NAME="Visual Studio Code"
+VSCODE_REPO="microsoft/vscode"
+VSCODE_BIN_NAME="code"
+VSCODE_HOMEBREW_CASK="visual-studio-code"
+VSCODE_APT_KEY_URL="https://packages.microsoft.com/keys/microsoft.asc"
+VSCODE_APT_REPO="https://packages.microsoft.com/repos/code"
+VSCODE_RPM_KEY_URL="https://packages.microsoft.com/keys/microsoft.asc"
+VSCODE_RPM_REPO_URL="https://packages.microsoft.com/yumrepos/vscode"
+VSCODE_DEB_PACKAGE="code"
+VSCODE_RPM_PACKAGE="code"
+VSCODE_ARCH_AUR="visual-studio-code-bin"
+VSCODE_ARCH_COMMUNITY="code"
+
+SKIP_CONFIRM=false
 # Help function
 show_help() {
     show_description
@@ -20,6 +36,7 @@ show_help() {
     log_output "${LIGHT_GREEN}Opções:${NC}"
     log_output "  -h, --help        Mostra esta mensagem de ajuda"
     log_output "  --uninstall       Desinstala o VS Code do sistema"
+    log_output "  -y, --yes         Pula confirmação (usar com --uninstall)"
     log_output "  -u, --upgrade     Atualiza o VS Code para a versão mais recente"
     log_output "  -v, --verbose     Habilita saída detalhada para depuração"
     log_output "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
@@ -47,7 +64,7 @@ show_help() {
 # Get latest version
 get_latest_version() {
     # VS Code releases are available on GitHub
-    local version=$(github_get_latest_version "microsoft/vscode" 2> /dev/null)
+    local version=$(github_get_latest_version "$VSCODE_REPO" 2> /dev/null)
 
     if [ -n "$version" ] && [ "$version" != "null" ]; then
         echo "$version"
@@ -59,7 +76,7 @@ get_latest_version() {
 # Get installed VS Code version
 get_current_version() {
     if check_installation; then
-        local version=$(code --version 2> /dev/null | head -1 || echo "desconhecida")
+        local version=$($VSCODE_BIN_NAME --version 2> /dev/null | head -1 || echo "desconhecida")
         if [ "$version" != "desconhecida" ]; then
             echo "$version"
         fi
@@ -70,17 +87,7 @@ get_current_version() {
 
 # Check if VS Code is installed
 check_installation() {
-    command -v code &> /dev/null
-}
-
-# Detect Linux distribution
-detect_distro() {
-    if [ -f /etc/os-release ]; then
-        . /etc/os-release
-        echo "$ID"
-    else
-        echo "unknown"
-    fi
+    command -v $VSCODE_BIN_NAME &> /dev/null
 }
 
 # Install VS Code on macOS using Homebrew
@@ -118,16 +125,14 @@ install_vscode_debian() {
     log_info "Adicionando chave GPG da Microsoft..."
     wget -qO- $VSCODE_APT_KEY_URL | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/microsoft.gpg > /dev/null
 
-    # Add repository
     log_info "Adicionando repositório..."
     echo "deb [arch=amd64,arm64,armhf] $VSCODE_APT_REPO stable main" | sudo tee /etc/apt/sources.list.d/vscode.list > /dev/null
 
-    # Update and install
     log_info "Atualizando lista de pacotes..."
     sudo apt-get update > /dev/null 2>&1
 
     log_info "Instalando VS Code..."
-    sudo apt-get install -y code > /dev/null 2>&1
+    sudo apt-get install -y $VSCODE_DEB_PACKAGE > /dev/null 2>&1
 
     return $?
 }
@@ -138,9 +143,11 @@ install_vscode_rhel() {
 
     # Import GPG key
     log_info "Importando chave GPG da Microsoft..."
+    enabled=1
+    gpgcheck=1
+    gpgkey=$VSCODE_RPM_KEY_URL
     sudo rpm --import $VSCODE_RPM_KEY_URL > /dev/null 2>&1
 
-    # Add repository
     log_info "Adicionando repositório..."
     sudo tee /etc/yum.repos.d/vscode.repo > /dev/null << EOF
 [code]
@@ -151,12 +158,11 @@ gpgcheck=1
 gpgkey=$VSCODE_RPM_KEY_URL
 EOF
 
-    # Install using dnf or yum
     log_info "Instalando VS Code..."
     if command -v dnf &> /dev/null; then
-        sudo dnf install -y code > /dev/null 2>&1
+        sudo dnf install -y $VSCODE_RPM_PACKAGE > /dev/null 2>&1
     else
-        sudo yum install -y code > /dev/null 2>&1
+        sudo yum install -y $VSCODE_RPM_PACKAGE > /dev/null 2>&1
     fi
 
     return $?
@@ -169,13 +175,13 @@ install_vscode_arch() {
     # Install from official repository or AUR
     if command -v yay &> /dev/null; then
         log_info "Instalando via yay..."
-        yay -S --noconfirm visual-studio-code-bin > /dev/null 2>&1
+        yay -S --noconfirm $VSCODE_ARCH_AUR > /dev/null 2>&1
     elif command -v paru &> /dev/null; then
         log_info "Instalando via paru..."
-        paru -S --noconfirm visual-studio-code-bin > /dev/null 2>&1
+        paru -S --noconfirm $VSCODE_ARCH_AUR > /dev/null 2>&1
     else
         log_info "Instalando via pacman (repositório comunitário)..."
-        sudo pacman -S --noconfirm code > /dev/null 2>&1 || {
+        sudo pacman -S --noconfirm $VSCODE_ARCH_COMMUNITY > /dev/null 2>&1 || {
             log_warning "VS Code não encontrado no repositório oficial"
             log_info "Tentando instalar helper AUR..."
             log_error "Considere instalar yay ou paru primeiro:"
@@ -191,7 +197,7 @@ install_vscode_arch() {
 
 # Install VS Code on Linux
 install_vscode_linux() {
-    local distro=$(detect_distro)
+    local distro=$(get_distro_id)
     log_debug "Distribuição detectada: $distro"
 
     case "$distro" in
@@ -224,17 +230,15 @@ install_vscode() {
     log_info "Iniciando instalação do VS Code..."
 
     # Detect OS
-    local os_name=$(uname -s | tr '[:upper:]' '[:lower:]')
-
-    case "$os_name" in
-        darwin)
+    case "$OS_TYPE" in
+        macos)
             install_vscode_macos
             ;;
-        linux)
+        debian | fedora)
             install_vscode_linux
             ;;
         *)
-            log_error "Sistema operacional não suportado: $os_name"
+            log_error "Sistema operacional não suportado: $OS_TYPE"
             return 1
             ;;
     esac
@@ -247,7 +251,7 @@ install_vscode() {
             local installed_version=$(get_current_version)
 
             # Mark as installed in lock file
-            register_or_update_software_in_lock "vscode" "$installed_version"
+            register_or_update_software_in_lock "$COMMAND_NAME" "$installed_version"
 
             log_success "VS Code $installed_version instalado com sucesso!"
             log_output ""
@@ -280,10 +284,8 @@ update_vscode() {
     log_info "Versão atual: $current_version"
 
     # Detect OS and update
-    local os_name=$(uname -s | tr '[:upper:]' '[:lower:]')
-
-    case "$os_name" in
-        darwin)
+    case "$OS_TYPE" in
+        macos)
             if ! command -v brew &> /dev/null; then
                 log_error "Homebrew não está instalado"
                 return 1
@@ -295,32 +297,32 @@ update_vscode() {
                 return 0
             }
             ;;
-        linux)
-            local distro=$(detect_distro)
+        debian | fedora)
+            local distro=$(get_distro_id)
             log_debug "Distribuição detectada: $distro"
 
             case "$distro" in
                 ubuntu | debian | pop | linuxmint | elementary)
                     log_info "Atualizando VS Code via apt..."
                     sudo apt-get update > /dev/null 2>&1
-                    sudo apt-get install --only-upgrade -y code > /dev/null 2>&1
+                    sudo apt-get install --only-upgrade -y $VSCODE_DEB_PACKAGE > /dev/null 2>&1
                     ;;
                 fedora | rhel | centos | rocky | almalinux)
                     log_info "Atualizando VS Code via dnf/yum..."
                     if command -v dnf &> /dev/null; then
-                        sudo dnf upgrade -y code > /dev/null 2>&1
+                        sudo dnf upgrade -y $VSCODE_RPM_PACKAGE > /dev/null 2>&1
                     else
-                        sudo yum update -y code > /dev/null 2>&1
+                        sudo yum update -y $VSCODE_RPM_PACKAGE > /dev/null 2>&1
                     fi
                     ;;
                 arch | manjaro | endeavouros)
                     log_info "Atualizando VS Code via pacman/AUR..."
                     if command -v yay &> /dev/null; then
-                        yay -Syu --noconfirm visual-studio-code-bin > /dev/null 2>&1
+                        yay -Syu --noconfirm $VSCODE_ARCH_AUR > /dev/null 2>&1
                     elif command -v paru &> /dev/null; then
-                        paru -Syu --noconfirm visual-studio-code-bin > /dev/null 2>&1
+                        paru -Syu --noconfirm $VSCODE_ARCH_AUR > /dev/null 2>&1
                     else
-                        sudo pacman -Syu --noconfirm code > /dev/null 2>&1
+                        sudo pacman -Syu --noconfirm $VSCODE_ARCH_COMMUNITY > /dev/null 2>&1
                     fi
                     ;;
                 *)
@@ -340,7 +342,7 @@ update_vscode() {
         local new_version=$(get_current_version)
 
         # Update version in lock file
-        register_or_update_software_in_lock "vscode" "$new_version"
+        register_or_update_software_in_lock "$COMMAND_NAME" "$new_version"
 
         if [ "$current_version" = "$new_version" ]; then
             log_info "VS Code já estava na versão mais recente ($current_version)"
@@ -367,32 +369,32 @@ uninstall_vscode() {
     log_debug "Versão a ser removida: $current_version"
 
     log_output ""
-    log_output "${YELLOW}Deseja realmente desinstalar o VS Code $current_version? (s/N)${NC}"
-    read -r response
+    if [ "$SKIP_CONFIRM" = false ]; then
+        log_output "${YELLOW}Deseja realmente desinstalar o VS Code $current_version? (s/N)${NC}"
+        read -r response
 
-    if [[ ! "$response" =~ ^[sSyY]$ ]]; then
-        log_info "Desinstalação cancelada"
-        return 0
+        if [[ ! "$response" =~ ^[sSyY]$ ]]; then
+            log_info "Desinstalação cancelada"
+            return 0
+        fi
     fi
 
-    local os_name=$(uname -s | tr '[:upper:]' '[:lower:]')
-
-    case "$os_name" in
-        darwin)
+    case "$OS_TYPE" in
+        macos)
             # Uninstall via Homebrew
             if command -v brew &> /dev/null; then
                 log_info "Removendo VS Code via Homebrew..."
                 brew uninstall --cask $VSCODE_HOMEBREW_CASK 2> /dev/null || log_debug "VS Code não instalado via Homebrew"
             fi
             ;;
-        linux)
-            local distro=$(detect_distro)
+        debian | fedora)
+            local distro=$(get_distro_id)
             log_debug "Distribuição detectada: $distro"
 
             case "$distro" in
                 ubuntu | debian | pop | linuxmint | elementary)
                     log_info "Removendo VS Code via apt..."
-                    sudo apt-get purge -y code > /dev/null 2>&1
+                    sudo apt-get purge -y $VSCODE_DEB_PACKAGE > /dev/null 2>&1
                     sudo apt-get autoremove -y > /dev/null 2>&1
 
                     # Remove repository
@@ -413,11 +415,11 @@ uninstall_vscode() {
                 arch | manjaro | endeavouros)
                     log_info "Removendo VS Code via pacman..."
                     if command -v yay &> /dev/null; then
-                        yay -Rns --noconfirm visual-studio-code-bin > /dev/null 2>&1 || sudo pacman -Rns --noconfirm code > /dev/null 2>&1
+                        yay -Rns --noconfirm $VSCODE_ARCH_AUR > /dev/null 2>&1 || sudo pacman -Rns --noconfirm $VSCODE_ARCH_COMMUNITY > /dev/null 2>&1
                     elif command -v paru &> /dev/null; then
-                        paru -Rns --noconfirm visual-studio-code-bin > /dev/null 2>&1 || sudo pacman -Rns --noconfirm code > /dev/null 2>&1
+                        paru -Rns --noconfirm $VSCODE_ARCH_AUR > /dev/null 2>&1 || sudo pacman -Rns --noconfirm $VSCODE_ARCH_COMMUNITY > /dev/null 2>&1
                     else
-                        sudo pacman -Rns --noconfirm code > /dev/null 2>&1
+                        sudo pacman -Rns --noconfirm $VSCODE_ARCH_COMMUNITY > /dev/null 2>&1
                     fi
                     ;;
             esac
@@ -427,7 +429,7 @@ uninstall_vscode() {
     # Verify uninstallation
     if ! check_installation; then
         # Mark as uninstalled in lock file
-        remove_software_in_lock "vscode"
+        remove_software_in_lock "$COMMAND_NAME"
 
         log_success "VS Code desinstalado com sucesso!"
     else
@@ -435,30 +437,65 @@ uninstall_vscode() {
         return 1
     fi
 
-    # Ask about configuration removal
-    log_output ""
-    log_output "${YELLOW}Deseja remover também as configurações e extensões do VS Code? (s/N)${NC}"
-    read -r response
+    # Detect OS for configuration paths
+    local os_name=$(uname -s | tr '[:upper:]' '[:lower:]')
 
-    if [[ "$response" =~ ^[sSyY]$ ]]; then
-        log_info "Removendo configurações e extensões..."
+    # Ask about configuration removal
+    if [ "$SKIP_CONFIRM" = false ]; then
+        log_output ""
+        log_output "${YELLOW}Deseja remover também as configurações e extensões do VS Code? (s/N)${NC}"
+        read -r config_response
+
+        if [[ "$config_response" =~ ^[sSyY]$ ]]; then
+            log_info "Removendo configurações e extensões..."
+
+            case "$os_name" in
+                darwin)
+                    rm -rf "$HOME/Library/Application Support/Code" 2> /dev/null || true
+                    log_debug "Configurações removidas: ~/Library/Application Support/Code"
+                    rm -rf "$HOME/.vscode" 2> /dev/null || true
+                    log_debug "Extensões removidas: ~/.vscode"
+                    rm -rf "$HOME/Library/Caches/com.microsoft.VSCode" 2> /dev/null || true
+                    log_debug "Cache removido"
+                    ;;
+                linux)
+                    rm -rf "$HOME/.config/Code" 2> /dev/null || true
+                    log_debug "Configurações removidas: ~/.config/Code"
+                    rm -rf "$HOME/.vscode" 2> /dev/null || true
+                    log_debug "Extensões removidas: ~/.vscode"
+                    rm -rf "$HOME/.cache/vscode" 2> /dev/null || true
+                    log_debug "Cache removido: ~/.cache/vscode"
+                    ;;
+            esac
+
+            log_success "Configurações e extensões removidas"
+        else
+            log_info "Configurações mantidas"
+        fi
+    else
+        # Auto-remove when --yes is used
+        log_info "Removendo configurações e extensões automaticamente..."
 
         case "$os_name" in
             darwin)
                 rm -rf "$HOME/Library/Application Support/Code" 2> /dev/null || true
+                log_debug "Configurações removidas: ~/Library/Application Support/Code"
                 rm -rf "$HOME/.vscode" 2> /dev/null || true
+                log_debug "Extensões removidas: ~/.vscode"
                 rm -rf "$HOME/Library/Caches/com.microsoft.VSCode" 2> /dev/null || true
+                log_debug "Cache removido"
                 ;;
             linux)
                 rm -rf "$HOME/.config/Code" 2> /dev/null || true
+                log_debug "Configurações removidas: ~/.config/Code"
                 rm -rf "$HOME/.vscode" 2> /dev/null || true
+                log_debug "Extensões removidas: ~/.vscode"
                 rm -rf "$HOME/.cache/vscode" 2> /dev/null || true
+                log_debug "Cache removido: ~/.cache/vscode"
                 ;;
         esac
 
-        log_info "Configurações e extensões removidas"
-    else
-        log_info "Configurações mantidas"
+        log_info "Configurações e extensões removidas automaticamente"
     fi
 }
 
@@ -481,7 +518,7 @@ main() {
                 export SILENT=true
                 ;;
             --info)
-                show_software_info
+                show_software_info "$VSCODE_BIN_NAME"
                 exit 0
                 ;;
             --get-current-version)
@@ -498,6 +535,10 @@ main() {
                 ;;
             --uninstall)
                 action="uninstall"
+                shift
+                ;;
+            -y | --yes)
+                SKIP_CONFIRM=true
                 shift
                 ;;
             -u | --upgrade)

@@ -2,10 +2,19 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-# Source installations library
+# Source libraries
 source "$LIB_DIR/internal/installations.sh"
 source "$LIB_DIR/github.sh"
+source "$LIB_DIR/shell.sh"
 
+# Constants
+POETRY_NAME="Poetry"
+POETRY_REPO="python-poetry/poetry"
+POETRY_BIN_NAME="poetry"
+POETRY_INSTALL_URL="https://install.python-poetry.org"
+POETRY_HOME="$HOME/.local/share/pypoetry"
+
+SKIP_CONFIRM=false
 # Help function
 show_help() {
     show_description
@@ -13,21 +22,22 @@ show_help() {
     show_usage
     echo ""
     log_output "${LIGHT_GREEN}O que é:${NC}"
-    log_output "  Poetry é um gerenciador de dependências e empacotamento para Python."
+    log_output "  $POETRY_NAME é um gerenciador de dependências e empacotamento para Python."
     log_output "  Facilita o gerenciamento de bibliotecas, criação de ambientes virtuais"
     log_output "  e publicação de pacotes Python de forma simplificada."
     echo ""
     log_output "${LIGHT_GREEN}Opções:${NC}"
     log_output "  -h, --help        Mostra esta mensagem de ajuda"
     log_output "  --uninstall       Desinstala o Poetry do sistema"
+    log_output "  -y, --yes         Pula confirmação (usar com --uninstall)"
     log_output "  -u, --upgrade     Atualiza o Poetry para a versão mais recente"
     log_output "  -v, --verbose     Habilita saída detalhada para depuração"
     log_output "  -q, --quiet       Minimiza a saída, desabilita mensagens de depuração"
     echo ""
     log_output "${LIGHT_GREEN}Exemplos:${NC}"
-    log_output "  susa setup poetry              # Instala o Poetry"
-    log_output "  susa setup poetry --upgrade    # Atualiza o Poetry"
-    log_output "  susa setup poetry --uninstall  # Desinstala o Poetry"
+    log_output "  susa setup poetry              # Instala o $POETRY_NAME"
+    log_output "  susa setup poetry --upgrade    # Atualiza o $POETRY_NAME"
+    log_output "  susa setup poetry --uninstall  # Desinstala o $POETRY_NAME"
     echo ""
     log_output "${LIGHT_GREEN}Pós-instalação:${NC}"
     log_output "  Após a instalação, reinicie o terminal ou execute:"
@@ -43,13 +53,13 @@ show_help() {
 
 # Get latest Poetry version
 get_latest_version() {
-    github_get_latest_version "python-poetry/poetry"
+    github_get_latest_version "$POETRY_REPO"
 }
 
 # Get installed Poetry version
 get_current_version() {
     if check_installation; then
-        poetry --version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida"
+        $POETRY_BIN_NAME --version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "desconhecida"
     else
         echo "desconhecida"
     fi
@@ -57,7 +67,7 @@ get_current_version() {
 
 # Check if Poetry is installed
 check_installation() {
-    command -v poetry &> /dev/null
+    command -v $POETRY_BIN_NAME &> /dev/null
 }
 
 # Configure shell to use Poetry
@@ -147,7 +157,7 @@ install_poetry() {
         local version=$(get_current_version)
 
         # Mark as installed in lock file
-        register_or_update_software_in_lock "poetry" "$version"
+        register_or_update_software_in_lock "$COMMAND_NAME" "$version"
 
         log_success "Poetry $version instalado com sucesso!"
 
@@ -200,7 +210,7 @@ update_poetry() {
             log_info "Poetry já está na versão mais recente ($current_version)"
         else
             # Update version in lock file
-            register_or_update_software_in_lock "poetry" "$new_version"
+            register_or_update_software_in_lock "$COMMAND_NAME" "$new_version"
 
             log_success "Poetry atualizado de $current_version para $new_version!"
             log_debug "Atualização concluída com sucesso"
@@ -229,13 +239,15 @@ uninstall_poetry() {
     log_debug "Versão a ser removida: $version"
 
     # Confirm uninstallation
-    echo ""
-    log_output "${YELLOW}Deseja realmente desinstalar o Poetry $version? (s/N)${NC}"
-    read -r response
+    if [ "$SKIP_CONFIRM" = false ]; then
+        echo ""
+        log_output "${YELLOW}Deseja realmente desinstalar o Poetry $version? (s/N)${NC}"
+        read -r response
 
-    if [[ ! "$response" =~ ^[sSyY]$ ]]; then
-        log_info "Desinstalação cancelada"
-        return 1
+        if [[ ! "$response" =~ ^[sSyY]$ ]]; then
+            log_info "Desinstalação cancelada"
+            return 0
+        fi
     fi
 
     local poetry_home="$POETRY_HOME"
@@ -293,7 +305,7 @@ uninstall_poetry() {
 
     if ! check_installation; then
         # Mark as uninstalled in lock file
-        remove_software_in_lock "poetry"
+        remove_software_in_lock "$COMMAND_NAME"
 
         log_success "Poetry desinstalado com sucesso!"
 
@@ -306,19 +318,31 @@ uninstall_poetry() {
     fi
 
     # Ask about cache and config removal
-    echo ""
-    log_output "${YELLOW}Deseja remover também o cache e configurações do Poetry? (s/N)${NC}"
-    read -r config_response
+    if [ "$SKIP_CONFIRM" = false ]; then
+        echo ""
+        log_output "${YELLOW}Deseja remover também o cache e configurações do Poetry? (s/N)${NC}"
+        read -r config_response
 
-    if [[ "$config_response" =~ ^[sSyY]$ ]]; then
+        if [[ "$config_response" =~ ^[sSyY]$ ]]; then
+            rm -rf "$HOME/.cache/pypoetry" 2> /dev/null || true
+            log_debug "Cache removido: ~/.cache/pypoetry"
+
+            rm -rf "$HOME/.config/pypoetry" 2> /dev/null || true
+            log_debug "Configurações removidas: ~/.config/pypoetry"
+
+            log_success "Cache e configurações removidos"
+        else
+            log_info "Cache e configurações mantidos"
+        fi
+    else
+        # Auto-remove cache and config when --yes is used
         rm -rf "$HOME/.cache/pypoetry" 2> /dev/null || true
+        log_debug "Cache removido: ~/.cache/pypoetry"
 
         rm -rf "$HOME/.config/pypoetry" 2> /dev/null || true
         log_debug "Configurações removidas: ~/.config/pypoetry"
 
-        log_success "Cache e configurações removidos"
-    else
-        log_info "Cache e configurações mantidos"
+        log_info "Cache e configurações removidos automaticamente"
     fi
 }
 
@@ -341,7 +365,7 @@ main() {
                 export SILENT=true
                 ;;
             --info)
-                show_software_info
+                show_software_info $POETRY_BIN_NAME
                 exit 0
                 ;;
             --get-current-version)
@@ -358,6 +382,10 @@ main() {
                 ;;
             --uninstall)
                 action="uninstall"
+                shift
+                ;;
+            -y | --yes)
+                SKIP_CONFIRM=true
                 shift
                 ;;
             -u | --upgrade)

@@ -7,12 +7,5 @@
   "os": [
     "linux",
     "mac"
-  ],
-  "envs": {
-    "VSCODE_HOMEBREW_CASK": "visual-studio-code",
-    "VSCODE_APT_KEY_URL": "https://packages.microsoft.com/keys/microsoft.asc",
-    "VSCODE_APT_REPO": "https://packages.microsoft.com/repos/code",
-    "VSCODE_RPM_KEY_URL": "https://packages.microsoft.com/keys/microsoft.asc",
-    "VSCODE_RPM_REPO_URL": "https://packages.microsoft.com/yumrepos/vscode"
-  }
+  ]
 }
