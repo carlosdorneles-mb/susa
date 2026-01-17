@@ -1,0 +1,9 @@
+{
+  "name": "MySQL",
+  "description": "Instala o MySQL Client (mysql, mysqldump, mysqladmin) para conexão e administração de bancos MySQL.",
+  "entrypoint": "main.sh",
+  "sudo": true,
+  "group": "database",
+  "os": ["linux", "mac"],
+  "envs": {}
+}
