@@ -3,8 +3,6 @@ set -euo pipefail
 IFS=$'\n\t'
 
 # Source libs
-source "$LIB_DIR/color.sh"
-source "$LIB_DIR/logger.sh"
 source "$LIB_DIR/internal/registry.sh"
 source "$LIB_DIR/internal/plugin.sh"
 source "$LIB_DIR/internal/args.sh"

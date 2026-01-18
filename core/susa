@@ -28,6 +28,121 @@ export PLUGINS_DIR
 export GLOBAL_CONFIG_FILE
 
 # ============================================================
+# Dependency Checking
+# ============================================================
+
+# Check and prompt for missing dependencies
+check_dependencies() {
+    # Skip check if explicitly requested (useful for CI/CD)
+    if [ "${SUSA_SKIP_DEPS_CHECK:-}" = "1" ]; then
+        return 0
+    fi
+
+    local missing_deps=()
+    local install_commands=()
+    local reasons=()
+
+    # Check Bash version (requires 4+ for associative arrays)
+    if ((BASH_VERSINFO[0] < 4)); then
+        missing_deps+=("bash")
+        reasons+=("Bash 4.0+ é necessário para arrays associativos usados pelo sistema de cache")
+
+        if [[ "$OS_TYPE" == "macos" ]]; then
+            install_commands+=("brew install bash && sudo bash -c 'echo /opt/homebrew/bin/bash >> /etc/shells' && chsh -s /opt/homebrew/bin/bash")
+        else
+            install_commands+=("sudo apt update && sudo apt install -y bash")
+        fi
+    fi
+
+    # Check jq (required for JSON parsing)
+    if ! command -v jq &> /dev/null; then
+        missing_deps+=("jq")
+        reasons+=("jq é necessário para processar arquivos JSON (cache, configurações, plugins)")
+
+        if [[ "$OS_TYPE" == "macos" ]]; then
+            install_commands+=("brew install jq")
+        elif [[ "$OS_TYPE" == "debian" ]]; then
+            install_commands+=("sudo apt update && sudo apt install -y jq")
+        elif [[ "$OS_TYPE" == "fedora" ]]; then
+            install_commands+=("sudo dnf install -y jq")
+        else
+            install_commands+=("Instale jq manualmente para seu sistema")
+        fi
+    fi
+
+    # If no missing dependencies, return success
+    if [ ${#missing_deps[@]} -eq 0 ]; then
+        return 0
+    fi
+
+    # Display missing dependencies
+    echo ""
+    log_error "Dependências faltando"
+    echo ""
+
+    for i in "${!missing_deps[@]}"; do
+        local dep="${missing_deps[$i]}"
+        local reason="${reasons[$i]}"
+        local install_cmd="${install_commands[$i]}"
+
+        echo -e "${LIGHT_RED}✗ ${dep}${NC}"
+        echo -e "  ${LIGHT_GRAY}Motivo: ${reason}${NC}"
+        echo -e "  ${LIGHT_CYAN}Comando: ${install_cmd}${NC}"
+        echo ""
+    done
+
+    # Ask user if they want to install
+    echo -e "${LIGHT_YELLOW}Deseja instalar as dependências agora? (s/N)${NC}"
+    read -r response
+
+    if [[ "$response" =~ ^[SsYy]$ ]]; then
+        echo ""
+        log_info "Instalando dependências..."
+        echo ""
+
+        for i in "${!missing_deps[@]}"; do
+            local dep="${missing_deps[$i]}"
+            local install_cmd="${install_commands[$i]}"
+
+            log_info "Instalando ${dep}..."
+            if eval "$install_cmd"; then
+                log_success "✓ ${dep} instalado com sucesso!"
+            else
+                log_error "✗ Falha ao instalar ${dep}"
+                echo ""
+                log_warning "Por favor, instale manualmente:"
+                echo "  $install_cmd"
+            fi
+            echo ""
+        done
+
+        # Special message for Bash upgrade
+        if [[ " ${missing_deps[*]} " =~ " bash " ]]; then
+            echo ""
+            log_warning "⚠ Bash foi atualizado!"
+            echo ""
+            echo "Para usar a nova versão:"
+            echo "  1. Feche este terminal"
+            echo "  2. Abra um novo terminal"
+            echo "  3. Execute: bash --version (deve mostrar 4.x ou superior)"
+            echo ""
+            exit 0
+        fi
+
+        log_success "Dependências instaladas! Execute o comando novamente."
+        exit 0
+    else
+        echo ""
+        log_warning "Instalação cancelada."
+        echo ""
+        log_info "O SUSA CLI requer estas dependências para funcionar corretamente."
+        log_info "Instale-as manualmente e tente novamente."
+        echo ""
+        exit 1
+    fi
+}
+
+# ============================================================
 # Load Libraries
 # ============================================================
 
@@ -36,7 +151,12 @@ source "$LIB_DIR/color.sh"
 source "$LIB_DIR/logger.sh"
 source "$LIB_DIR/os.sh"
 
-# Config system (needs cache first)
+# Essential internal libraries (loaded automatically for all commands)
+source "$LIB_DIR/internal/cache.sh"
+source "$LIB_DIR/internal/lock.sh"
+source "$LIB_DIR/internal/context.sh"
+
+# Config system (uses lock.sh internally)
 source "$LIB_DIR/internal/config.sh"
 source "$LIB_DIR/cli.sh"
 
@@ -48,6 +168,9 @@ source "$LIB_DIR/internal/executor.sh"
 # string.sh, sudo.sh, shell.sh, dependencies.sh
 
 [ -f "$CLI_DIR/config/settings.conf" ] && source "$CLI_DIR/config/settings.conf"
+
+# Check dependencies before proceeding
+check_dependencies
 
 # Load cache for fast startup
 cache_load 2> /dev/null || true

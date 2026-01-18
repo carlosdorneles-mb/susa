@@ -5,7 +5,6 @@ IFS=$'\n\t'
 # Source necessary libraries
 source "$LIB_DIR/internal/registry.sh"
 source "$LIB_DIR/internal/plugin.sh"
-source "$LIB_DIR/internal/lock.sh"
 source "$LIB_DIR/internal/args.sh"
 
 # Help function

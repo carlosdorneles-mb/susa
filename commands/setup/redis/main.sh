@@ -6,7 +6,6 @@ IFS=$'\n\t'
 # Source libraries
 source "$LIB_DIR/internal/installations.sh"
 source "$LIB_DIR/github.sh"
-source "$LIB_DIR/color.sh"
 source "$LIB_DIR/os.sh"
 
 # Contants

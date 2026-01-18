@@ -1,0 +1,5 @@
+{
+  "name": "List",
+  "description": "Lista todos os caches disponíveis",
+  "entrypoint": "main.sh"
+}

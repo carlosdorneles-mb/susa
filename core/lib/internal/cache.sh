@@ -3,16 +3,33 @@
 # ============================================================
 # Cache Management for SUSA CLI
 # ============================================================
-# Fast cache system to avoid parsing lock file with jq on every execution
+# Generic named cache system for fast data access in memory
+# All caches use associative arrays for maximum performance
 
-# Cache configuration
-CACHE_DIR="${XDG_RUNTIME_DIR:-/tmp}/susa-$USER"
-CACHE_FILE="$CACHE_DIR/lock.cache"
-LOCK_FILE="${CLI_DIR:-$HOME/.susa}/susa.lock"
+# Check Bash version (requires 4+ for associative arrays)
+if ((BASH_VERSINFO[0] < 4)); then
+    log_error "Erro: Este sistema requer Bash 4.0 ou superior" >&2
+    log_output "Versão atual: $BASH_VERSION" >&2
+    if [[ "$(uname)" == "Darwin" ]]; then
+        log_output "Para macOS, instale via: brew install bash" >&2
+    fi
+    exit 1
+fi
 
-# Global variable to hold cached data in memory
-_SUSA_CACHE_DATA=""
-_SUSA_CACHE_LOADED=0
+# Determine cache directory based on OS
+# Linux: Use XDG_RUNTIME_DIR or /tmp/susa-$USER
+# macOS: Use TMPDIR (user-specific) or ~/Library/Caches/susa
+if [[ "$(uname)" == "Darwin" ]]; then
+    # macOS: TMPDIR is user-specific and cleaned on logout
+    CACHE_DIR="${TMPDIR:-$HOME/Library/Caches}/susa"
+else
+    # Linux: XDG_RUNTIME_DIR is the standard, fallback to /tmp
+    CACHE_DIR="${XDG_RUNTIME_DIR:-/tmp}/susa-$USER"
+fi
+
+# Associative arrays for named caches (bash 4+)
+declare -A _SUSA_NAMED_CACHES
+declare -A _SUSA_NAMED_CACHES_LOADED
 
 # ============================================================
 # Internal Cache Functions
@@ -22,7 +39,9 @@ _SUSA_CACHE_LOADED=0
 _cache_init() {
     if [ ! -d "$CACHE_DIR" ]; then
         mkdir -p "$CACHE_DIR" 2> /dev/null || {
-            log_debug "Não foi possível criar diretório de cache: $CACHE_DIR"
+            if command -v log_debug &> /dev/null; then
+                log_debug "Não foi possível criar diretório de cache: $CACHE_DIR"
+            fi
             return 1
         }
         chmod 700 "$CACHE_DIR" 2> /dev/null
@@ -30,185 +49,342 @@ _cache_init() {
     return 0
 }
 
-# Check if cache is valid (exists and is newer than lock file)
-_cache_is_valid() {
-    [ ! -f "$LOCK_FILE" ] && return 1
-    [ ! -f "$CACHE_FILE" ] && return 1
-    [ "$CACHE_FILE" -nt "$LOCK_FILE" ] && return 0
-    return 1
+# Get cache file path for named cache
+_cache_named_file() {
+    local name="$1"
+    echo "$CACHE_DIR/${name}.cache"
 }
 
-# Update cache file from lock file
-_cache_update() {
-    if [ ! -f "$LOCK_FILE" ]; then
-        log_debug "Lock file não encontrado: $LOCK_FILE"
+# Load named cache into memory from file or source file
+# Args: cache_name [source_file]
+# If source_file provided and cache doesn't exist or is older, loads from source
+cache_named_load() {
+    local name="$1"
+    local source_file="${2:-}"
+
+    if [ -z "$name" ]; then
+        if command -v log_error &> /dev/null; then
+            log_error "cache_named_load: nome do cache não pode ser vazio"
+        fi
         return 1
     fi
+
+    # Already loaded, skip
+    [ "${_SUSA_NAMED_CACHES_LOADED[$name]:-0}" -eq 1 ] && return 0
 
     _cache_init || return 1
 
-    # Use jq to minify and validate JSON, then write to cache
-    if jq -c '.' "$LOCK_FILE" > "$CACHE_FILE.tmp" 2> /dev/null; then
-        mv "$CACHE_FILE.tmp" "$CACHE_FILE"
-        log_debug "Cache atualizado: $CACHE_FILE"
+    local cache_file=$(_cache_named_file "$name")
+
+    # If source file provided, check if cache needs update
+    if [ -n "$source_file" ] && [ -f "$source_file" ]; then
+        local needs_update=0
+
+        # Cache doesn't exist
+        if [ ! -f "$cache_file" ]; then
+            needs_update=1
+        # Source is newer than cache
+        elif [ "$source_file" -nt "$cache_file" ]; then
+            needs_update=1
+        fi
+
+        # Update cache from source if needed
+        if [ $needs_update -eq 1 ]; then
+            if jq -c '.' "$source_file" > "${cache_file}.tmp" 2> /dev/null; then
+                mv "${cache_file}.tmp" "$cache_file"
+                chmod 600 "$cache_file"
+                if command -v log_debug &> /dev/null; then
+                    log_debug "Cache '$name' atualizado de: $source_file"
+                fi
+            else
+                rm -f "${cache_file}.tmp" 2> /dev/null
+                # Fallback: load directly from source
+                if command -v log_debug &> /dev/null; then
+                    log_debug "Usando arquivo fonte diretamente: $source_file"
+                fi
+                _SUSA_NAMED_CACHES[$name]=$(jq -c '.' "$source_file" 2> /dev/null)
+                _SUSA_NAMED_CACHES_LOADED[$name]=1
+                return 0
+            fi
+        fi
+    fi
+
+    # If cache doesn't exist, create empty object
+    if [ ! -f "$cache_file" ]; then
+        echo '{}' > "$cache_file"
+        chmod 600 "$cache_file"
+    fi
+
+    # Load cache into memory
+    _SUSA_NAMED_CACHES[$name]=$(cat "$cache_file" 2> /dev/null)
+    _SUSA_NAMED_CACHES_LOADED[$name]=1
+    if command -v log_debug &> /dev/null; then
+        log_debug "Cache nomeado carregado: $name"
+    fi
+    return 0
+}
+
+# Query named cache with jq
+# Args: cache_name jq_query
+cache_named_query() {
+    local name="$1"
+    local query="$2"
+
+    if [ -z "$name" ] || [ -z "$query" ]; then
+        if command -v log_error &> /dev/null; then
+            log_error "cache_named_query: nome e query são obrigatórios"
+        fi
+        return 1
+    fi
+
+    # Ensure cache is loaded
+    cache_named_load "$name" || return 1
+
+    # Query the in-memory cache data
+    echo "${_SUSA_NAMED_CACHES[$name]}" | jq -r "$query" 2> /dev/null
+}
+
+# Set a value in named cache
+# Args: cache_name key value
+cache_named_set() {
+    local name="$1"
+    local key="$2"
+    local value="$3"
+
+    if [ -z "$name" ] || [ -z "$key" ]; then
+        if command -v log_error &> /dev/null; then
+            log_error "cache_named_set: nome e chave são obrigatórios"
+        fi
+        return 1
+    fi
+
+    # Ensure cache is loaded
+    cache_named_load "$name" || return 1
+
+    # Update in-memory cache
+    local updated_data
+    updated_data=$(echo "${_SUSA_NAMED_CACHES[$name]}" |
+        jq --arg key "$key" --arg value "$value" \
+            '. + {($key): $value}' 2> /dev/null)
+
+    if [ $? -eq 0 ]; then
+        _SUSA_NAMED_CACHES[$name]="$updated_data"
+        if command -v log_debug &> /dev/null; then
+            log_debug "Cache atualizado: $name.$key = $value"
+        fi
         return 0
     else
-        rm -f "$CACHE_FILE.tmp" 2> /dev/null
-        log_debug "Erro ao atualizar cache do lock file"
+        if command -v log_error &> /dev/null; then
+            log_error "Erro ao atualizar cache nomeado"
+        fi
         return 1
     fi
 }
 
-# ============================================================
-# Public Cache Functions
-# ============================================================
+# Get a value from named cache
+# Args: cache_name key
+cache_named_get() {
+    local name="$1"
+    local key="$2"
 
-# Load cache data into memory
-# This should be called once at CLI startup
-cache_load() {
-    # Already loaded, skip
-    [ "$_SUSA_CACHE_LOADED" -eq 1 ] && return 0
-
-    # Check if cache is valid, if not update it
-    if ! _cache_is_valid; then
-        _cache_update || {
-            log_debug "Usando lock file diretamente (cache indisponível)"
-            if [ -f "$LOCK_FILE" ]; then
-                _SUSA_CACHE_DATA=$(jq -c '.' "$LOCK_FILE" 2> /dev/null)
-                _SUSA_CACHE_LOADED=1
-                return 0
-            fi
-            return 1
-        }
+    if [ -z "$name" ] || [ -z "$key" ]; then
+        if command -v log_error &> /dev/null; then
+            log_error "cache_named_get: nome e chave são obrigatórios"
+        fi
+        return 1
     fi
 
-    # Load cache into memory
-    if [ -f "$CACHE_FILE" ]; then
-        _SUSA_CACHE_DATA=$(cat "$CACHE_FILE" 2> /dev/null)
-        _SUSA_CACHE_LOADED=1
-        log_debug "Cache carregado em memória"
+    # Ensure cache is loaded
+    cache_named_load "$name" || return 1
+
+    # Get value from in-memory cache
+    echo "${_SUSA_NAMED_CACHES[$name]}" |
+        jq -r --arg key "$key" '.[$key] // empty' 2> /dev/null || true
+}
+
+# Check if key exists in named cache
+# Args: cache_name key
+cache_named_has() {
+    local name="$1"
+    local key="$2"
+
+    if [ -z "$name" ] || [ -z "$key" ]; then
+        if command -v log_error &> /dev/null; then
+            log_error "cache_named_has: nome e chave são obrigatórios"
+        fi
+        return 1
+    fi
+
+    # Ensure cache is loaded
+    cache_named_load "$name" || return 1
+
+    # Check if key exists
+    local result
+    result=$(echo "${_SUSA_NAMED_CACHES[$name]}" |
+        jq -r --arg key "$key" 'has($key)' 2> /dev/null || echo "false")
+
+    [ "$result" = "true" ] && return 0 || return 1
+}
+
+# Get all data from named cache
+# Args: cache_name
+cache_named_get_all() {
+    local name="$1"
+
+    if [ -z "$name" ]; then
+        if command -v log_error &> /dev/null; then
+            log_error "cache_named_get_all: nome do cache não pode ser vazio"
+        fi
+        return 1
+    fi
+
+    # Ensure cache is loaded
+    cache_named_load "$name" || return 1
+
+    echo "${_SUSA_NAMED_CACHES[$name]}"
+}
+
+# Count keys in named cache
+# Args: cache_name
+cache_named_count() {
+    local name="$1"
+
+    if [ -z "$name" ]; then
+        if command -v log_error &> /dev/null; then
+            log_error "cache_named_count: nome do cache não pode ser vazio"
+        fi
+        return 1
+    fi
+
+    # Ensure cache is loaded
+    cache_named_load "$name" || return 1
+
+    # Count keys in cache
+    echo "${_SUSA_NAMED_CACHES[$name]}" | jq 'keys | length' 2> /dev/null || echo "0"
+}
+
+# Remove a key from named cache
+# Args: cache_name key
+cache_named_remove() {
+    local name="$1"
+    local key="$2"
+
+    if [ -z "$name" ] || [ -z "$key" ]; then
+        if command -v log_error &> /dev/null; then
+            log_error "cache_named_remove: nome e chave são obrigatórios"
+        fi
+        return 1
+    fi
+
+    # Ensure cache is loaded
+    cache_named_load "$name" || return 1
+
+    # Remove key from in-memory cache
+    local updated_data
+    updated_data=$(echo "${_SUSA_NAMED_CACHES[$name]}" |
+        jq --arg key "$key" 'del(.[$key])' 2> /dev/null)
+
+    if [ $? -eq 0 ]; then
+        _SUSA_NAMED_CACHES[$name]="$updated_data"
+        if command -v log_debug &> /dev/null; then
+            log_debug "Chave removida do cache: $name.$key"
+        fi
+        return 0
+    else
+        if command -v log_error &> /dev/null; then
+            log_error "Erro ao remover chave do cache nomeado"
+        fi
+        return 1
+    fi
+}
+
+# Save named cache to disk
+# Args: cache_name
+cache_named_save() {
+    local name="$1"
+
+    if [ -z "$name" ]; then
+        if command -v log_error &> /dev/null; then
+            log_error "cache_named_save: nome do cache não pode ser vazio"
+        fi
+        return 1
+    fi
+
+    # Check if cache is loaded
+    if [ "${_SUSA_NAMED_CACHES_LOADED[$name]:-0}" -eq 0 ]; then
+        if command -v log_debug &> /dev/null; then
+            log_debug "Cache não carregado, nada para salvar: $name"
+        fi
         return 0
     fi
 
-    return 1
+    local cache_file=$(_cache_named_file "$name")
+
+    # Write to disk
+    echo "${_SUSA_NAMED_CACHES[$name]}" > "$cache_file"
+    chmod 600 "$cache_file"
+    if command -v log_debug &> /dev/null; then
+        log_debug "Cache salvo em disco: $name"
+    fi
 }
 
-# Get data from cache using jq query
-# Args: jq_query
-# Example: cache_query '.categories[].name'
-cache_query() {
-    local query="$1"
+# Clear named cache
+# Args: cache_name
+cache_named_clear() {
+    local name="$1"
+
+    if [ -z "$name" ]; then
+        if command -v log_error &> /dev/null; then
+            log_error "cache_named_clear: nome do cache não pode ser vazio"
+        fi
+        return 1
+    fi
+
+    # Clear from memory
+    unset '_SUSA_NAMED_CACHES[$name]'
+    unset '_SUSA_NAMED_CACHES_LOADED[$name]'
+
+    # Remove file
+    local cache_file=$(_cache_named_file "$name")
+    rm -f "$cache_file" 2> /dev/null
+
+    if command -v log_debug &> /dev/null; then
+        log_debug "Cache nomeado limpo: $name"
+    fi
+}
+
+# List all keys in named cache
+# Args: cache_name
+cache_named_keys() {
+    local name="$1"
+
+    if [ -z "$name" ]; then
+        if command -v log_error &> /dev/null; then
+            log_error "cache_named_keys: nome do cache não pode ser vazio"
+        fi
+        return 1
+    fi
 
     # Ensure cache is loaded
-    cache_load || return 1
+    cache_named_load "$name" || return 1
 
-    # Query the in-memory cache data
-    echo "$_SUSA_CACHE_DATA" | jq -r "$query" 2> /dev/null
+    echo "${_SUSA_NAMED_CACHES[$name]}" | jq -r 'keys[]' 2> /dev/null || true
 }
 
-# Get categories from cache
-cache_get_categories() {
-    cache_query '.categories[].name'
-}
+# Count keys in named cache
+# Args: cache_name
+cache_named_count() {
+    local name="$1"
 
-# Get category info from cache
-# Args: category field
-cache_get_category_info() {
-    local category="$1"
-    local field="$2"
-    cache_query ".categories[] | select(.name == \"$category\") | .$field"
-}
-
-# Get commands from category from cache
-# Args: category
-cache_get_category_commands() {
-    local category="$1"
-    cache_query ".commands[] | select(.category == \"$category\") | .name"
-}
-
-# Get command info from cache
-# Args: category command field
-cache_get_command_info() {
-    local category="$1"
-    local command="$2"
-    local field="$3"
-    cache_query ".commands[] | select(.category == \"$category\" and .name == \"$command\") | .$field"
-}
-
-# Get plugin info from cache
-# Args: plugin_name field
-cache_get_plugin_info() {
-    local plugin_name="$1"
-    local field="$2"
-    cache_query ".plugins[] | select(.name == \"$plugin_name\") | .$field"
-}
-
-# Get all plugins from cache
-cache_get_plugins() {
-    cache_query '.plugins[].name'
-}
-
-# Force cache refresh
-cache_refresh() {
-    _SUSA_CACHE_LOADED=0
-    _SUSA_CACHE_DATA=""
-    _cache_update
-    cache_load
-}
-
-# Clear cache
-cache_clear() {
-    _SUSA_CACHE_LOADED=0
-    _SUSA_CACHE_DATA=""
-    rm -f "$CACHE_FILE" 2> /dev/null
-    log_debug "Cache limpo"
-}
-
-# Check if cache exists and is valid
-cache_exists() {
-    _cache_is_valid
-}
-
-# Get cache info for debugging
-cache_info() {
-    log_output "${BOLD}${CYAN}Informações do Cache${NC}"
-    log_output "${GRAY}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo ""
-
-    log_output "${BOLD}Localização:${NC}"
-    log_output "  ${GRAY}Diretório:${NC} $CACHE_DIR"
-    log_output "  ${GRAY}Arquivo:${NC}   $CACHE_FILE"
-    log_output "  ${GRAY}Lock:${NC}      $LOCK_FILE"
-    echo ""
-
-    log_output "${BOLD}Status do Cache:${NC}"
-    if [ -f "$CACHE_FILE" ]; then
-        local cache_size=$(du -h "$CACHE_FILE" | cut -f1)
-        local cache_date=$(stat -c %y "$CACHE_FILE" 2> /dev/null || stat -f "%Sm" -t "%Y-%m-%d %H:%M:%S" "$CACHE_FILE" 2> /dev/null)
-        log_output "  ${GRAY}Existe:${NC}      ${GREEN}✓ Sim${NC}"
-        log_output "  ${GRAY}Tamanho:${NC}     $cache_size"
-        log_output "  ${GRAY}Modificado:${NC}  $cache_date"
-    else
-        log_output "  ${GRAY}Existe:${NC}      ${RED}✗ Não${NC}"
+    if [ -z "$name" ]; then
+        if command -v log_error &> /dev/null; then
+            log_error "cache_named_count: nome do cache não pode ser vazio"
+        fi
+        return 1
     fi
-    echo ""
 
-    log_output "${BOLD}Status do Lock File:${NC}"
-    if [ -f "$LOCK_FILE" ]; then
-        local lock_date=$(stat -c %y "$LOCK_FILE" 2> /dev/null || stat -f "%Sm" -t "%Y-%m-%d %H:%M:%S" "$LOCK_FILE" 2> /dev/null)
-        log_output "  ${GRAY}Existe:${NC}      ${GREEN}✓ Sim${NC}"
-        log_output "  ${GRAY}Modificado:${NC}  $lock_date"
-    else
-        log_output "  ${GRAY}Existe:${NC}      ${RED}✗ Não${NC}"
-    fi
-    echo ""
+    # Ensure cache is loaded
+    cache_named_load "$name" || return 1
 
-    log_output "${BOLD}Validação:${NC}"
-    if _cache_is_valid; then
-        log_output "  ${GRAY}Status:${NC}      ${GREEN}✓ Válido${NC}"
-        log_output "  ${GRAY}Descrição:${NC}   Cache está atualizado e pronto para uso"
-    else
-        log_output "  ${GRAY}Status:${NC}      ${YELLOW}⚠ Inválido ou Desatualizado${NC}"
-        log_output "  ${GRAY}Descrição:${NC}   Cache será regenerado na próxima execução"
-    fi
+    echo "${_SUSA_NAMED_CACHES[$name]}" | jq 'keys | length' 2> /dev/null || echo "0"
 }

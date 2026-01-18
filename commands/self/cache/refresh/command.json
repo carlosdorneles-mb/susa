@@ -1,6 +1,0 @@
-{
-  "name": "Refresh",
-  "description": "Força atualização do cache",
-  "entrypoint": "main.sh",
-  "sudo": false
-}

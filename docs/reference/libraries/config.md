@@ -2,14 +2,17 @@
 
 Parser de configurações JSON usando jq para ler configs e lock files.
 
+> **⚠️ Biblioteca Interna:** Esta biblioteca está em `core/lib/internal/` e carrega automaticamente suas dependências incluindo [lock.sh](lock.md) para acesso ao cache do `susa.lock`.
+
 ## Visão Geral
 
 A biblioteca `config.sh` fornece funções para:
 
 - 📄 Leitura de configurações JSON (cli.json, command.json, category.json, plugin.json)
-- 🔒 Leitura do lock file (susa.lock)
+- 🔒 Leitura do lock file (susa.lock) via [lock.sh](lock.md)
 - 📦 Descoberta de categorias e comandos
 - ℹ️ Funções de versão do CLI
+- 🌍 Carregamento automático de variáveis de ambiente
 
 ## Configuração Inicial
 
@@ -460,3 +463,25 @@ TIMEOUT=90 ./core/susa comando       # → TIMEOUT=90 (do sistema - maior priori
 1. Sempre defina `GLOBAL_CONFIG_FILE` e `CLI_DIR` no início
 2. Use `is_command_compatible()` antes de executar comandos
 3. Cache resultados de funções pesadas em loops
+
+## Dependências
+
+```text
+config.sh
+├── registry.sh  (gerenciamento de plugins)
+├── json.sh      (parsing JSON)
+├── plugin.sh    (metadados de plugins)
+├── cache.sh     (sistema de cache genérico)
+└── lock.sh      (cache do susa.lock)
+    ├── json.sh
+    └── cache.sh
+```
+
+**Nota:** `config.sh` carrega automaticamente todas as suas dependências. Você não precisa fazer `source` de `lock.sh` ou `cache.sh` separadamente ao usar `config.sh`.
+
+## Veja Também
+
+- [lock.sh](lock.md) - Acesso ao cache do lock file
+- [cache.sh](cache.md) - Sistema de cache genérico
+- [registry.sh](registry.md) - Gerenciamento de plugins
+- [plugin.sh](plugin.md) - Metadados de plugins

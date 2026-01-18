@@ -18,3 +18,5 @@ nav:
   - Plugins: plugin.md
   - Registry: registry.md
   - Cache: cache.md
+  - Lock: lock.md
+  - Context: context.md

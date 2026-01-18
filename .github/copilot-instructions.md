@@ -39,14 +39,26 @@ get_installed_from_cache
 
 ### Ordem de Source de Bibliotecas
 
+> **🎉 Carregamento Automático:** As bibliotecas essenciais (`color.sh`, `logger.sh`, `cache.sh`, `lock.sh`, `context.sh`, `config.sh`) são carregadas automaticamente no início da execução de cada comando pelo `core/susa`. **Você não precisa fazer `source` delas nos seus comandos!**
+
+**Bibliotecas carregadas automaticamente:**
+- `color.sh` - Cores e formatação
+- `logger.sh` - Sistema de logs
+- `os.sh` - Detecção de sistema
+- `cache.sh` - Cache genérico nomeado
+- `lock.sh` - Cache do susa.lock
+- `context.sh` - Contexto de execução
+- `config.sh` - Parser de configurações
+- `cli.sh` - Funções do CLI
+
+**Bibliotecas que você precisa carregar manualmente (quando necessário):**
 ```bash
-# Sempre nesta ordem (dependências resolvidas):
-source "$LIB_DIR/logger.sh"
-source "$LIB_DIR/color.sh"
-source "$LIB_DIR/internal/cache.sh"
-source "$LIB_DIR/internal/installations.sh"
-source "$LIB_DIR/internal/registry.sh"
-source "$LIB_DIR/github.sh"
+source "$LIB_DIR/internal/installations.sh"  # Se gerenciar instalações
+source "$LIB_DIR/internal/registry.sh"       # Se trabalhar com plugins
+source "$LIB_DIR/github.sh"                  # Se baixar do GitHub
+source "$LIB_DIR/string.sh"                  # Se manipular strings
+source "$LIB_DIR/sudo.sh"                    # Se precisar de sudo
+source "$LIB_DIR/shell.sh"                   # Se trabalhar com shells
 ```
 
 ### Padrões Críticos
@@ -326,10 +338,25 @@ O SUSA implementa um sistema de cache em memória para otimizar leituras do arqu
 - Dados após `sync_installations()` (usar `cache_refresh()`)
 - Modificações em registry.json
 
-### Funções de Cache (core/lib/internal/cache.sh)
+### Funções de Cache
+
+> **⚠️ Importante:** Funções de acesso ao lock file (`cache_load`, `cache_query`, `cache_get_*`) foram movidas para `lock.sh`.
+
+#### Core (core/lib/internal/cache.sh)
 
 ```bash
-# Carregar cache (chamada única no início)
+# Sistema genérico de cache nomeado
+cache_named_load "mydata"
+cache_named_set "mydata" "key" "value"
+cache_named_get "mydata" "key"
+cache_named_query "mydata" '.field'
+cache_named_clear "mydata"
+```
+
+#### Lock File (core/lib/internal/lock.sh)
+
+```bash
+# Carregar cache do lock file
 cache_load
 
 # Consultar dados do cache
@@ -345,6 +372,12 @@ cache_refresh
 
 # Limpar cache
 cache_clear
+```
+
+**Para usar funções do lock:**
+```bash
+source "$LIB_DIR/internal/lock.sh"  # Já carrega cache.sh automaticamente
+cache_load
 ```
 
 ## 📚 Bibliotecas Core - Guia de Uso
@@ -448,10 +481,9 @@ get_installed_version_cached()
 set -euo pipefail
 IFS=$'\n\t'
 
-# Source libraries (ordem importa!)
-source "$LIB_DIR/logger.sh"
+# ✨ Bibliotecas essenciais já estão carregadas automaticamente!
+# Carregue apenas as bibliotecas específicas que você precisa:
 source "$LIB_DIR/internal/installations.sh"  # Se usar instalações
-source "$LIB_DIR/internal/registry.sh"       # Se usar plugins
 source "$LIB_DIR/github.sh"                  # Se usar GitHub
 
 # Help function
@@ -582,7 +614,9 @@ registry.sh (standalone)
   ↓
 plugin.sh → git.sh
   ↓
-config.sh → registry.sh, json.sh, cache.sh, plugin.sh
+lock.sh → cache.sh, json.sh
+  ↓
+config.sh → registry.sh, json.sh, cache.sh, plugin.sh, lock.sh
 ```
 
 **Ordem de carregamento segura:**
@@ -592,8 +626,9 @@ config.sh → registry.sh, json.sh, cache.sh, plugin.sh
 4. git.sh (sem dependências)
 5. registry.sh (sem dependências)
 6. plugin.sh (depende de git.sh)
-7. installations.sh (depende de json.sh, cache.sh)
-8. config.sh (depende de registry, json, cache, plugin)
+7. lock.sh (depende de json.sh, cache.sh)
+8. installations.sh (depende de json.sh, cache.sh)
+9. config.sh (depende de registry, json, cache, plugin, lock)
 
 ## 🎯 Padrões de Performance
 
@@ -643,7 +678,7 @@ local count=$(registry_count_plugins "$registry_file")
 DEBUG=1 susa setup docker --info
 
 # Testar cache
-susa self cache info
+susa self cache list
 
 # Verificar lock
 jq . ~/.susa/susa.lock
@@ -802,9 +837,9 @@ Ao criar documentação de um novo comando:
 - **Documentação:** `docs/` directory
 - **Exemplos:** `commands/setup/docker/main.sh` (bem documentado)
 - **Testes:** Execute comandos com `--help` para ver opções
-- **Cache:** Execute `susa self cache info` para entender o estado
+- **Cache:** Execute `susa self cache list --detailed` para entender o estado
 
 ---
 
-**Última atualização:** 2026-01-16
+**Última atualização:** 2026-01-18
 **Versão do documento:** 1.0.0

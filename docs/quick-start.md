@@ -27,11 +27,47 @@ curl -LsSf https://raw.githubusercontent.com/duducp/susa/1.0.0/install-remote.sh
 Este comando irá:
 
 - ✅ Detectar seu sistema operacional automaticamente
-- ✅ Instalar dependências necessárias (git)
+- ✅ Verificar e instalar dependências necessárias (git, jq)
 - ✅ Clonar o repositório
 - ✅ Executar a instalação
 - ✅ Configurar o PATH automaticamente
 - ✅ Detectar e configurar todos os shells disponíveis (Bash e Zsh)
+
+### 📦 Dependências
+
+O SUSA CLI requer algumas dependências para funcionar:
+
+| Dependência | Versão Mínima | Motivo | Instalação |
+|-------------|---------------|--------|------------|
+| **Bash** | 4.0+ | Arrays associativos para cache | `brew install bash` (macOS) |
+| **jq** | 1.5+ | Processamento de JSON | `brew install jq` ou `apt install jq` |
+
+**Verificação Automática:**
+
+Na primeira execução, o SUSA CLI verifica automaticamente se todas as dependências estão instaladas:
+
+```bash
+$ susa --version
+
+Dependências faltando
+
+✗ jq
+  Motivo: jq é necessário para processar arquivos JSON (cache, configurações, plugins)
+  Comando: sudo apt install -y jq
+
+Deseja instalar as dependências agora? (s/n)
+```
+
+Se você responder **'s'** (sim), as dependências serão instaladas automaticamente. Se responder **'n'** (não), será exibido o comando de instalação manual.
+
+**Pular verificação (CI/CD):**
+
+Para ambientes automatizados onde as dependências já estão garantidas:
+
+```bash
+export SUSA_SKIP_DEPS_CHECK=1
+susa --version
+```
 
 ### ⚠️ Importante: Shells Suportados
 

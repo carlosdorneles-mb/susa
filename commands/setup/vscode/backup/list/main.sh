@@ -3,9 +3,7 @@ set -euo pipefail
 IFS=$'\n\t'
 
 # List available VSCode backups
-# Source libraries
-source "$LIB_DIR/logger.sh"
-source "$LIB_DIR/color.sh"
+# Bibliotecas essenciais já carregadas automaticamente
 
 # Default backup directory
 DEFAULT_BACKUP_DIR="$HOME/.susa/backups/vscode"

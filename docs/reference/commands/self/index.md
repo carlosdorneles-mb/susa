@@ -40,12 +40,13 @@ susa self lock
 
 ### [Cache](cache.md)
 
-Gerencia o sistema de cache do CLI para melhorar a performance de inicialização.
+Gerencia o sistema de cache do CLI para melhorar a performance.
 
 ```bash
-susa self cache info      # Informações do cache
-susa self cache refresh   # Atualiza o cache
-susa self cache clear     # Limpa o cache
+susa self cache list                # Lista todos os caches
+susa self cache list --detailed     # Informações detalhadas
+susa self cache clear lock          # Limpa cache específico
+susa self cache clear --all         # Limpa todos os caches
 ```
 
 ### [Version](version.md)

@@ -3,7 +3,6 @@ set -euo pipefail
 IFS=$'\n\t'
 
 source "$LIB_DIR/internal/installations.sh"
-source "$LIB_DIR/internal/cache.sh"
 source "$LIB_DIR/sudo.sh"
 
 show_help() {

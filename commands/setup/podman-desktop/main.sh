@@ -3,7 +3,6 @@ set -euo pipefail
 IFS=$'\n\t'
 
 # Source libraries
-source "$LIB_DIR/logger.sh"
 source "$LIB_DIR/internal/installations.sh"
 source "$LIB_DIR/github.sh"
 

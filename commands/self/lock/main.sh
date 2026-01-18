@@ -4,13 +4,10 @@ IFS=$'\n\t'
 
 # Setup command environment
 
-source "$LIB_DIR/logger.sh"
 source "$LIB_DIR/string.sh"
-source "$LIB_DIR/internal/config.sh"
 source "$LIB_DIR/internal/json.sh"
 source "$LIB_DIR/internal/installations.sh"
 source "$LIB_DIR/internal/plugin.sh"
-source "$LIB_DIR/internal/lock.sh"
 
 # ============================================================
 # Help Function
@@ -306,7 +303,7 @@ generate_lock_file() {
         log_debug "Fazendo backup da seção de instalações..."
 
         # Try cache first if available
-        if cache_load 2> /dev/null && [ "$_SUSA_CACHE_LOADED" -eq 1 ]; then
+        if cache_load 2> /dev/null; then
             local installations_json=$(cache_query '.installations' 2> /dev/null)
             if [ -n "$installations_json" ] && [ "$installations_json" != "null" ] && [ "$installations_json" != "[]" ]; then
                 echo "$installations_json" > "$temp_installations"

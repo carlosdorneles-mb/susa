@@ -7,11 +7,12 @@ IFS=$'\n\t'
 # ============================================================
 # Parser to read JSON configurations (centralized and decentralized)
 
-# Source registry lib
+# Source libs (order matters - avoid circular dependencies)
 source "$LIB_DIR/internal/registry.sh"
 source "$LIB_DIR/internal/json.sh"
-source "$LIB_DIR/internal/cache.sh"
 source "$LIB_DIR/internal/plugin.sh"
+source "$LIB_DIR/internal/cache.sh"
+source "$LIB_DIR/internal/lock.sh"
 
 # ============================================================
 # Lock File Functions

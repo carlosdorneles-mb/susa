@@ -4,7 +4,6 @@ IFS=$'\n\t'
 
 # Create backup of VSCode configurations and profiles
 # Source libraries
-source "$LIB_DIR/logger.sh"
 source "$LIB_DIR/os.sh"
 
 # Default backup directory
@@ -149,7 +148,7 @@ create_backup() {
             mkdir -p "$backup_content_dir/extensions"
             # Only backup extension configuration, not the full extensions (too large)
             find "$VSCODE_USER_DIR/extensions" -name "package.json" -o -name "*.json" | while read -r file; do
-                local rel_path="${file#$VSCODE_USER_DIR/extensions/}"
+                local rel_path="${file#"$VSCODE_USER_DIR"/extensions/}"
                 local target_dir="$backup_content_dir/extensions/$(dirname "$rel_path")"
                 mkdir -p "$target_dir"
                 cp "$file" "$target_dir/" 2> /dev/null || true

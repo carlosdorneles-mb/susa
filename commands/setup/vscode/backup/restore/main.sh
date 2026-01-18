@@ -4,7 +4,6 @@ IFS=$'\n\t'
 
 # Restore VSCode configurations from backup
 # Source libraries
-source "$LIB_DIR/logger.sh"
 source "$LIB_DIR/os.sh"
 
 # Default backup directory

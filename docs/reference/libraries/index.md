@@ -71,7 +71,15 @@ Parser JSON interno usando jq. Funções auxiliares para leitura e manipulação
 
 #### [cache.sh](cache.md)
 
-Sistema de cache em memória para acelerar o carregamento do CLI. Mantém uma cópia pré-processada do `susa.lock` em memória e disco, eliminando a necessidade de múltiplas chamadas ao jq durante a execução.
+Sistema unificado de caches nomeados para máxima performance. Todos os caches (incluindo o do `susa.lock`) usam arrays associativos em memória (~1-3ms por operação). Suporta queries jq, operações chave-valor e validação automática.
+
+#### [lock.sh](lock.md)
+
+Wrapper para acesso otimizado ao cache do arquivo `susa.lock`. Fornece funções específicas como `cache_load()`, `cache_query()`, `cache_get_categories()` e outras para trabalhar com o lock file de forma eficiente.
+
+#### [context.sh](context.md)
+
+Sistema de contexto para compartilhar dados durante a execução de comandos. Provê armazenamento chave-valor em memória otimizado que é automaticamente limpo após cada comando. Usa o sistema de cache nomeado para máxima performance.
 
 #### [args.sh](args.md)
 
@@ -137,11 +145,24 @@ BIBLIOTECAS INTERNAS:
 internal/config.sh
 ├── internal/registry.sh
 ├── internal/json.sh
-└── internal/cache.sh
+├── internal/plugin.sh
+├── internal/cache.sh
+└── internal/lock.sh
+    ├── internal/json.sh
+    └── internal/cache.sh
 
 internal/cache.sh
 └── logger.sh (opcional)
     └── color.sh
+
+internal/lock.sh
+├── internal/json.sh
+└── internal/cache.sh
+
+internal/context.sh
+└── internal/cache.sh
+    └── logger.sh (opcional)
+        └── color.sh
 
 internal/args.sh
 └── logger.sh
