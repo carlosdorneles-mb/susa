@@ -4,6 +4,7 @@ IFS=$'\n\t'
 
 # List available VSCode backups
 # Bibliotecas essenciais já carregadas automaticamente
+source "$LIB_DIR/table.sh"
 
 # Default backup directory
 DEFAULT_BACKUP_DIR="$HOME/.susa/backups/vscode"
@@ -36,8 +37,12 @@ list_backups() {
         return 0
     fi
 
-    log_output "${LIGHT_GREEN}Backups disponíveis:${NC}"
+    log_output "${BOLD}Backups disponíveis:${NC}"
     log_output ""
+
+    # Initialize table
+    table_init
+    table_add_header "Nome" "Tamanho" "Data de Criação"
 
     local count=0
     for backup in "$BACKUP_DIR"/*.tar.gz; do
@@ -47,17 +52,17 @@ list_backups() {
             local backup_size=$(du -h "$backup" | cut -f1)
             local backup_date=$(date -r "$backup" "+%Y-%m-%d %H:%M:%S" 2> /dev/null || stat -c %y "$backup" 2> /dev/null | cut -d' ' -f1-2)
 
-            log_output "  ${LIGHT_CYAN}$count.${NC} $backup_name"
-            log_output "     ${GRAY}Tamanho: $backup_size | Criado: $backup_date${NC}"
-            log_output ""
+            table_add_row "$backup_name" "$backup_size" "$backup_date"
         fi
     done
 
     if [ $count -eq 0 ]; then
         log_output "Nenhum backup encontrado."
     else
-        log_output "${LIGHT_GREEN}Total:${NC} $count backup(s)"
-        log_output "${LIGHT_GREEN}Diretório:${NC} $BACKUP_DIR"
+        # Render table
+        table_render
+        log_output ""
+        log_output "${BOLD}Total:${NC} $count backup(s) • ${BOLD}Diretório:${NC} $BACKUP_DIR"
         log_output ""
         log_output "${LIGHT_GREEN}Para restaurar um backup:${NC}"
         log_output "  susa setup vscode backup restore <nome-do-backup>"

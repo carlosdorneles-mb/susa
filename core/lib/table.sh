@@ -18,11 +18,28 @@
 _TABLE_DATA=""
 _TABLE_INDENT="  "
 _TABLE_SEPARATOR=$'\t'
+_TABLE_AUTO_NUMBER=true
+_TABLE_ROW_COUNT=0
+_TABLE_NUMBER_COLOR="${LIGHT_CYAN:-}"
 
 # Initialize a new table
 # Clears any previous data
+#
+# Options:
+#   --no-number    Disable automatic row numbering (enabled by default)
+#
+# Example:
+#   table_init              # With auto-numbering
+#   table_init --no-number  # Without auto-numbering
+# shellcheck disable=SC2120
 table_init() {
     _TABLE_DATA=""
+    _TABLE_ROW_COUNT=0
+    _TABLE_AUTO_NUMBER=true
+
+    if [ "${1:-}" = "--no-number" ]; then
+        _TABLE_AUTO_NUMBER=false
+    fi
 }
 
 # Set table indentation (default: 2 spaces)
@@ -34,12 +51,22 @@ table_set_indent() {
 # Add a row to the table
 # Args: column values (one or more arguments)
 #
+# Note: If auto-numbering is enabled, the row number is automatically
+#       added as the first column. You don't need to pass it manually.
+#
 # Example:
 #   table_add_row "Col1" "Col2" "Col3"
 #   table_add_row "${CYAN}value1${NC}" "value2" "value3"
 table_add_row() {
     local row="${_TABLE_INDENT}"
     local first=true
+
+    # Auto-number: add row number as first column (only for data rows, not header)
+    if [ "$_TABLE_AUTO_NUMBER" = true ] && [ $_TABLE_ROW_COUNT -gt 0 ]; then
+        row+="${_TABLE_NUMBER_COLOR}${_TABLE_ROW_COUNT}${NC:-}"
+        first=false
+        _TABLE_ROW_COUNT=$((_TABLE_ROW_COUNT + 1))
+    fi
 
     for value in "$@"; do
         if [ "$first" = true ]; then
@@ -56,6 +83,9 @@ table_add_row() {
 # Add a header row (with bold/gray formatting)
 # Args: column values
 #
+# Note: If auto-numbering is enabled, the "#" column is automatically
+#       added as the first column. You don't need to pass it manually.
+#
 # Example:
 #   table_add_header "Name" "Age" "City"
 table_add_header() {
@@ -65,6 +95,13 @@ table_add_header() {
     # Load colors if available
     if command -v source &> /dev/null && [ -f "${LIB_DIR:-}/color.sh" ]; then
         source "${LIB_DIR}/color.sh" 2> /dev/null || true
+    fi
+
+    # Auto-number: add "#" as first column header
+    if [ "$_TABLE_AUTO_NUMBER" = true ]; then
+        row+="${BOLD:-}${GRAY:-}#${NC:-}"
+        first=false
+        _TABLE_ROW_COUNT=1 # Start counting from 1 for data rows
     fi
 
     for value in "$@"; do

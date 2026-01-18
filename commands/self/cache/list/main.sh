@@ -52,15 +52,15 @@ main() {
         esac
     done
 
+    log_info "Listando caches disponíveis..."
+    echo ""
+
     local cache_dir
     if [[ "$(uname)" == "Darwin" ]]; then
         cache_dir="${TMPDIR:-$HOME/Library/Caches}/susa"
     else
         cache_dir="${XDG_RUNTIME_DIR:-/tmp}/susa-$USER"
     fi
-
-    log_output "${BOLD}Caches Disponíveis:${NC}"
-    echo ""
 
     # Check if cache directory exists
     if [ ! -d "$cache_dir" ]; then
@@ -74,6 +74,9 @@ main() {
     # List all caches
     local found=0
     local total_size=0
+
+    log_output "${BOLD}Caches Disponíveis:${NC}"
+    echo ""
 
     # Initialize table
     table_init

@@ -14,14 +14,23 @@ source "$LIB_DIR/table.sh"
 
 ## API
 
-### `table_init()`
+### `table_init([--no-number])`
 
 Inicializa uma nova tabela, limpando qualquer dado anterior.
+
+**Opções:**
+
+- `--no-number` - Desabilita numeração automática de linhas (habilitada por padrão)
+
+**Comportamento padrão:**
+
+Por padrão, a biblioteca adiciona automaticamente uma coluna `#` como primeira coluna e numera as linhas sequencialmente (1, 2, 3...). Você não precisa passar manualmente o número da linha.
 
 **Exemplo:**
 
 ```bash
-table_init
+table_init              # Com numeração automática (padrão)
+table_init --no-number  # Sem numeração automática
 ```
 
 ### `table_set_indent(indentação)`
@@ -46,10 +55,22 @@ Adiciona uma linha de cabeçalho com formatação em negrito/cinza.
 
 - `col1, col2, ...` - Valores das colunas do cabeçalho
 
+**Comportamento com numeração automática:**
+
+Se a numeração automática estiver habilitada (padrão), a coluna `#` é adicionada automaticamente. Você não precisa incluí-la manualmente nos argumentos.
+
 **Exemplo:**
 
 ```bash
+# Com numeração automática (padrão)
+table_init
 table_add_header "Nome" "Idade" "Cidade"
+# Resultado: #  Nome  Idade  Cidade
+
+# Sem numeração automática
+table_init --no-number
+table_add_header "Nome" "Idade" "Cidade"
+# Resultado: Nome  Idade  Cidade
 ```
 
 ### `table_add_row(val1, val2, ...)`
@@ -60,11 +81,32 @@ Adiciona uma linha de dados à tabela.
 
 - `val1, val2, ...` - Valores das colunas
 
+**Comportamento com numeração automática:**
+
+Se a numeração automática estiver habilitada (padrão), o número da linha é adicionado automaticamente como primeira coluna. Você não precisa passar o número manualmente.
+
 **Exemplo:**
 
 ```bash
-table_add_row "João" "25" "São Paulo"
-table_add_row "${CYAN}Maria${NC}" "30" "Rio de Janeiro"
+# Com numeração automática (padrão)
+table_init
+table_add_header "Nome" "Status"
+table_add_row "João" "${GREEN}✓${NC}"
+table_add_row "Maria" "${GREEN}✓${NC}"
+# Resultado:
+#   #  Nome   Status
+#   1  João   ✓
+#   2  Maria  ✓
+
+# Sem numeração automática
+table_init --no-number
+table_add_header "Nome" "Status"
+table_add_row "João" "${GREEN}✓${NC}"
+table_add_row "Maria" "${GREEN}✓${NC}"
+# Resultado:
+#   Nome   Status
+#   João   ✓
+#   Maria  ✓
 ```
 
 ### `table_render([--no-clear])`
@@ -107,15 +149,17 @@ echo "Total de linhas: $count"
 
 ## Exemplo Completo
 
+### Exemplo Básico
+
 ```bash
 #!/bin/bash
 source "$LIB_DIR/table.sh"
 
-# Criar tabela
+# Criar tabela (com numeração automática por padrão)
 table_init
 table_add_header "Nome" "Tamanho" "Status"
 
-# Adicionar dados
+# Adicionar dados (números adicionados automaticamente)
 table_add_row "${CYAN}lock${NC}" "8KB" "${GREEN}✓${NC}"
 table_add_row "${CYAN}context${NC}" "2KB" "${GREEN}✓${NC}"
 table_add_row "${CYAN}temp${NC}" "512B" "${YELLOW}⚠${NC}"
@@ -124,10 +168,83 @@ table_add_row "${CYAN}temp${NC}" "512B" "${YELLOW}⚠${NC}"
 table_render
 
 # Output:
+#   #  Nome     Tamanho  Status
+#   1  lock     8KB      ✓
+#   2  context  2KB      ✓
+#   3  temp     512B     ⚠
+```
+
+### Exemplo Sem Numeração
+
+```bash
+#!/bin/bash
+source "$LIB_DIR/table.sh"
+
+# Criar tabela sem numeração automática
+table_init --no-number
+table_add_header "Nome" "Tamanho" "Status"
+
+# Adicionar dados
+table_add_row "${CYAN}lock${NC}" "8KB" "${GREEN}✓${NC}"
+table_add_row "${CYAN}context${NC}" "2KB" "${GREEN}✓${NC}"
+
+# Renderizar
+table_render
+
+# Output:
 #   Nome     Tamanho  Status
 #   lock     8KB      ✓
 #   context  2KB      ✓
-#   temp     512B     ⚠
+```
+
+### Exemplo com Numeração Automática
+
+```bash
+#!/bin/bash
+source "$LIB_DIR/table.sh"
+
+# Lista de items
+local items=(
+    "lock:8KB:active"
+    "context:2KB:active"
+    "temp:512B:warning"
+)
+
+# Criar tabela (numeração automática habilitada por padrão)
+table_init
+table_add_header "Nome" "Tamanho" "Status"
+
+# Adicionar dados (sem passar números manualmente)
+for item in "${items[@]}"; do
+    IFS=':' read -r name size status <<< "$item"
+
+    # Escolher cor do status
+    local status_color="${GREEN}"
+    local status_icon="✓"
+    if [[ "$status" == "warning" ]]; then
+        status_color="${YELLOW}"
+        status_icon="⚠"
+    fi
+
+    # Não é necessário passar o número - é adicionado automaticamente
+    table_add_row "${CYAN}${name}${NC}" "$size" "${status_color}${status_icon}${NC}"
+done
+
+# Renderizar
+table_render
+
+# Resumo
+local total=${#items[@]}
+echo ""
+log_output "${BOLD}Total:${NC} $total item(s)"
+
+# Output:
+#   #  Nome     Tamanho  Status
+#   1  lock     8KB      ✓
+#   2  context  2KB      ✓
+#   3  temp     512B     ⚠
+#
+#   Total: 3 item(s)
 ```
 
 ## Uso em Plugins
